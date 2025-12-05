@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ArrowLeft, ArrowRight, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type BowlResult = 
@@ -21,16 +22,20 @@ type BowlResult =
   | 'Heavy & Wide' 
   | 'Effective';
 
+type ViewState = 'end-setup' | 'bowling' | 'score-entry' | 'end-summary';
+
 export default function GameRecording() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { data: game, isLoading } = useGameFull(id);
+  const { data: game, isLoading, refetch } = useGameFull(id);
   const createEnd = useCreateEnd();
   const createBowl = useCreateBowl();
   const updateEnd = useUpdateEnd();
   const updateGame = useUpdateGame();
 
+  const [viewState, setViewState] = useState<ViewState>('end-setup');
+  const [currentEndId, setCurrentEndId] = useState<string | null>(null);
   const [activeBowl, setActiveBowl] = useState<1 | 2>(1);
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: 0|1|2, col: 0|1|2} | null>(null);
@@ -40,20 +45,35 @@ export default function GameRecording() {
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [isDead, setIsDead] = useState(false);
 
-  const currentEndNum = (game?.ends?.length || 0) + 1;
-  const currentEnd = game?.ends?.find(e => !e.isCompleted) || game?.ends?.[game?.ends?.length - 1];
+  const completedEnds = game?.ends?.filter(e => e.isCompleted) || [];
+  const incompleteEnd = game?.ends?.find(e => !e.isCompleted);
+  const currentEnd = currentEndId 
+    ? game?.ends?.find(e => e.id === currentEndId) 
+    : incompleteEnd;
+  const nextEndNumber = completedEnds.length + 1;
+  
   const bowl1 = currentEnd?.bowls?.find(b => b.bowlNumber === 1);
   const bowl2 = currentEnd?.bowls?.find(b => b.bowlNumber === 2);
 
   useEffect(() => {
-    setActiveBowl(bowl1 ? (bowl2 ? 1 : 2) : 1);
-    setGridSelection(null);
-    if (currentEnd && !bowl1 && !bowl2) {
-      setScoreFor(0);
-      setScoreAgainst(0);
-      setIsDead(false);
+    if (!game) return;
+    
+    if (incompleteEnd) {
+      setCurrentEndId(incompleteEnd.id);
+      if (incompleteEnd.bowls?.length === 0) {
+        setViewState('bowling');
+        setActiveBowl(1);
+      } else if (incompleteEnd.bowls?.length === 1) {
+        setViewState('bowling');
+        setActiveBowl(2);
+      } else if (incompleteEnd.bowls?.length >= 2) {
+        setViewState('score-entry');
+      }
+    } else {
+      setCurrentEndId(null);
+      setViewState('end-setup');
     }
-  }, [currentEnd?.id, bowl1, bowl2]);
+  }, [game?.ends?.length, incompleteEnd?.bowls?.length]);
 
   if (isLoading) return <div className="text-center py-12">Loading game...</div>;
   if (!game) return <div className="text-center py-12">Game not found</div>;
@@ -91,19 +111,27 @@ export default function GameRecording() {
     return 'Effective';
   };
 
-  const handleCreateOrContinueEnd = async () => {
-    if (!currentEnd || currentEnd.isCompleted) {
-      createEnd.mutate({
+  const handleStartEnd = async () => {
+    createEnd.mutate(
+      {
         gameId: game.id,
-        endNumber: currentEndNum,
+        endNumber: nextEndNumber,
         length: endLength,
         jackEffective: game.position === 'Lead' ? jackEffective : undefined,
         scoreFor: 0,
         scoreAgainst: 0,
         isDead: false,
         isCompleted: false,
-      });
-    }
+      },
+      {
+        onSuccess: (newEnd) => {
+          setCurrentEndId(newEnd.id);
+          setViewState('bowling');
+          setActiveBowl(1);
+          setGridSelection(null);
+        },
+      }
+    );
   };
 
   const saveBowl = async () => {
@@ -127,6 +155,8 @@ export default function GameRecording() {
           setGridSelection(null);
           if (activeBowl === 1) {
             setActiveBowl(2);
+          } else {
+            setViewState('score-entry');
           }
         },
       }
@@ -149,15 +179,21 @@ export default function GameRecording() {
       },
       {
         onSuccess: () => {
-          toast({ title: "End complete" });
-          setScoreFor(0);
-          setScoreAgainst(0);
-          setIsDead(false);
-          setJackEffective(true);
-          setEndLength(21);
+          setViewState('end-summary');
         },
       }
     );
+  };
+
+  const startNextEnd = () => {
+    setScoreFor(0);
+    setScoreAgainst(0);
+    setIsDead(false);
+    setJackEffective(true);
+    setEndLength(21);
+    setCurrentEndId(null);
+    setViewState('end-setup');
+    refetch();
   };
 
   const handleFinishGame = () => {
@@ -196,9 +232,8 @@ export default function GameRecording() {
     );
   };
 
-  const needsEndCreation = !currentEnd || currentEnd.isCompleted;
-  const showBowlRecording = currentEnd && !currentEnd.isCompleted && (!bowl1 || !bowl2);
-  const showScoreEntry = currentEnd && !currentEnd.isCompleted && bowl1 && bowl2;
+  const totalFor = completedEnds.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
+  const totalAgainst = completedEnds.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0);
 
   return (
     <div className="max-w-xl mx-auto space-y-6 pb-20">
@@ -208,7 +243,10 @@ export default function GameRecording() {
         </Button>
         <div className="text-center">
           <h2 className="text-2xl font-display font-bold" data-testid="text-end-number">
-            End {currentEnd?.isCompleted ? currentEndNum : (currentEnd?.endNumber || currentEndNum)}
+            {viewState === 'end-summary' 
+              ? `End ${currentEnd?.endNumber} Summary` 
+              : `End ${currentEnd?.endNumber || nextEndNumber}`
+            }
           </h2>
           <p className="text-xs text-muted-foreground">{game.venue} • {game.surface}</p>
         </div>
@@ -219,13 +257,17 @@ export default function GameRecording() {
           disabled={updateGame.isPending}
           data-testid="button-finish-game"
         >
-          Finish Game
+          <Flag className="w-4 h-4 mr-1" /> Finish
         </Button>
       </div>
 
-      {needsEndCreation && (
+      {/* End Setup View */}
+      {viewState === 'end-setup' && (
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardHeader>
+            <CardTitle>Start End {nextEndNumber}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             {game.position === 'Lead' && (
               <div className="flex items-center justify-between">
                 <Label className="text-base">Jack Delivery Effective?</Label>
@@ -243,7 +285,7 @@ export default function GameRecording() {
             </div>
             <Button 
               className="w-full" 
-              onClick={handleCreateOrContinueEnd}
+              onClick={handleStartEnd}
               disabled={createEnd.isPending}
               data-testid="button-start-end"
             >
@@ -253,7 +295,8 @@ export default function GameRecording() {
         </Card>
       )}
 
-      {showBowlRecording && (
+      {/* Bowling View */}
+      {viewState === 'bowling' && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold" data-testid="text-bowl-number">
@@ -305,13 +348,25 @@ export default function GameRecording() {
         </div>
       )}
 
-      {showScoreEntry && (
+      {/* Score Entry View */}
+      {viewState === 'score-entry' && (
         <div className="space-y-6 animate-in fade-in">
           <Card className="bg-secondary/20 border-primary/20">
             <CardHeader>
-              <CardTitle>End Complete</CardTitle>
+              <CardTitle>Record End Score</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-background p-3 rounded border">
+                  <span className="block font-semibold text-foreground">Bowl 1</span>
+                  {bowl1?.hand} - {bowl1?.result}
+                </div>
+                <div className="bg-background p-3 rounded border">
+                  <span className="block font-semibold text-foreground">Bowl 2</span>
+                  {bowl2?.hand} - {bowl2?.result}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
                 <span className="font-medium">End Status</span>
                 <div className="flex items-center gap-2">
@@ -354,20 +409,126 @@ export default function GameRecording() {
                 disabled={updateEnd.isPending}
                 data-testid="button-finish-end"
               >
-                {updateEnd.isPending ? "Saving..." : "Confirm & Start Next End"}
+                {updateEnd.isPending ? "Saving..." : "Save & Finish End"}
               </Button>
             </CardContent>
           </Card>
+        </div>
+      )}
 
-          <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-            <div className="bg-secondary/50 p-3 rounded border">
-              <span className="block font-semibold text-foreground">Bowl 1</span>
-              {bowl1?.hand} - {bowl1?.result}
-            </div>
-            <div className="bg-secondary/50 p-3 rounded border">
-              <span className="block font-semibold text-foreground">Bowl 2</span>
-              {bowl2?.hand} - {bowl2?.result}
-            </div>
+      {/* End Summary View - Shows after each completed end */}
+      {viewState === 'end-summary' && currentEnd && (
+        <div className="space-y-6 animate-in fade-in">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-primary">End {currentEnd.endNumber} Complete</CardTitle>
+              {currentEnd.isDead ? (
+                <p className="text-muted-foreground">Dead End - No Score</p>
+              ) : (
+                <div className="flex justify-center gap-8 mt-2">
+                  <div>
+                    <span className="text-3xl font-bold text-primary">{currentEnd.scoreFor}</span>
+                    <p className="text-xs text-muted-foreground">For</p>
+                  </div>
+                  <div>
+                    <span className="text-3xl font-bold text-destructive">{currentEnd.scoreAgainst}</span>
+                    <p className="text-xs text-muted-foreground">Against</p>
+                  </div>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bowl</TableHead>
+                    <TableHead>Hand</TableHead>
+                    <TableHead>Result</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentEnd.bowls?.map((bowl) => (
+                    <TableRow key={bowl.id}>
+                      <TableCell className="font-medium">Bowl {bowl.bowlNumber}</TableCell>
+                      <TableCell>{bowl.hand}</TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "px-2 py-1 rounded text-xs font-medium",
+                          bowl.result === 'Effective' ? "bg-primary/10 text-primary" : "bg-secondary"
+                        )}>
+                          {bowl.result}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Running Total */}
+          <Card className="bg-muted/30">
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Running Score</span>
+                <div className="flex gap-4">
+                  <span className="text-lg font-bold text-primary">{totalFor + (currentEnd.scoreFor || 0)} For</span>
+                  <span className="text-lg font-bold text-destructive">{totalAgainst + (currentEnd.scoreAgainst || 0)} Against</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* History Table */}
+          {completedEnds.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">Ends Played</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>End</TableHead>
+                      <TableHead>Bowl 1</TableHead>
+                      <TableHead>Bowl 2</TableHead>
+                      <TableHead className="text-right">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...completedEnds, currentEnd].filter(Boolean).map((end) => (
+                      <TableRow key={end!.id}>
+                        <TableCell className="font-medium">{end!.endNumber}</TableCell>
+                        <TableCell className="text-xs">{end!.bowls?.[0]?.result || '-'}</TableCell>
+                        <TableCell className="text-xs">{end!.bowls?.[1]?.result || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          {end!.isDead ? (
+                            <span className="text-muted-foreground">Dead</span>
+                          ) : (
+                            <span>
+                              <span className="text-primary">{end!.scoreFor}</span>
+                              {' / '}
+                              <span className="text-destructive">{end!.scoreAgainst}</span>
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex gap-4">
+            <Button 
+              size="lg" 
+              className="flex-1"
+              onClick={startNextEnd}
+              data-testid="button-next-end"
+            >
+              Record Next End <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
         </div>
       )}
