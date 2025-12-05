@@ -1,0 +1,82 @@
+import { Link, useLocation } from "wouter";
+import { LayoutDashboard, PlusCircle, BarChart3, Settings, Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const navItems = [
+    { href: "/", label: "Home", icon: LayoutDashboard },
+    { href: "/new-game", label: "New Game", icon: PlusCircle },
+    { href: "/analysis", label: "Analysis", icon: BarChart3 },
+  ];
+
+  const NavContent = () => (
+    <div className="flex flex-col gap-6 py-4">
+      <div className="flex items-center gap-3 px-2">
+        <img src={generatedImage} alt="PennantPro" className="w-8 h-8" />
+        <span className="font-display text-xl font-bold tracking-tight text-primary">PennantPro</span>
+      </div>
+      <nav className="flex flex-col gap-2">
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <a 
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                location === item.href 
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+              onClick={() => setIsOpen(false)}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+            </a>
+          </Link>
+        ))}
+      </nav>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background font-sans">
+      {/* Mobile Header */}
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md md:hidden">
+        <div className="flex items-center gap-2">
+          <img src={generatedImage} alt="PennantPro" className="w-8 h-8" />
+          <span className="font-display text-lg font-bold text-primary">PennantPro</span>
+        </div>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="w-6 h-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[280px] sm:w-[350px]">
+            <NavContent />
+          </SheetContent>
+        </Sheet>
+      </header>
+
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-card px-4 py-6 sticky top-0">
+          <NavContent />
+          <div className="mt-auto">
+            {/* Optional footer content */}
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-10 max-w-5xl mx-auto w-full">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
