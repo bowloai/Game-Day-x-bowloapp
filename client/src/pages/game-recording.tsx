@@ -568,44 +568,6 @@ export default function GameRecording() {
               </Card>
             </div>
 
-            {/* All Bowls Summary */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">All Bowls This Game</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>End</TableHead>
-                      <TableHead>Bowl</TableHead>
-                      <TableHead>Hand</TableHead>
-                      <TableHead>Result</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allEndsIncludingCurrent.map((end) => 
-                      end.bowls?.map((bowl) => (
-                        <TableRow key={bowl.id}>
-                          <TableCell className="font-medium">{end.endNumber}</TableCell>
-                          <TableCell>{bowl.bowlNumber}</TableCell>
-                          <TableCell className="text-xs">{bowl.hand}</TableCell>
-                          <TableCell>
-                            <span className={cn(
-                              "px-2 py-1 rounded text-xs font-medium",
-                              bowl.result === 'Effective' ? "bg-primary/10 text-primary" : "bg-secondary"
-                            )}>
-                              {bowl.result}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
             {/* Ends Summary Table */}
             <Card>
               <CardHeader className="pb-2">
