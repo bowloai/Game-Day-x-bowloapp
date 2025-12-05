@@ -508,8 +508,11 @@ export default function GameRecording() {
         const totalBowls = allBowls.length;
         const effectiveBowls = allBowls.filter(b => b.result === 'Effective').length;
         const effectivePercent = totalBowls > 0 ? Math.round((effectiveBowls / totalBowls) * 100) : 0;
-        const runningFor = totalFor + (currentEnd.scoreFor || 0);
-        const runningAgainst = totalAgainst + (currentEnd.scoreAgainst || 0);
+        
+        // Calculate running totals - exclude current end from completedEnds since we add it separately
+        const otherEnds = completedEnds.filter(e => e.id !== currentEnd.id);
+        const runningFor = otherEnds.reduce((sum, e) => sum + (e.scoreFor || 0), 0) + (currentEnd.scoreFor || 0);
+        const runningAgainst = otherEnds.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0) + (currentEnd.scoreAgainst || 0);
 
         return (
           <div className="space-y-6 animate-in fade-in">
