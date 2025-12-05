@@ -8,6 +8,7 @@ import Layout from "@/components/layout";
 import Home from "@/pages/home";
 import GameSetup from "@/pages/game-setup";
 import GameRecording from "@/pages/game-recording";
+import Games from "@/pages/games";
 import Analysis from "@/pages/analysis";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/new-game" component={GameSetup} />
         <Route path="/play/:id" component={GameRecording} />
+        <Route path="/games" component={Games} />
         <Route path="/analysis" component={Analysis} />
         <Route component={NotFound} />
       </Switch>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, PlusCircle, BarChart3, Settings, Menu, X } from "lucide-react";
+import { LayoutDashboard, PlusCircle, BarChart3, ClipboardList, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -13,6 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/", label: "Home", icon: LayoutDashboard },
     { href: "/new-game", label: "New Game", icon: PlusCircle },
+    { href: "/games", label: "My Games", icon: ClipboardList },
     { href: "/analysis", label: "Analysis", icon: BarChart3 },
   ];
 

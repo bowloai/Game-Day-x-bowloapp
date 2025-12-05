@@ -2,12 +2,14 @@ import { useGames } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState, useMemo, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, Scale, Crosshair } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X } from "lucide-react";
 
 type Bowl = {
   id: string;
@@ -168,10 +170,15 @@ export default function Analysis() {
   const { data: games, isLoading } = useGames();
   const [gamesWithDetails, setGamesWithDetails] = useState<GameWithDetails[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  
+  // Get game ID from URL params
+  const urlParams = new URLSearchParams(searchString);
+  const gameIdFromUrl = urlParams.get('game');
   
   // Filters
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filterGame, setFilterGame] = useState<string>("All");
   const [filterType, setFilterType] = useState<string>("All");
   const [filterSurface, setFilterSurface] = useState<string>("All");
   const [filterPosition, setFilterPosition] = useState<string>("All");
@@ -221,8 +228,8 @@ export default function Analysis() {
     let filteredGames = [...gamesWithDetails];
     
     // Apply filters
-    if (filterGame !== "All") {
-      filteredGames = filteredGames.filter(g => g.id === filterGame);
+    if (gameIdFromUrl) {
+      filteredGames = filteredGames.filter(g => g.id === gameIdFromUrl);
     }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g => g.type === filterType);
@@ -258,7 +265,7 @@ export default function Analysis() {
       backhandStats: calculateStats(backhandBowls),
       totalGames: filteredGames.length,
     };
-  }, [gamesWithDetails, filterGame, filterType, filterSurface, filterPosition, filterVenue, filterOpponent]);
+  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent]);
 
   if (isLoading || loadingDetails) {
     return <div className="text-center py-12">Loading...</div>;
@@ -273,8 +280,15 @@ export default function Analysis() {
     );
   }
 
-  const hasActiveFilters = filterGame !== "All" || filterType !== "All" || filterSurface !== "All" || 
+  const hasActiveFilters = filterType !== "All" || filterSurface !== "All" || 
     filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All";
+  
+  // Get the selected game details for display
+  const selectedGame = gameIdFromUrl ? gamesWithDetails.find(g => g.id === gameIdFromUrl) : null;
+  
+  const clearGameFilter = () => {
+    setLocation('/analysis');
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -284,6 +298,33 @@ export default function Analysis() {
           {totalGames} game{totalGames !== 1 ? 's' : ''} analyzed
         </div>
       </div>
+
+      {/* Single Game Banner */}
+      {selectedGame && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-muted-foreground">Viewing analysis for:</span>
+                <span className="ml-2 font-semibold">vs {selectedGame.opponent}</span>
+                <span className="ml-2 text-sm text-muted-foreground">
+                  ({format(new Date(selectedGame.createdAt), "MMM d, yyyy")} at {selectedGame.venue})
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearGameFilter}
+                className="text-muted-foreground hover:text-foreground"
+                data-testid="button-clear-game-filter"
+              >
+                <X className="h-4 w-4 mr-1" />
+                View All Games
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Collapsible Filters */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -310,25 +351,7 @@ export default function Analysis() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {/* Specific Game */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Game</Label>
-                  <Select value={filterGame} onValueChange={setFilterGame}>
-                    <SelectTrigger className="h-9" data-testid="select-filter-game">
-                      <SelectValue placeholder="All Games" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All Games</SelectItem>
-                      {gamesWithDetails.map(g => (
-                        <SelectItem key={g.id} value={g.id}>
-                          vs {g.opponent} ({format(new Date(g.createdAt), "MMM d")})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {/* Game Type */}
                 <div className="space-y-1">
                   <Label className="text-xs">Type</Label>
