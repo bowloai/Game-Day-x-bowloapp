@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, ArrowLeft, ArrowRight, Flag } from "lucide-react";
@@ -45,6 +48,24 @@ export default function GameRecording() {
   const [scoreFor, setScoreFor] = useState(0);
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [isDead, setIsDead] = useState(false);
+  
+  // Survey dialog state
+  const [showSurveyDialog, setShowSurveyDialog] = useState(false);
+  const [surveyGreenSpeed, setSurveyGreenSpeed] = useState<string>("");
+  const [surveyGreenComparable, setSurveyGreenComparable] = useState<string>("");
+  const [surveyMentalFeeling, setSurveyMentalFeeling] = useState<string>("");
+  const [surveyPerformanceRating, setSurveyPerformanceRating] = useState<number[]>([5]);
+  const [surveyRatingTouched, setSurveyRatingTouched] = useState(false);
+  const [surveyNotes, setSurveyNotes] = useState<string>("");
+  
+  const resetSurveyState = () => {
+    setSurveyGreenSpeed("");
+    setSurveyGreenComparable("");
+    setSurveyMentalFeeling("");
+    setSurveyPerformanceRating([5]);
+    setSurveyRatingTouched(false);
+    setSurveyNotes("");
+  };
 
   const completedEnds = game?.ends?.filter(e => e.isCompleted) || [];
   const incompleteEnd = game?.ends?.find(e => !e.isCompleted);
@@ -73,7 +94,7 @@ export default function GameRecording() {
       } else if (incompleteEnd.bowls?.length >= 2) {
         setViewState('score-entry');
       }
-    } else if (viewState !== 'end-summary') {
+    } else {
       setCurrentEndId(null);
       setViewState('end-setup');
     }
@@ -203,6 +224,37 @@ export default function GameRecording() {
   };
 
   const handleFinishGame = () => {
+    setShowSurveyDialog(true);
+  };
+
+  const submitSurveyAndFinish = () => {
+    const greenSpeedValue = surveyGreenSpeed.trim() ? parseInt(surveyGreenSpeed) : null;
+    
+    updateGame.mutate(
+      {
+        id: game.id,
+        updates: { 
+          status: "COMPLETED",
+          greenSpeed: greenSpeedValue && !isNaN(greenSpeedValue) ? greenSpeedValue : null,
+          greenComparable: surveyGreenComparable.trim() || null,
+          mentalFeeling: surveyMentalFeeling.trim() || null,
+          performanceRating: surveyRatingTouched ? surveyPerformanceRating[0] : null,
+          notes: surveyNotes.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          resetSurveyState();
+          toast({ title: "Game finished!", description: "Check out your stats in Analysis" });
+          setLocation("/");
+        },
+      }
+    );
+  };
+
+  const skipSurveyAndFinish = () => {
+    resetSurveyState();
+    setShowSurveyDialog(false);
     updateGame.mutate(
       {
         id: game.id,
@@ -617,6 +669,121 @@ export default function GameRecording() {
           </div>
         );
       })()}
+
+      {/* Post-Game Survey Dialog */}
+      <Dialog 
+        open={showSurveyDialog} 
+        onOpenChange={(open) => {
+          setShowSurveyDialog(open);
+          if (!open) {
+            resetSurveyState();
+          }
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Game Complete!</DialogTitle>
+            <DialogDescription>
+              Take a moment to reflect on your game. All fields are optional.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-5 py-4">
+            {/* Green Speed */}
+            <div className="space-y-2">
+              <Label htmlFor="greenSpeed">Green Speed (estimated seconds)</Label>
+              <Input
+                id="greenSpeed"
+                type="number"
+                placeholder="e.g., 14"
+                value={surveyGreenSpeed}
+                onChange={(e) => setSurveyGreenSpeed(e.target.value)}
+                data-testid="input-green-speed"
+              />
+            </div>
+
+            {/* Green Comparable */}
+            <div className="space-y-2">
+              <Label htmlFor="greenComparable">Green comparable to</Label>
+              <Input
+                id="greenComparable"
+                placeholder="e.g., Home green, Club championship green"
+                value={surveyGreenComparable}
+                onChange={(e) => setSurveyGreenComparable(e.target.value)}
+                data-testid="input-green-comparable"
+              />
+            </div>
+
+            {/* Mental Feeling */}
+            <div className="space-y-2">
+              <Label>How did you feel mentally?</Label>
+              <Select value={surveyMentalFeeling} onValueChange={setSurveyMentalFeeling}>
+                <SelectTrigger data-testid="select-mental-feeling">
+                  <SelectValue placeholder="Select how you felt" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Excellent">Excellent - Fully focused</SelectItem>
+                  <SelectItem value="Good">Good - Generally focused</SelectItem>
+                  <SelectItem value="Average">Average - Some distractions</SelectItem>
+                  <SelectItem value="Below Average">Below Average - Struggled to concentrate</SelectItem>
+                  <SelectItem value="Poor">Poor - Couldn't focus</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Performance Rating */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label>Rate your performance</Label>
+                <span className="text-2xl font-bold text-primary">{surveyPerformanceRating[0]}/10</span>
+              </div>
+              <Slider
+                value={surveyPerformanceRating}
+                onValueChange={(value) => {
+                  setSurveyPerformanceRating(value);
+                  setSurveyRatingTouched(true);
+                }}
+                max={10}
+                min={1}
+                step={1}
+                className="py-2"
+                data-testid="slider-performance"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Additional notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Any thoughts or reflections on the game..."
+                value={surveyNotes}
+                onChange={(e) => setSurveyNotes(e.target.value)}
+                rows={3}
+                data-testid="textarea-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={skipSurveyAndFinish}
+              disabled={updateGame.isPending}
+              data-testid="button-skip-survey"
+            >
+              Skip
+            </Button>
+            <Button 
+              onClick={submitSurveyAndFinish}
+              disabled={updateGame.isPending}
+              data-testid="button-submit-survey"
+            >
+              Save & Finish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

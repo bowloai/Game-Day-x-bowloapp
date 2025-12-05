@@ -1,30 +1,66 @@
 import { useGames, useDeleteGame } from "@/lib/hooks";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
+import * as api from "@/lib/api";
+import type { GameWithDetails } from "@/lib/api";
 
 export default function Games() {
   const { data: games, isLoading } = useGames();
   const deleteGame = useDeleteGame();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [gamesWithDetails, setGamesWithDetails] = useState<GameWithDetails[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const filteredGames = useMemo(() => {
-    if (!games) return [];
+  // Fetch full game details to get scores
+  useEffect(() => {
+    async function fetchDetails() {
+      if (!games || games.length === 0) {
+        setGamesWithDetails([]);
+        return;
+      }
+      
+      setLoadingDetails(true);
+      try {
+        const details = await Promise.all(
+          games.map(g => api.getGameFull(g.id))
+        );
+        setGamesWithDetails(details);
+      } catch (err) {
+        console.error('Failed to load game details', err);
+      }
+      setLoadingDetails(false);
+    }
+    fetchDetails();
+  }, [games]);
+
+  // Calculate score from ends
+  const getGameScore = (game: GameWithDetails) => {
+    if (!game.ends || game.ends.length === 0) return { scoreFor: 0, scoreAgainst: 0 };
     
-    let filtered = [...games].sort((a, b) => 
+    const completedEnds = game.ends.filter(e => e.isCompleted);
+    const scoreFor = completedEnds.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
+    const scoreAgainst = completedEnds.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0);
+    
+    return { scoreFor, scoreAgainst };
+  };
+
+  const filteredGames = useMemo(() => {
+    if (!gamesWithDetails) return [];
+    
+    let filtered = [...gamesWithDetails].sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     
@@ -38,7 +74,7 @@ export default function Games() {
     }
     
     return filtered;
-  }, [games, dateRange]);
+  }, [gamesWithDetails, dateRange]);
 
   const handleDelete = async (id: string, opponent: string) => {
     try {
@@ -60,7 +96,7 @@ export default function Games() {
     setDateRange(undefined);
   };
 
-  if (isLoading) {
+  if (isLoading || loadingDetails) {
     return <div className="text-center py-12">Loading...</div>;
   }
 
@@ -138,23 +174,43 @@ export default function Games() {
           {filteredGames.map(game => {
             const isCompleted = game.status === 'COMPLETED';
             const isInProgress = game.status === 'IN_PROGRESS';
+            const { scoreFor, scoreAgainst } = getGameScore(game);
+            const completedEnds = game.ends?.filter(e => e.isCompleted).length || 0;
             
             return (
               <Card key={game.id} className="hover:bg-muted/50 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-semibold text-lg truncate" data-testid={`text-opponent-${game.id}`}>
                           vs {game.opponent}
                         </h3>
+                        {/* Score Display */}
+                        <div className="flex items-center gap-1 font-mono text-lg">
+                          <span className={cn(
+                            "font-bold",
+                            scoreFor > scoreAgainst ? "text-green-600 dark:text-green-400" : 
+                            scoreFor < scoreAgainst ? "text-red-600 dark:text-red-400" : ""
+                          )} data-testid={`text-score-for-${game.id}`}>
+                            {scoreFor}
+                          </span>
+                          <span className="text-muted-foreground">-</span>
+                          <span className={cn(
+                            "font-bold",
+                            scoreAgainst > scoreFor ? "text-green-600 dark:text-green-400" : 
+                            scoreAgainst < scoreFor ? "text-red-600 dark:text-red-400" : ""
+                          )} data-testid={`text-score-against-${game.id}`}>
+                            {scoreAgainst}
+                          </span>
+                        </div>
                         <span className={cn(
                           "text-xs px-2 py-0.5 rounded-full",
                           isCompleted ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                           isInProgress ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
                           "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
                         )}>
-                          {game.status.replace('_', ' ')}
+                          {isInProgress ? `End ${completedEnds + 1}` : game.status.replace('_', ' ')}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
@@ -164,7 +220,7 @@ export default function Games() {
                         <span>{game.surface}</span>
                         <span>{game.position}</span>
                       </div>
-                                          </div>
+                    </div>
                     
                     <div className="flex items-center gap-2">
                       {isInProgress && (

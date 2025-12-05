@@ -9,7 +9,7 @@ import { useLocation, useSearch } from "wouter";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote } from "lucide-react";
 
 type Bowl = {
   id: string;
@@ -177,8 +177,9 @@ export default function Analysis() {
   const urlParams = new URLSearchParams(searchString);
   const gameIdFromUrl = urlParams.get('game');
   
-  // Filters
+  // Filters and Game Report
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [gameReportOpen, setGameReportOpen] = useState(true);
   const [filterType, setFilterType] = useState<string>("All");
   const [filterSurface, setFilterSurface] = useState<string>("All");
   const [filterPosition, setFilterPosition] = useState<string>("All");
@@ -324,6 +325,81 @@ export default function Analysis() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Game Report - only shown for individual game analysis */}
+      {selectedGame && (selectedGame.greenSpeed || selectedGame.greenComparable || 
+        selectedGame.mentalFeeling || selectedGame.performanceRating || selectedGame.notes) && (
+        <Collapsible open={gameReportOpen} onOpenChange={setGameReportOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-sm">Game Report</CardTitle>
+                  </div>
+                  {gameReportOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {selectedGame.greenSpeed && (
+                    <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <Gauge className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Green Speed</p>
+                        <p className="font-semibold">{selectedGame.greenSpeed} seconds</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedGame.greenComparable && (
+                    <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <Target className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Green Comparable To</p>
+                        <p className="font-semibold">{selectedGame.greenComparable}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedGame.mentalFeeling && (
+                    <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <Brain className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Mental State</p>
+                        <p className="font-semibold">{selectedGame.mentalFeeling}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedGame.performanceRating && (
+                    <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <Star className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Performance Rating</p>
+                        <p className="font-semibold text-xl">{selectedGame.performanceRating}/10</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedGame.notes && (
+                    <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg md:col-span-2 lg:col-span-3">
+                      <StickyNote className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Notes</p>
+                        <p className="font-medium whitespace-pre-wrap">{selectedGame.notes}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
       
       {/* Collapsible Filters */}

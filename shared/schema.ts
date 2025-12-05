@@ -14,6 +14,12 @@ export const games = pgTable("games", {
   position: text("position").notNull(),
   status: text("status").notNull().default("IN_PROGRESS"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  // Post-game survey fields (all optional)
+  greenSpeed: integer("green_speed"),
+  greenComparable: text("green_comparable"),
+  mentalFeeling: text("mental_feeling"),
+  performanceRating: integer("performance_rating"),
+  notes: text("notes"),
 });
 
 export const ends = pgTable("ends", {
