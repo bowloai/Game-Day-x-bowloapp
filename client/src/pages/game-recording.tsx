@@ -552,6 +552,30 @@ export default function GameRecording() {
         const evenNarrowPercent = evenBowls.length > 0 ? Math.round((evenNarrow / evenBowls.length) * 100) : 0;
         const evenWide = evenBowls.filter(b => b.result.includes('Wide')).length;
         const evenWidePercent = evenBowls.length > 0 ? Math.round((evenWide / evenBowls.length) * 100) : 0;
+        
+        // All bowls combined stats
+        const allHeavy = allBowls.filter(b => b.result.includes('Heavy')).length;
+        const allHeavyPercent = totalBowls > 0 ? Math.round((allHeavy / totalBowls) * 100) : 0;
+        const allShort = allBowls.filter(b => b.result.includes('Short')).length;
+        const allShortPercent = totalBowls > 0 ? Math.round((allShort / totalBowls) * 100) : 0;
+        const allNarrow = allBowls.filter(b => b.result.includes('Narrow')).length;
+        const allNarrowPercent = totalBowls > 0 ? Math.round((allNarrow / totalBowls) * 100) : 0;
+        const allWide = allBowls.filter(b => b.result.includes('Wide')).length;
+        const allWidePercent = totalBowls > 0 ? Math.round((allWide / totalBowls) * 100) : 0;
+        
+        // Helper to shorten result text for display
+        const shortenResult = (result: string) => {
+          return result
+            .replace('Short & Narrow', 'S+N')
+            .replace('Short & Wide', 'S+W')
+            .replace('Heavy & Narrow', 'H+N')
+            .replace('Heavy & Wide', 'H+W')
+            .replace('Effective', 'Eff')
+            .replace('Short', 'Shrt')
+            .replace('Heavy', 'Hvy')
+            .replace('Narrow', 'Nar')
+            .replace('Wide', 'Wide');
+        };
 
         return (
           <div className="space-y-6 animate-in fade-in">
@@ -618,121 +642,132 @@ export default function GameRecording() {
                   <TableHeader>
                     <TableRow>
                       <TableHead></TableHead>
-                      <TableHead className="text-center">Odd Ends</TableHead>
-                      <TableHead className="text-center">Even Ends</TableHead>
+                      <TableHead className="text-center text-xs">All</TableHead>
+                      <TableHead className="text-center text-xs">Odd</TableHead>
+                      <TableHead className="text-center text-xs">Even</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell className="font-medium">Effective</TableCell>
+                      <TableCell className="font-medium text-xs">Effective</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          effectivePercent >= 50 ? "text-primary" : ""
+                        )}>{effectivePercent}%</span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
                           oddEffectivePercent >= 50 ? "text-primary" : ""
                         )}>{oddEffectivePercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">({oddEffective}/{oddBowls.length})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
-                          <>
-                            <span className={cn(
-                              "font-bold",
-                              evenEffectivePercent >= 50 ? "text-primary" : ""
-                            )}>{evenEffectivePercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">({evenEffective}/{evenBowls.length})</span>
-                          </>
+                          <span className={cn(
+                            "font-bold",
+                            evenEffectivePercent >= 50 ? "text-primary" : ""
+                          )}>{evenEffectivePercent}%</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Heavy</TableCell>
+                      <TableCell className="font-medium text-xs">Heavy</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          allHeavyPercent > 20 ? "text-destructive" : ""
+                        )}>{allHeavyPercent}%</span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
                           oddHeavyPercent > 20 ? "text-destructive" : ""
                         )}>{oddHeavyPercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">({oddHeavy})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
-                          <>
-                            <span className={cn(
-                              "font-bold",
-                              evenHeavyPercent > 20 ? "text-destructive" : ""
-                            )}>{evenHeavyPercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">({evenHeavy})</span>
-                          </>
+                          <span className={cn(
+                            "font-bold",
+                            evenHeavyPercent > 20 ? "text-destructive" : ""
+                          )}>{evenHeavyPercent}%</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Short</TableCell>
+                      <TableCell className="font-medium text-xs">Short</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          allShortPercent > 20 ? "text-destructive" : ""
+                        )}>{allShortPercent}%</span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
                           oddShortPercent > 20 ? "text-destructive" : ""
                         )}>{oddShortPercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">({oddShort})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
-                          <>
-                            <span className={cn(
-                              "font-bold",
-                              evenShortPercent > 20 ? "text-destructive" : ""
-                            )}>{evenShortPercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">({evenShort})</span>
-                          </>
+                          <span className={cn(
+                            "font-bold",
+                            evenShortPercent > 20 ? "text-destructive" : ""
+                          )}>{evenShortPercent}%</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Narrow</TableCell>
+                      <TableCell className="font-medium text-xs">Narrow</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          allNarrowPercent > 20 ? "text-destructive" : ""
+                        )}>{allNarrowPercent}%</span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
                           oddNarrowPercent > 20 ? "text-destructive" : ""
                         )}>{oddNarrowPercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">({oddNarrow})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
-                          <>
-                            <span className={cn(
-                              "font-bold",
-                              evenNarrowPercent > 20 ? "text-destructive" : ""
-                            )}>{evenNarrowPercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">({evenNarrow})</span>
-                          </>
+                          <span className={cn(
+                            "font-bold",
+                            evenNarrowPercent > 20 ? "text-destructive" : ""
+                          )}>{evenNarrowPercent}%</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Wide</TableCell>
+                      <TableCell className="font-medium text-xs">Wide</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          allWidePercent > 20 ? "text-destructive" : ""
+                        )}>{allWidePercent}%</span>
+                      </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
                           oddWidePercent > 20 ? "text-destructive" : ""
                         )}>{oddWidePercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">({oddWide})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
-                          <>
-                            <span className={cn(
-                              "font-bold",
-                              evenWidePercent > 20 ? "text-destructive" : ""
-                            )}>{evenWidePercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">({evenWide})</span>
-                          </>
+                          <span className={cn(
+                            "font-bold",
+                            evenWidePercent > 20 ? "text-destructive" : ""
+                          )}>{evenWidePercent}%</span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -748,57 +783,53 @@ export default function GameRecording() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">Ends Summary</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>End</TableHead>
-                      <TableHead>Length</TableHead>
-                      <TableHead>Bowl 1</TableHead>
-                      <TableHead>Bowl 2</TableHead>
-                      <TableHead className="text-right">Score</TableHead>
+                      <TableHead className="text-xs px-1 w-8">#</TableHead>
+                      <TableHead className="text-xs px-1">Len</TableHead>
+                      <TableHead className="text-xs px-1">B1</TableHead>
+                      <TableHead className="text-xs px-1">B2</TableHead>
+                      <TableHead className="text-xs px-1 text-right">Scr</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {allEndsIncludingCurrent.map((end) => (
                       <TableRow key={end.id}>
-                        <TableCell className="font-medium">{end.endNumber}</TableCell>
-                        <TableCell className="text-xs">{end.length}</TableCell>
-                        <TableCell className="text-xs">
+                        <TableCell className="font-medium text-xs px-1">{end.endNumber}</TableCell>
+                        <TableCell className="text-xs px-1">{end.length?.slice(0,3)}</TableCell>
+                        <TableCell className="text-xs px-1">
                           {end.bowls?.[0] ? (
-                            <div>
-                              <span className={cn(
-                                end.bowls[0].result === 'Effective' ? "text-primary font-medium" : ""
-                              )}>
-                                {end.bowls[0].result}
+                            <span className={cn(
+                              end.bowls[0].result === 'Effective' ? "text-primary font-medium" : ""
+                            )}>
+                              {shortenResult(end.bowls[0].result)}
+                              <span className="text-muted-foreground text-[10px] ml-0.5">
+                                {end.bowls[0].hand === 'Forehand' ? 'F' : 'B'}
                               </span>
-                              <span className="text-muted-foreground ml-1">
-                                ({end.bowls[0].hand === 'Forehand' ? 'FH' : 'BH'})
-                              </span>
-                            </div>
+                            </span>
                           ) : '-'}
                         </TableCell>
-                        <TableCell className="text-xs">
+                        <TableCell className="text-xs px-1">
                           {end.bowls?.[1] ? (
-                            <div>
-                              <span className={cn(
-                                end.bowls[1].result === 'Effective' ? "text-primary font-medium" : ""
-                              )}>
-                                {end.bowls[1].result}
+                            <span className={cn(
+                              end.bowls[1].result === 'Effective' ? "text-primary font-medium" : ""
+                            )}>
+                              {shortenResult(end.bowls[1].result)}
+                              <span className="text-muted-foreground text-[10px] ml-0.5">
+                                {end.bowls[1].hand === 'Forehand' ? 'F' : 'B'}
                               </span>
-                              <span className="text-muted-foreground ml-1">
-                                ({end.bowls[1].hand === 'Forehand' ? 'FH' : 'BH'})
-                              </span>
-                            </div>
+                            </span>
                           ) : '-'}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-xs px-1">
                           {end.isDead ? (
-                            <span className="text-muted-foreground">Dead</span>
+                            <span className="text-muted-foreground">D</span>
                           ) : (
                             <span>
                               <span className="text-primary font-medium">{end.scoreFor}</span>
-                              {' - '}
+                              <span className="text-muted-foreground">-</span>
                               <span className="text-destructive font-medium">{end.scoreAgainst}</span>
                             </span>
                           )}
