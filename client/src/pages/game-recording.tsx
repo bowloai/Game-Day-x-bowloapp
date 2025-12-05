@@ -447,105 +447,150 @@ export default function GameRecording() {
       )}
 
       {/* End Summary View - Shows after each completed end */}
-      {viewState === 'end-summary' && currentEnd && (
-        <div className="space-y-6 animate-in fade-in">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-primary">End {currentEnd.endNumber} Complete</CardTitle>
-              {currentEnd.isDead ? (
-                <p className="text-muted-foreground">Dead End - No Score</p>
-              ) : (
-                <div className="flex justify-center gap-8 mt-2">
-                  <div>
-                    <span className="text-3xl font-bold text-primary">{currentEnd.scoreFor}</span>
-                    <p className="text-xs text-muted-foreground">For</p>
-                  </div>
-                  <div>
-                    <span className="text-3xl font-bold text-destructive">{currentEnd.scoreAgainst}</span>
-                    <p className="text-xs text-muted-foreground">Against</p>
-                  </div>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Bowl</TableHead>
-                    <TableHead>Hand</TableHead>
-                    <TableHead>Result</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentEnd.bowls?.map((bowl) => (
-                    <TableRow key={bowl.id}>
-                      <TableCell className="font-medium">Bowl {bowl.bowlNumber}</TableCell>
-                      <TableCell>{bowl.hand}</TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "px-2 py-1 rounded text-xs font-medium",
-                          bowl.result === 'Effective' ? "bg-primary/10 text-primary" : "bg-secondary"
-                        )}>
-                          {bowl.result}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+      {viewState === 'end-summary' && currentEnd && (() => {
+        const allEndsIncludingCurrent = [...completedEnds.filter(e => e.id !== currentEnd.id), currentEnd];
+        const allBowls = allEndsIncludingCurrent.flatMap(e => e.bowls || []);
+        const totalBowls = allBowls.length;
+        const effectiveBowls = allBowls.filter(b => b.result === 'Effective').length;
+        const effectivePercent = totalBowls > 0 ? Math.round((effectiveBowls / totalBowls) * 100) : 0;
+        const runningFor = totalFor + (currentEnd.scoreFor || 0);
+        const runningAgainst = totalAgainst + (currentEnd.scoreAgainst || 0);
 
-          {/* Running Total */}
-          <Card className="bg-muted/30">
-            <CardContent className="py-4">
-              <div className="text-center space-y-2">
-                <span className="text-sm font-medium text-muted-foreground">Running Total</span>
-                <div className="flex justify-center gap-8">
-                  <div>
-                    <span className="text-2xl font-bold text-primary">{totalFor + (currentEnd.scoreFor || 0)}</span>
-                    <p className="text-xs text-muted-foreground">Us</p>
+        return (
+          <div className="space-y-6 animate-in fade-in">
+            {/* This End Result */}
+            <Card className="border-primary/30">
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="text-primary">End {currentEnd.endNumber} Complete</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentEnd.isDead ? (
+                  <p className="text-center text-muted-foreground py-4">Dead End - No Score</p>
+                ) : (
+                  <div className="flex justify-center gap-8 py-2">
+                    <div className="text-center">
+                      <span className="text-4xl font-bold text-primary">{currentEnd.scoreFor}</span>
+                      <p className="text-xs text-muted-foreground">For</p>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-4xl font-bold text-destructive">{currentEnd.scoreAgainst}</span>
+                      <p className="text-xs text-muted-foreground">Against</p>
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-muted-foreground">-</div>
-                  <div>
-                    <span className="text-2xl font-bold text-destructive">{totalAgainst + (currentEnd.scoreAgainst || 0)}</span>
-                    <p className="text-xs text-muted-foreground">Them</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* History Table */}
-          {completedEnds.length > 0 && (
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="bg-muted/30">
+                <CardContent className="py-4 text-center">
+                  <span className="text-sm text-muted-foreground">Game Score</span>
+                  <div className="flex justify-center items-baseline gap-2 mt-1">
+                    <span className="text-3xl font-bold text-primary">{runningFor}</span>
+                    <span className="text-muted-foreground">-</span>
+                    <span className="text-3xl font-bold text-destructive">{runningAgainst}</span>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={cn(
+                "bg-muted/30",
+                effectivePercent >= 50 ? "border-primary/30" : ""
+              )}>
+                <CardContent className="py-4 text-center">
+                  <span className="text-sm text-muted-foreground">Effective Bowls</span>
+                  <div className="mt-1">
+                    <span className={cn(
+                      "text-3xl font-bold",
+                      effectivePercent >= 50 ? "text-primary" : "text-foreground"
+                    )}>{effectivePercent}%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{effectiveBowls} of {totalBowls}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* All Bowls Summary */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground">Ends Played</CardTitle>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">All Bowls This Game</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>End</TableHead>
+                      <TableHead>Bowl</TableHead>
+                      <TableHead>Hand</TableHead>
+                      <TableHead>Result</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allEndsIncludingCurrent.map((end) => 
+                      end.bowls?.map((bowl) => (
+                        <TableRow key={bowl.id}>
+                          <TableCell className="font-medium">{end.endNumber}</TableCell>
+                          <TableCell>{bowl.bowlNumber}</TableCell>
+                          <TableCell className="text-xs">{bowl.hand}</TableCell>
+                          <TableCell>
+                            <span className={cn(
+                              "px-2 py-1 rounded text-xs font-medium",
+                              bowl.result === 'Effective' ? "bg-primary/10 text-primary" : "bg-secondary"
+                            )}>
+                              {bowl.result}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Ends Summary Table */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Ends Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>End</TableHead>
+                      <TableHead>Length</TableHead>
                       <TableHead>Bowl 1</TableHead>
                       <TableHead>Bowl 2</TableHead>
                       <TableHead className="text-right">Score</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...completedEnds, currentEnd].filter(Boolean).map((end) => (
-                      <TableRow key={end!.id}>
-                        <TableCell className="font-medium">{end!.endNumber}</TableCell>
-                        <TableCell className="text-xs">{end!.bowls?.[0]?.result || '-'}</TableCell>
-                        <TableCell className="text-xs">{end!.bowls?.[1]?.result || '-'}</TableCell>
+                    {allEndsIncludingCurrent.map((end) => (
+                      <TableRow key={end.id}>
+                        <TableCell className="font-medium">{end.endNumber}</TableCell>
+                        <TableCell className="text-xs">{end.length}</TableCell>
+                        <TableCell className="text-xs">
+                          <span className={cn(
+                            end.bowls?.[0]?.result === 'Effective' ? "text-primary font-medium" : ""
+                          )}>
+                            {end.bowls?.[0]?.result || '-'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <span className={cn(
+                            end.bowls?.[1]?.result === 'Effective' ? "text-primary font-medium" : ""
+                          )}>
+                            {end.bowls?.[1]?.result || '-'}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right">
-                          {end!.isDead ? (
+                          {end.isDead ? (
                             <span className="text-muted-foreground">Dead</span>
                           ) : (
                             <span>
-                              <span className="text-primary">{end!.scoreFor}</span>
-                              {' / '}
-                              <span className="text-destructive">{end!.scoreAgainst}</span>
+                              <span className="text-primary font-medium">{end.scoreFor}</span>
+                              {' - '}
+                              <span className="text-destructive font-medium">{end.scoreAgainst}</span>
                             </span>
                           )}
                         </TableCell>
@@ -555,20 +600,20 @@ export default function GameRecording() {
                 </Table>
               </CardContent>
             </Card>
-          )}
 
-          <div className="flex gap-4">
-            <Button 
-              size="lg" 
-              className="flex-1"
-              onClick={startNextEnd}
-              data-testid="button-next-end"
-            >
-              Record Next End <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            <div className="flex gap-4">
+              <Button 
+                size="lg" 
+                className="flex-1"
+                onClick={startNextEnd}
+                data-testid="button-next-end"
+              >
+                Record Next End <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
