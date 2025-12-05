@@ -533,19 +533,25 @@ export default function GameRecording() {
         const evenEffective = evenBowls.filter(b => b.result === 'Effective').length;
         const evenEffectivePercent = evenBowls.length > 0 ? Math.round((evenEffective / evenBowls.length) * 100) : 0;
         
-        // Weight issues (Heavy or Short) - check if result contains these words
-        const isWeightIssue = (result: string) => result.includes('Heavy') || result.includes('Short');
-        const oddWeightIssues = oddBowls.filter(b => isWeightIssue(b.result)).length;
-        const oddWeightPercent = oddBowls.length > 0 ? Math.round((oddWeightIssues / oddBowls.length) * 100) : 0;
-        const evenWeightIssues = evenBowls.filter(b => isWeightIssue(b.result)).length;
-        const evenWeightPercent = evenBowls.length > 0 ? Math.round((evenWeightIssues / evenBowls.length) * 100) : 0;
+        // Specific weight breakdown - Heavy vs Short
+        const oddHeavy = oddBowls.filter(b => b.result.includes('Heavy')).length;
+        const oddHeavyPercent = oddBowls.length > 0 ? Math.round((oddHeavy / oddBowls.length) * 100) : 0;
+        const oddShort = oddBowls.filter(b => b.result.includes('Short')).length;
+        const oddShortPercent = oddBowls.length > 0 ? Math.round((oddShort / oddBowls.length) * 100) : 0;
+        const evenHeavy = evenBowls.filter(b => b.result.includes('Heavy')).length;
+        const evenHeavyPercent = evenBowls.length > 0 ? Math.round((evenHeavy / evenBowls.length) * 100) : 0;
+        const evenShort = evenBowls.filter(b => b.result.includes('Short')).length;
+        const evenShortPercent = evenBowls.length > 0 ? Math.round((evenShort / evenBowls.length) * 100) : 0;
         
-        // Line issues (Narrow or Wide) - check if result contains these words
-        const isLineIssue = (result: string) => result.includes('Narrow') || result.includes('Wide');
-        const oddLineIssues = oddBowls.filter(b => isLineIssue(b.result)).length;
-        const oddLinePercent = oddBowls.length > 0 ? Math.round((oddLineIssues / oddBowls.length) * 100) : 0;
-        const evenLineIssues = evenBowls.filter(b => isLineIssue(b.result)).length;
-        const evenLinePercent = evenBowls.length > 0 ? Math.round((evenLineIssues / evenBowls.length) * 100) : 0;
+        // Specific line breakdown - Narrow vs Wide
+        const oddNarrow = oddBowls.filter(b => b.result.includes('Narrow')).length;
+        const oddNarrowPercent = oddBowls.length > 0 ? Math.round((oddNarrow / oddBowls.length) * 100) : 0;
+        const oddWide = oddBowls.filter(b => b.result.includes('Wide')).length;
+        const oddWidePercent = oddBowls.length > 0 ? Math.round((oddWide / oddBowls.length) * 100) : 0;
+        const evenNarrow = evenBowls.filter(b => b.result.includes('Narrow')).length;
+        const evenNarrowPercent = evenBowls.length > 0 ? Math.round((evenNarrow / evenBowls.length) * 100) : 0;
+        const evenWide = evenBowls.filter(b => b.result.includes('Wide')).length;
+        const evenWidePercent = evenBowls.length > 0 ? Math.round((evenWide / evenBowls.length) * 100) : 0;
 
         return (
           <div className="space-y-6 animate-in fade-in">
@@ -641,22 +647,22 @@ export default function GameRecording() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Weight Issues</TableCell>
+                      <TableCell className="font-medium">Heavy</TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
-                          oddWeightPercent > 30 ? "text-destructive" : ""
-                        )}>{oddWeightPercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">heavy/short</span>
+                          oddHeavyPercent > 20 ? "text-destructive" : ""
+                        )}>{oddHeavyPercent}%</span>
+                        <span className="text-xs text-muted-foreground ml-1">({oddHeavy})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
                           <>
                             <span className={cn(
                               "font-bold",
-                              evenWeightPercent > 30 ? "text-destructive" : ""
-                            )}>{evenWeightPercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">heavy/short</span>
+                              evenHeavyPercent > 20 ? "text-destructive" : ""
+                            )}>{evenHeavyPercent}%</span>
+                            <span className="text-xs text-muted-foreground ml-1">({evenHeavy})</span>
                           </>
                         ) : (
                           <span className="text-muted-foreground">-</span>
@@ -664,22 +670,68 @@ export default function GameRecording() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell className="font-medium">Line Issues</TableCell>
+                      <TableCell className="font-medium">Short</TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-bold",
-                          oddLinePercent > 30 ? "text-destructive" : ""
-                        )}>{oddLinePercent}%</span>
-                        <span className="text-xs text-muted-foreground ml-1">narrow/wide</span>
+                          oddShortPercent > 20 ? "text-destructive" : ""
+                        )}>{oddShortPercent}%</span>
+                        <span className="text-xs text-muted-foreground ml-1">({oddShort})</span>
                       </TableCell>
                       <TableCell className="text-center">
                         {evenBowls.length > 0 ? (
                           <>
                             <span className={cn(
                               "font-bold",
-                              evenLinePercent > 30 ? "text-destructive" : ""
-                            )}>{evenLinePercent}%</span>
-                            <span className="text-xs text-muted-foreground ml-1">narrow/wide</span>
+                              evenShortPercent > 20 ? "text-destructive" : ""
+                            )}>{evenShortPercent}%</span>
+                            <span className="text-xs text-muted-foreground ml-1">({evenShort})</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Narrow</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          oddNarrowPercent > 20 ? "text-destructive" : ""
+                        )}>{oddNarrowPercent}%</span>
+                        <span className="text-xs text-muted-foreground ml-1">({oddNarrow})</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {evenBowls.length > 0 ? (
+                          <>
+                            <span className={cn(
+                              "font-bold",
+                              evenNarrowPercent > 20 ? "text-destructive" : ""
+                            )}>{evenNarrowPercent}%</span>
+                            <span className="text-xs text-muted-foreground ml-1">({evenNarrow})</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Wide</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "font-bold",
+                          oddWidePercent > 20 ? "text-destructive" : ""
+                        )}>{oddWidePercent}%</span>
+                        <span className="text-xs text-muted-foreground ml-1">({oddWide})</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {evenBowls.length > 0 ? (
+                          <>
+                            <span className={cn(
+                              "font-bold",
+                              evenWidePercent > 20 ? "text-destructive" : ""
+                            )}>{evenWidePercent}%</span>
+                            <span className="text-xs text-muted-foreground ml-1">({evenWide})</span>
                           </>
                         ) : (
                           <span className="text-muted-foreground">-</span>
