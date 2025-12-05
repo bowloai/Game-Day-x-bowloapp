@@ -1,15 +1,168 @@
 import { useGames } from "@/lib/hooks";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Filter } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, Scale, Crosshair } from "lucide-react";
+
+type Bowl = {
+  id: string;
+  result: string;
+  hand: string;
+  bowlNumber: number;
+};
+
+function calculateStats(bowls: Bowl[]) {
+  const total = bowls.length;
+  if (total === 0) {
+    return {
+      total: 0,
+      effective: 0,
+      effectivePercent: 0,
+      firstBowlEffective: 0,
+      firstBowlTotal: 0,
+      firstBowlPercent: 0,
+      short: 0,
+      shortPercent: 0,
+      heavy: 0,
+      heavyPercent: 0,
+      goodWeight: 0,
+      goodWeightPercent: 0,
+      narrow: 0,
+      narrowPercent: 0,
+      wide: 0,
+      widePercent: 0,
+      goodLine: 0,
+      goodLinePercent: 0,
+    };
+  }
+
+  const effective = bowls.filter(b => b.result === 'Effective').length;
+  const firstBowls = bowls.filter(b => b.bowlNumber === 1);
+  const firstBowlEffective = firstBowls.filter(b => b.result === 'Effective').length;
+
+  const short = bowls.filter(b => b.result.includes('Short')).length;
+  const heavy = bowls.filter(b => b.result.includes('Heavy')).length;
+  const goodWeight = total - short - heavy;
+
+  const narrow = bowls.filter(b => b.result.includes('Narrow')).length;
+  const wide = bowls.filter(b => b.result.includes('Wide')).length;
+  const goodLine = total - narrow - wide;
+
+  return {
+    total,
+    effective,
+    effectivePercent: Math.round((effective / total) * 100),
+    firstBowlEffective,
+    firstBowlTotal: firstBowls.length,
+    firstBowlPercent: firstBowls.length > 0 ? Math.round((firstBowlEffective / firstBowls.length) * 100) : 0,
+    short,
+    shortPercent: Math.round((short / total) * 100),
+    heavy,
+    heavyPercent: Math.round((heavy / total) * 100),
+    goodWeight,
+    goodWeightPercent: Math.round((goodWeight / total) * 100),
+    narrow,
+    narrowPercent: Math.round((narrow / total) * 100),
+    wide,
+    widePercent: Math.round((wide / total) * 100),
+    goodLine,
+    goodLinePercent: Math.round((goodLine / total) * 100),
+  };
+}
+
+function StatBlock({ title, icon: Icon, stats }: { 
+  title: string; 
+  icon: React.ElementType;
+  stats: ReturnType<typeof calculateStats>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Icon className="h-5 w-5 text-primary" />
+          {title}
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">{stats.total} bowls delivered</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Bowl Effectiveness */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-baseline">
+            <span className="text-sm font-medium">Bowl Effectiveness</span>
+            <span className="text-2xl font-bold text-primary" data-testid={`text-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
+              {stats.effectivePercent}%
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {stats.effective} of {stats.total} bowls marked effective
+          </p>
+        </div>
+
+        {/* First Bowl Effectiveness */}
+        <div className="space-y-1">
+          <div className="flex justify-between items-baseline">
+            <span className="text-sm font-medium">First Bowl Effectiveness</span>
+            <span className="text-2xl font-bold text-accent-foreground" data-testid={`text-first-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
+              {stats.firstBowlPercent}%
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {stats.firstBowlEffective} of {stats.firstBowlTotal} first bowls effective
+          </p>
+        </div>
+
+        {/* Weight Control */}
+        <div className="space-y-2 pt-2 border-t">
+          <span className="text-sm font-medium">Weight Control</span>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-red-50 dark:bg-red-950/30 rounded p-2">
+              <div className="text-lg font-bold text-red-600 dark:text-red-400">{stats.shortPercent}%</div>
+              <div className="text-xs text-muted-foreground">Short</div>
+              <div className="text-xs text-muted-foreground">({stats.short})</div>
+            </div>
+            <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">{stats.goodWeightPercent}%</div>
+              <div className="text-xs text-muted-foreground">Good</div>
+              <div className="text-xs text-muted-foreground">({stats.goodWeight})</div>
+            </div>
+            <div className="bg-slate-100 dark:bg-slate-800 rounded p-2">
+              <div className="text-lg font-bold text-slate-600 dark:text-slate-400">{stats.heavyPercent}%</div>
+              <div className="text-xs text-muted-foreground">Heavy</div>
+              <div className="text-xs text-muted-foreground">({stats.heavy})</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Line Control */}
+        <div className="space-y-2 pt-2 border-t">
+          <span className="text-sm font-medium">Line Control</span>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-2">
+              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{stats.narrowPercent}%</div>
+              <div className="text-xs text-muted-foreground">Narrow</div>
+              <div className="text-xs text-muted-foreground">({stats.narrow})</div>
+            </div>
+            <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">{stats.goodLinePercent}%</div>
+              <div className="text-xs text-muted-foreground">Good</div>
+              <div className="text-xs text-muted-foreground">({stats.goodLine})</div>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-2">
+              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats.widePercent}%</div>
+              <div className="text-xs text-muted-foreground">Wide</div>
+              <div className="text-xs text-muted-foreground">({stats.wide})</div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Analysis() {
   const { data: games, isLoading } = useGames();
@@ -24,7 +177,6 @@ export default function Analysis() {
   const [filterPosition, setFilterPosition] = useState<string>("All");
   const [filterVenue, setFilterVenue] = useState<string>("All");
   const [filterOpponent, setFilterOpponent] = useState<string>("All");
-  const [filterHand, setFilterHand] = useState<string>("All");
 
   // Fetch full game details for completed games
   useEffect(() => {
@@ -61,8 +213,10 @@ export default function Analysis() {
     return Array.from(new Set(gamesWithDetails.map(g => g.opponent))).sort();
   }, [gamesWithDetails]);
 
-  const stats = useMemo(() => {
-    if (!gamesWithDetails || gamesWithDetails.length === 0) return null;
+  const { allStats, forehandStats, backhandStats, totalGames } = useMemo(() => {
+    if (!gamesWithDetails || gamesWithDetails.length === 0) {
+      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0 };
+    }
     
     let filteredGames = [...gamesWithDetails];
     
@@ -86,85 +240,31 @@ export default function Analysis() {
       filteredGames = filteredGames.filter(g => g.opponent === filterOpponent);
     }
 
-    const totalGames = filteredGames.length;
-    if (totalGames === 0) return null;
+    if (filteredGames.length === 0) {
+      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0 };
+    }
 
     // Get all bowls from filtered games
-    let allBowls = filteredGames.flatMap(g => 
+    const allBowls: Bowl[] = filteredGames.flatMap(g => 
       g.ends?.flatMap(e => e.bowls || []) || []
     );
 
-    // Filter by hand if specified
-    if (filterHand !== "All") {
-      allBowls = allBowls.filter(b => b.hand === filterHand);
-    }
-
-    const totalBowls = allBowls.length;
-    if (totalBowls === 0) return { totalGames, totalBowls: 0, effectivePercent: 0, firstEffectivePercent: 0, weightData: [], lineData: [] };
-
-    // Effectiveness
-    const effectiveCount = allBowls.filter(b => b.result === 'Effective').length;
-    const effectivePercent = Math.round((effectiveCount / totalBowls) * 100);
-
-    // First Bowl Effectiveness
-    let firstBowls = filteredGames.flatMap(g => 
-      g.ends?.map(e => e.bowls?.find(b => b.bowlNumber === 1)).filter(Boolean) || []
-    );
-    if (filterHand !== "All") {
-      firstBowls = firstBowls.filter(b => b?.hand === filterHand);
-    }
-    const firstEffectiveCount = firstBowls.filter(b => b?.result === 'Effective').length;
-    const firstEffectivePercent = firstBowls.length > 0 
-      ? Math.round((firstEffectiveCount / firstBowls.length) * 100) 
-      : 0;
-
-    // Weight Control
-    const shortCount = allBowls.filter(b => b.result.includes('Short')).length;
-    const heavyCount = allBowls.filter(b => b.result.includes('Heavy')).length;
-    const goodWeightCount = totalBowls - shortCount - heavyCount;
-
-    // Line Control
-    const narrowCount = allBowls.filter(b => b.result.includes('Narrow')).length;
-    const wideCount = allBowls.filter(b => b.result.includes('Wide')).length;
-    const goodLineCount = totalBowls - narrowCount - wideCount;
-
-    const weightData = [
-      { name: 'Short', value: shortCount, color: 'hsl(0 84% 60%)' },
-      { name: 'Good', value: goodWeightCount, color: 'hsl(142 76% 36%)' },
-      { name: 'Heavy', value: heavyCount, color: 'hsl(215 25% 27%)' },
-    ];
-
-    const lineData = [
-      { name: 'Narrow', value: narrowCount, color: 'hsl(0 84% 60%)' },
-      { name: 'Good', value: goodLineCount, color: 'hsl(142 76% 36%)' },
-      { name: 'Wide', value: wideCount, color: 'hsl(215 25% 27%)' },
-    ];
-
-    // Calculate percentages for display
-    const shortPercent = Math.round((shortCount / totalBowls) * 100);
-    const heavyPercent = Math.round((heavyCount / totalBowls) * 100);
-    const narrowPercent = Math.round((narrowCount / totalBowls) * 100);
-    const widePercent = Math.round((wideCount / totalBowls) * 100);
+    const forehandBowls = allBowls.filter(b => b.hand === 'Forehand');
+    const backhandBowls = allBowls.filter(b => b.hand === 'Backhand');
 
     return {
-      totalGames,
-      totalBowls,
-      effectivePercent,
-      firstEffectivePercent,
-      weightData,
-      lineData,
-      shortPercent,
-      heavyPercent,
-      narrowPercent,
-      widePercent,
+      allStats: calculateStats(allBowls),
+      forehandStats: calculateStats(forehandBowls),
+      backhandStats: calculateStats(backhandBowls),
+      totalGames: filteredGames.length,
     };
-  }, [gamesWithDetails, filterGame, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterHand]);
+  }, [gamesWithDetails, filterGame, filterType, filterSurface, filterPosition, filterVenue, filterOpponent]);
 
   if (isLoading || loadingDetails) {
     return <div className="text-center py-12">Loading...</div>;
   }
 
-  if (!stats) {
+  if (!allStats) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-muted-foreground">No data available yet</h2>
@@ -173,9 +273,17 @@ export default function Analysis() {
     );
   }
 
+  const hasActiveFilters = filterGame !== "All" || filterType !== "All" || filterSurface !== "All" || 
+    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All";
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-bold text-primary">Performance Analysis</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-primary">Performance Analysis</h1>
+        <div className="text-sm text-muted-foreground">
+          {totalGames} game{totalGames !== 1 ? 's' : ''} analyzed
+        </div>
+      </div>
       
       {/* Collapsible Filters */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -186,9 +294,7 @@ export default function Analysis() {
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-sm">Filters</CardTitle>
-                  {(filterGame !== "All" || filterType !== "All" || filterSurface !== "All" || 
-                    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || 
-                    filterHand !== "All") && (
+                  {hasActiveFilters && (
                     <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                       Active
                     </span>
@@ -204,7 +310,7 @@ export default function Analysis() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Specific Game */}
                 <div className="space-y-1">
                   <Label className="text-xs">Game</Label>
@@ -303,120 +409,29 @@ export default function Analysis() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Hand Filter */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Hand</Label>
-                  <Select value={filterHand} onValueChange={setFilterHand}>
-                    <SelectTrigger className="h-9" data-testid="select-filter-hand">
-                      <SelectValue placeholder="All Hands" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All Bowls</SelectItem>
-                      <SelectItem value="Forehand">Forehand</SelectItem>
-                      <SelectItem value="Backhand">Backhand</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </CardContent>
           </CollapsibleContent>
         </Card>
       </Collapsible>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Overall Effectiveness</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-primary" data-testid="text-effectiveness">{stats.effectivePercent}%</div>
-            <p className="text-xs text-muted-foreground">of all bowls delivered</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">1st Bowl Effectiveness</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-accent-foreground" data-testid="text-first-effectiveness">{stats.firstEffectivePercent}%</div>
-            <p className="text-xs text-muted-foreground">setting the head</p>
-          </CardContent>
-        </Card>
-         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Games Analyzed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold" data-testid="text-total-games">{stats.totalGames}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Bowls</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold" data-testid="text-total-bowls">{stats.totalBowls}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Weight Control</CardTitle>
-            <CardDescription>
-              Short {stats.shortPercent || 0}% | Good {100 - (stats.shortPercent || 0) - (stats.heavyPercent || 0)}% | Heavy {stats.heavyPercent || 0}%
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats.weightData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={3}
-                  dataKey="value"
-                  label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
-                >
-                  {stats.weightData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36}/>
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Line Control</CardTitle>
-            <CardDescription>
-              Narrow {stats.narrowPercent || 0}% | Good {100 - (stats.narrowPercent || 0) - (stats.widePercent || 0)}% | Wide {stats.widePercent || 0}%
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-               <BarChart data={stats.lineData} layout="vertical">
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={60} />
-                <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {stats.lineData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Stats Breakdown - Three Columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatBlock 
+          title="All Bowls" 
+          icon={Target}
+          stats={allStats} 
+        />
+        <StatBlock 
+          title="Forehand" 
+          icon={CircleDot}
+          stats={forehandStats!} 
+        />
+        <StatBlock 
+          title="Backhand" 
+          icon={CircleDot}
+          stats={backhandStats!} 
+        />
       </div>
     </div>
   );
