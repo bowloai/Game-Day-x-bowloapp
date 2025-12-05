@@ -9,7 +9,6 @@ import Home from "@/pages/home";
 import GameSetup from "@/pages/game-setup";
 import GameRecording from "@/pages/game-recording";
 import Analysis from "@/pages/analysis";
-import { GameProvider } from "@/lib/game-store";
 
 function Router() {
   return (
@@ -29,10 +28,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <GameProvider>
-          <Router />
-          <Toaster />
-        </GameProvider>
+        <Router />
+        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );

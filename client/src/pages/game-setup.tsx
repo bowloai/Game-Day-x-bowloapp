@@ -1,4 +1,4 @@
-import { useGameStore, GameType, Surface, Position } from "@/lib/game-store";
+import { useCreateGame } from "@/lib/hooks";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   opponent: z.string().min(2, "Opponent name is required"),
@@ -35,7 +36,8 @@ const formSchema = z.object({
 
 export default function GameSetup() {
   const [, setLocation] = useLocation();
-  const { createGame } = useGameStore();
+  const { toast } = useToast();
+  const createGame = useCreateGame();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,18 +53,35 @@ export default function GameSetup() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    createGame(values);
-    // The store updates activeGameId, but we need to know the ID to navigate?
-    // Actually the store sets activeGameId, so we can just find the latest or just redirect to /play/active
-    // But createGame doesn't return ID. 
-    // Let's just redirect to home, and home will show the "Continue Active Game" button which is safer,
-    // OR assume the active game is the one we just created.
-    setLocation("/");
+    createGame.mutate(
+      { ...values, status: "IN_PROGRESS" },
+      {
+        onSuccess: (game) => {
+          toast({
+            title: "Game created",
+            description: `Ready to start vs ${game.opponent}`,
+          });
+          setLocation(`/play/${game.id}`);
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: error.message,
+          });
+        },
+      }
+    );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <Button variant="ghost" onClick={() => setLocation("/")} className="gap-2 pl-0 hover:pl-2 transition-all">
+      <Button 
+        variant="ghost" 
+        onClick={() => setLocation("/")} 
+        className="gap-2 pl-0 hover:pl-2 transition-all"
+        data-testid="button-back"
+      >
         <ArrowLeft className="w-4 h-4" /> Back to Dashboard
       </Button>
 
@@ -82,7 +101,7 @@ export default function GameSetup() {
                     <FormItem>
                       <FormLabel>Opponent</FormLabel>
                       <FormControl>
-                        <Input placeholder="Team or Player Name" {...field} />
+                        <Input placeholder="Team or Player Name" {...field} data-testid="input-opponent" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -96,7 +115,7 @@ export default function GameSetup() {
                     <FormItem>
                       <FormLabel>Venue</FormLabel>
                       <FormControl>
-                        <Input placeholder="Club Name" {...field} />
+                        <Input placeholder="Club Name" {...field} data-testid="input-venue" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -113,7 +132,7 @@ export default function GameSetup() {
                       <FormLabel>Surface</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-surface">
                             <SelectValue placeholder="Select surface" />
                           </SelectTrigger>
                         </FormControl>
@@ -135,7 +154,7 @@ export default function GameSetup() {
                     <FormItem>
                       <FormLabel>Rink Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. 4" {...field} />
+                        <Input placeholder="e.g. 4" {...field} data-testid="input-rink" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -149,7 +168,7 @@ export default function GameSetup() {
                     <FormItem>
                       <FormLabel>Ends to Play</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input type="number" {...field} data-testid="input-total-ends" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,7 +185,7 @@ export default function GameSetup() {
                       <FormLabel>Game Type</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-type">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
@@ -189,7 +208,7 @@ export default function GameSetup() {
                       <FormLabel>My Position</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-position">
                             <SelectValue placeholder="Select position" />
                           </SelectTrigger>
                         </FormControl>
@@ -207,7 +226,15 @@ export default function GameSetup() {
               </div>
 
               <div className="pt-4">
-                <Button type="submit" size="lg" className="w-full">Start Game</Button>
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full" 
+                  disabled={createGame.isPending}
+                  data-testid="button-start-game"
+                >
+                  {createGame.isPending ? "Creating..." : "Start Game"}
+                </Button>
               </div>
             </form>
           </Form>

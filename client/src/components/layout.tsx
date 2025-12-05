@@ -25,9 +25,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav className="flex flex-col gap-2">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
-            <a 
+            <div 
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
                 location === item.href 
                   ? "bg-primary/10 text-primary" 
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -36,7 +36,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               <item.icon className="w-5 h-5" />
               {item.label}
-            </a>
+            </div>
           </Link>
         ))}
       </nav>
