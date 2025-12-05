@@ -21,7 +21,7 @@ export const ends = pgTable("ends", {
   gameId: varchar("game_id").notNull().references(() => games.id, { onDelete: 'cascade' }),
   endNumber: integer("end_number").notNull(),
   jackEffective: boolean("jack_effective"),
-  length: integer("length").notNull(),
+  length: text("length").notNull(),
   scoreFor: integer("score_for").notNull().default(0),
   scoreAgainst: integer("score_against").notNull().default(0),
   isDead: boolean("is_dead").notNull().default(false),

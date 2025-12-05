@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, ArrowLeft, ArrowRight, Flag } from "lucide-react";
@@ -40,7 +41,7 @@ export default function GameRecording() {
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: 0|1|2, col: 0|1|2} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);
-  const [endLength, setEndLength] = useState(21);
+  const [endLength, setEndLength] = useState<string>("Medium");
   const [scoreFor, setScoreFor] = useState(0);
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [isDead, setIsDead] = useState(false);
@@ -110,6 +111,8 @@ export default function GameRecording() {
     }
     return 'Effective';
   };
+
+  const endLengthOptions = ["Minimum", "Short", "Medium", "Long", "Maximum"];
 
   const handleStartEnd = async () => {
     createEnd.mutate(
@@ -190,7 +193,7 @@ export default function GameRecording() {
     setScoreAgainst(0);
     setIsDead(false);
     setJackEffective(true);
-    setEndLength(21);
+    setEndLength("Medium");
     setCurrentEndId(null);
     setViewState('end-setup');
     refetch();
@@ -275,13 +278,17 @@ export default function GameRecording() {
               </div>
             )}
             <div className="space-y-2">
-              <Label>End Length (meters)</Label>
-              <Input 
-                type="number" 
-                value={endLength} 
-                onChange={(e) => setEndLength(Number(e.target.value))}
-                data-testid="input-end-length"
-              />
+              <Label>End Length</Label>
+              <Select value={endLength} onValueChange={setEndLength}>
+                <SelectTrigger data-testid="select-end-length">
+                  <SelectValue placeholder="Select length" />
+                </SelectTrigger>
+                <SelectContent>
+                  {endLengthOptions.map((option) => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button 
               className="w-full" 
