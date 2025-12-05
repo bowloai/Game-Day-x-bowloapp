@@ -2,11 +2,14 @@ import { useGames } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 import { useState, useMemo, useEffect } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
+import { ChevronDown, ChevronUp, Filter } from "lucide-react";
 
 export default function Analysis() {
   const { data: games, isLoading } = useGames();
@@ -14,6 +17,7 @@ export default function Analysis() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   
   // Filters
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterGame, setFilterGame] = useState<string>("All");
   const [filterType, setFilterType] = useState<string>("All");
   const [filterSurface, setFilterSurface] = useState<string>("All");
@@ -173,129 +177,152 @@ export default function Analysis() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold text-primary">Performance Analysis</h1>
       
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {/* Specific Game */}
-            <div className="space-y-1">
-              <Label className="text-xs">Game</Label>
-              <Select value={filterGame} onValueChange={setFilterGame}>
-                <SelectTrigger className="h-9" data-testid="select-filter-game">
-                  <SelectValue placeholder="All Games" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Games</SelectItem>
-                  {gamesWithDetails.map(g => (
-                    <SelectItem key={g.id} value={g.id}>
-                      vs {g.opponent} ({format(new Date(g.createdAt), "MMM d")})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Collapsible Filters */}
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm">Filters</CardTitle>
+                  {(filterGame !== "All" || filterType !== "All" || filterSurface !== "All" || 
+                    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || 
+                    filterHand !== "All") && (
+                    <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
+                </div>
+                {filtersOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {/* Specific Game */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Game</Label>
+                  <Select value={filterGame} onValueChange={setFilterGame}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-game">
+                      <SelectValue placeholder="All Games" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Games</SelectItem>
+                      {gamesWithDetails.map(g => (
+                        <SelectItem key={g.id} value={g.id}>
+                          vs {g.opponent} ({format(new Date(g.createdAt), "MMM d")})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Game Type */}
-            <div className="space-y-1">
-              <Label className="text-xs">Type</Label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="h-9" data-testid="select-filter-type">
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Types</SelectItem>
-                  <SelectItem value="Pennant">Pennant</SelectItem>
-                  <SelectItem value="Tournament">Tournament</SelectItem>
-                  <SelectItem value="Practice">Practice</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Game Type */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Type</Label>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-type">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Types</SelectItem>
+                      <SelectItem value="Pennant">Pennant</SelectItem>
+                      <SelectItem value="Tournament">Tournament</SelectItem>
+                      <SelectItem value="Practice">Practice</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Surface */}
-            <div className="space-y-1">
-              <Label className="text-xs">Surface</Label>
-              <Select value={filterSurface} onValueChange={setFilterSurface}>
-                <SelectTrigger className="h-9" data-testid="select-filter-surface">
-                  <SelectValue placeholder="All Surfaces" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Surfaces</SelectItem>
-                  <SelectItem value="Grass">Grass</SelectItem>
-                  <SelectItem value="Plastic">Plastic</SelectItem>
-                  <SelectItem value="Carpet">Carpet</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Surface */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Surface</Label>
+                  <Select value={filterSurface} onValueChange={setFilterSurface}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-surface">
+                      <SelectValue placeholder="All Surfaces" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Surfaces</SelectItem>
+                      <SelectItem value="Grass">Grass</SelectItem>
+                      <SelectItem value="Plastic">Plastic</SelectItem>
+                      <SelectItem value="Carpet">Carpet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Position */}
-            <div className="space-y-1">
-              <Label className="text-xs">Position</Label>
-              <Select value={filterPosition} onValueChange={setFilterPosition}>
-                <SelectTrigger className="h-9" data-testid="select-filter-position">
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Positions</SelectItem>
-                  <SelectItem value="Lead">Lead</SelectItem>
-                  <SelectItem value="Second">Second</SelectItem>
-                  <SelectItem value="Third">Third</SelectItem>
-                  <SelectItem value="Skip">Skip</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Position */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Position</Label>
+                  <Select value={filterPosition} onValueChange={setFilterPosition}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-position">
+                      <SelectValue placeholder="All Positions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Positions</SelectItem>
+                      <SelectItem value="Lead">Lead</SelectItem>
+                      <SelectItem value="Second">Second</SelectItem>
+                      <SelectItem value="Third">Third</SelectItem>
+                      <SelectItem value="Skip">Skip</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Venue */}
-            <div className="space-y-1">
-              <Label className="text-xs">Venue</Label>
-              <Select value={filterVenue} onValueChange={setFilterVenue}>
-                <SelectTrigger className="h-9" data-testid="select-filter-venue">
-                  <SelectValue placeholder="All Venues" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Venues</SelectItem>
-                  {uniqueVenues.map(v => (
-                    <SelectItem key={v} value={v}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Venue */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Venue</Label>
+                  <Select value={filterVenue} onValueChange={setFilterVenue}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-venue">
+                      <SelectValue placeholder="All Venues" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Venues</SelectItem>
+                      {uniqueVenues.map(v => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Opponent */}
-            <div className="space-y-1">
-              <Label className="text-xs">Opponent</Label>
-              <Select value={filterOpponent} onValueChange={setFilterOpponent}>
-                <SelectTrigger className="h-9" data-testid="select-filter-opponent">
-                  <SelectValue placeholder="All Opponents" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Opponents</SelectItem>
-                  {uniqueOpponents.map(o => (
-                    <SelectItem key={o} value={o}>{o}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Opponent */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Opponent</Label>
+                  <Select value={filterOpponent} onValueChange={setFilterOpponent}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-opponent">
+                      <SelectValue placeholder="All Opponents" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Opponents</SelectItem>
+                      {uniqueOpponents.map(o => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Hand Filter */}
-            <div className="space-y-1">
-              <Label className="text-xs">Hand</Label>
-              <Select value={filterHand} onValueChange={setFilterHand}>
-                <SelectTrigger className="h-9" data-testid="select-filter-hand">
-                  <SelectValue placeholder="All Hands" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Bowls</SelectItem>
-                  <SelectItem value="Forehand">Forehand</SelectItem>
-                  <SelectItem value="Backhand">Backhand</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                {/* Hand Filter */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Hand</Label>
+                  <Select value={filterHand} onValueChange={setFilterHand}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-hand">
+                      <SelectValue placeholder="All Hands" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Bowls</SelectItem>
+                      <SelectItem value="Forehand">Forehand</SelectItem>
+                      <SelectItem value="Backhand">Backhand</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
