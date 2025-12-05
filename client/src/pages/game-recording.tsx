@@ -59,6 +59,9 @@ export default function GameRecording() {
   useEffect(() => {
     if (!game) return;
     
+    // Don't override end-summary view - user must click button to proceed
+    if (viewState === 'end-summary') return;
+    
     if (incompleteEnd) {
       setCurrentEndId(incompleteEnd.id);
       if (incompleteEnd.bowls?.length === 0) {
@@ -70,11 +73,11 @@ export default function GameRecording() {
       } else if (incompleteEnd.bowls?.length >= 2) {
         setViewState('score-entry');
       }
-    } else {
+    } else if (viewState !== 'end-summary') {
       setCurrentEndId(null);
       setViewState('end-setup');
     }
-  }, [game?.ends?.length, incompleteEnd?.bowls?.length]);
+  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState]);
 
   if (isLoading) return <div className="text-center py-12">Loading game...</div>;
   if (!game) return <div className="text-center py-12">Game not found</div>;
