@@ -402,7 +402,8 @@ export default function Analysis() {
         </Collapsible>
       )}
       
-      {/* Collapsible Filters */}
+      {/* Collapsible Filters - only show when viewing all games */}
+      {!gameIdFromUrl && (
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <Card>
           <CollapsibleTrigger asChild>
@@ -513,6 +514,7 @@ export default function Analysis() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+      )}
 
       {/* Stats Breakdown - Three Columns */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
