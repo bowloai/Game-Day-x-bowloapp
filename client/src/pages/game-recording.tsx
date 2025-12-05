@@ -384,28 +384,50 @@ export default function GameRecording() {
 
               {!isDead && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-center block">End Score</Label>
-                    <Input 
-                      type="number" 
-                      min={-8} max={8} 
-                      className="text-center text-3xl h-20 font-bold"
-                      value={scoreFor > 0 ? scoreFor : (scoreAgainst > 0 ? -scoreAgainst : 0)}
-                      onChange={(e) => { 
-                        const val = Number(e.target.value);
-                        if (val >= 0) {
-                          setScoreFor(val);
-                          setScoreAgainst(0);
-                        } else {
-                          setScoreFor(0);
-                          setScoreAgainst(Math.abs(val));
+                  <Label className="text-center block">End Score</Label>
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="h-24 w-24 text-3xl font-bold rounded-xl"
+                      onClick={() => {
+                        if (scoreFor > 0) {
+                          setScoreFor(scoreFor - 1);
+                        } else if (scoreAgainst < 8) {
+                          setScoreAgainst(scoreAgainst + 1);
                         }
                       }}
-                      data-testid="input-score"
-                    />
-                    <p className="text-xs text-center text-muted-foreground">
-                      Positive = shots for you, Negative = shots against
-                    </p>
+                      data-testid="button-score-minus"
+                    >
+                      −
+                    </Button>
+                    
+                    <div className="text-center min-w-[100px]">
+                      <div className={cn(
+                        "text-5xl font-bold",
+                        scoreFor > 0 ? "text-primary" : scoreAgainst > 0 ? "text-destructive" : "text-foreground"
+                      )}>
+                        {scoreFor > 0 ? `+${scoreFor}` : scoreAgainst > 0 ? `-${scoreAgainst}` : '0'}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {scoreFor > 0 ? "For Us" : scoreAgainst > 0 ? "Against" : "Draw"}
+                      </p>
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      className="h-24 w-24 text-3xl font-bold rounded-xl bg-primary hover:bg-primary/90"
+                      onClick={() => {
+                        if (scoreAgainst > 0) {
+                          setScoreAgainst(scoreAgainst - 1);
+                        } else if (scoreFor < 8) {
+                          setScoreFor(scoreFor + 1);
+                        }
+                      }}
+                      data-testid="button-score-plus"
+                    >
+                      +
+                    </Button>
                   </div>
                 </div>
               )}
