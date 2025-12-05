@@ -74,6 +74,13 @@ export default function GameRecording() {
     : incompleteEnd;
   const nextEndNumber = completedEnds.length + 1;
   
+  // Check if we won the last end (or it's the first end) - determines if we deliver the jack
+  const lastCompletedEnd = completedEnds.length > 0 
+    ? completedEnds.reduce((latest, end) => end.endNumber > latest.endNumber ? end : latest)
+    : null;
+  const wonLastEnd = !lastCompletedEnd || (lastCompletedEnd.scoreFor || 0) > (lastCompletedEnd.scoreAgainst || 0);
+  const canDeliverJack = game?.position === 'Lead' && wonLastEnd;
+  
   const bowl1 = currentEnd?.bowls?.find(b => b.bowlNumber === 1);
   const bowl2 = currentEnd?.bowls?.find(b => b.bowlNumber === 2);
 
@@ -144,7 +151,7 @@ export default function GameRecording() {
         gameId: game.id,
         endNumber: nextEndNumber,
         length: endLength,
-        jackEffective: game.position === 'Lead' ? jackEffective : undefined,
+        jackEffective: canDeliverJack ? jackEffective : undefined,
         scoreFor: 0,
         scoreAgainst: 0,
         isDead: false,
@@ -326,7 +333,7 @@ export default function GameRecording() {
             <CardTitle>Start End {nextEndNumber}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {game.position === 'Lead' && (
+            {canDeliverJack && (
               <div className="flex items-center justify-between">
                 <Label className="text-base">Jack Delivery Effective?</Label>
                 <Switch checked={jackEffective} onCheckedChange={setJackEffective} data-testid="switch-jack" />
