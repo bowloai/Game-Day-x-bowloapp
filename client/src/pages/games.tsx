@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useEffect } from "react";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X } from "lucide-react";
+import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -96,6 +96,151 @@ export default function Games() {
     setDateRange(undefined);
   };
 
+  const downloadCSV = () => {
+    if (!gamesWithDetails || gamesWithDetails.length === 0) {
+      toast({
+        title: "No data",
+        description: "No games available to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create CSV content with all game, end, and bowl data
+    const headers = [
+      "Game Date",
+      "Opponent",
+      "Venue",
+      "Surface",
+      "Rink",
+      "Type",
+      "Position",
+      "Total Ends",
+      "Status",
+      "Final Score For",
+      "Final Score Against",
+      "Result",
+      "End Number",
+      "End Score For",
+      "End Score Against",
+      "Jack Effective",
+      "Jack Length",
+      "Is Dead",
+      "Bowl Number",
+      "Hand",
+      "Result"
+    ];
+
+    const rows: string[][] = [];
+
+    gamesWithDetails.forEach(game => {
+      const { scoreFor: totalFor, scoreAgainst: totalAgainst } = getGameScore(game);
+      const result = totalFor > totalAgainst ? "Win" : totalFor < totalAgainst ? "Loss" : "Draw";
+      
+      if (!game.ends || game.ends.length === 0) {
+        // Game with no ends
+        rows.push([
+          format(new Date(game.createdAt), "yyyy-MM-dd"),
+          game.opponent,
+          game.venue,
+          game.surface,
+          game.rink,
+          game.type,
+          game.position,
+          String(game.totalEnds),
+          game.status,
+          String(totalFor),
+          String(totalAgainst),
+          result,
+          "", "", "", "", "", "", "", "", ""
+        ]);
+      } else {
+        game.ends.forEach(end => {
+          if (!end.bowls || end.bowls.length === 0) {
+            // End with no bowls
+            rows.push([
+              format(new Date(game.createdAt), "yyyy-MM-dd"),
+              game.opponent,
+              game.venue,
+              game.surface,
+              game.rink,
+              game.type,
+              game.position,
+              String(game.totalEnds),
+              game.status,
+              String(totalFor),
+              String(totalAgainst),
+              result,
+              String(end.endNumber),
+              String(end.scoreFor || 0),
+              String(end.scoreAgainst || 0),
+              end.jackEffective ? "Yes" : "No",
+              end.length || "",
+              end.isDead ? "Yes" : "No",
+              "", "", ""
+            ]);
+          } else {
+            end.bowls.forEach(bowl => {
+              rows.push([
+                format(new Date(game.createdAt), "yyyy-MM-dd"),
+                game.opponent,
+                game.venue,
+                game.surface,
+                game.rink,
+                game.type,
+                game.position,
+                String(game.totalEnds),
+                game.status,
+                String(totalFor),
+                String(totalAgainst),
+                result,
+                String(end.endNumber),
+                String(end.scoreFor || 0),
+                String(end.scoreAgainst || 0),
+                end.jackEffective ? "Yes" : "No",
+                end.length || "",
+                end.isDead ? "Yes" : "No",
+                String(bowl.bowlNumber),
+                bowl.hand,
+                bowl.result
+              ]);
+            });
+          }
+        });
+      }
+    });
+
+    // Escape CSV values
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const csvContent = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `pennantpro-export-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export complete",
+      description: `Exported ${gamesWithDetails.length} games to CSV.`,
+    });
+  };
+
   if (isLoading || loadingDetails) {
     return <div className="text-center py-12">Loading...</div>;
   }
@@ -105,8 +250,18 @@ export default function Games() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-primary">My Games</h1>
         
-        {/* Date Range Filter */}
+        {/* Date Range Filter and Download */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={downloadCSV}
+            disabled={!gamesWithDetails || gamesWithDetails.length === 0}
+            data-testid="button-download-csv"
+            title="Download all data as CSV"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button
