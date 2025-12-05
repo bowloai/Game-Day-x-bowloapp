@@ -1,0 +1,96 @@
+I want to build a progressive web application which records and analyses the results of each lawn bowl i deliver in a game of pennant
+
+This app will be focused purely on pennant games which is a game of fours where each person has 2 bowls.
+
+The length of each game is based on ends.
+
+Before starting the game recording, the user will need to set the game up by determining/setting the following parameters
+Who the opponent is
+Game Venue
+Surface
+Grass
+Plastic
+Carpet
+The rink number the game is being played on
+Game Type
+Practice
+Tournament
+Pennant
+How many ends the game consists of
+The position the player is playing
+Lead
+Second
+Third
+Skip
+
+Once the game parameters are set, the bowls can be recorded.
+
+For each end the following parameters need to be set
+Jack roll effectiveness (yes or no) - this is only applicable if the set position was ‘lead’
+Length of end
+
+For each bowl the following parameters need to be set
+The hand the bowl is being played on (forehand or backhand)
+
+Each bowl is recorded based on the position it finishes after being delivered, the options are;
+Short
+Heavy
+Narrow
+Wide
+Short & Narrow
+Short & Wide
+Heavy & Narrow
+Heavy & Wide
+Effective
+
+
+They will record this via a 3X3 grid
+A mark in any square in the top row indicates Short 
+A mark in the bottom row indicates Heavy
+If I bowl on my backhand and mark in the left column the bowl is narrow
+If I bowl on my forehand and mark in the left column the bowl is wide
+If I bowl on my backhand and mark in the right column the bowl is wide
+If I bowl on my forehand and mark in the right column the bowl is narrow
+If I mark the middle square I am effective
+
+These can be in combination as well. As an example, if my bowl is delivered on my backhand and i mark the top left column then I am Short & Narrow
+
+After I deliver one bowl, I make my selection and hit save. After i deliver my 2nd bowl, i make my selection, I am able to record the score of the end (a maximum of 8 shots and if it was for us or against us) or mark the end as ‘Dead’. The results of bowls are still recorded for dead ends, but no score is recorded. Following these selections then I can hit Save/Finish end. 
+
+At the completion of the end, I am taken to the ‘End’ screen, which shows the results of my two bowls in a table, with a button to record the next end.
+
+At any stage of the game, one the ‘End’ screen i am able to finish the game. The game will not finish until I have hit the finish button.
+
+With this app, I want to be able to look at my results of finished games so that I can determine my strengths and weaknesses and review my performance. I want the analysis to be done on all games, as well as being able to choose a report of;
+A specific game I have played
+Filter 
+different game types (practice, tournament, pennant)
+Position (lead, second, third, skip)
+Venue
+Opponent
+Surface
+
+For the analysis I want to know
+Bowl effectiveness as a percentage (from the bowls delivered during the game how many were marked effective)
+First bowl effectiveness as a percentage (from the first bowl I delivered during the game how many were marked effective)
+Weight Control (of the bowls delivered in a game a breakdown of short vs heavy as a percentage)
+Line Control (of the bowls delivered in a game a breakdown of short vs narrow as a percentage)
+
+I want to be able to understand the analysis above
+For all bowls
+Bowls delivered on my forehand
+Bowls delivered on my backhand
+
+The app should have pages
+- Homepage
+- Game setup page
+- End recording page
+- Game analysis page
+
+On the homepage a user can create a new game, view games in progress, access the game analysis page.
+
+A menu to access the pages will appear in the top right corner of the application
+
+A database will need to be created in order to keep records of bowls, games, ends etc. 
+
+
