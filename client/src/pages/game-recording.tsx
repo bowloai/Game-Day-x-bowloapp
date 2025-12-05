@@ -383,28 +383,29 @@ export default function GameRecording() {
               </div>
 
               {!isDead && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-center block">Shots For</Label>
+                    <Label className="text-center block">End Score</Label>
                     <Input 
                       type="number" 
-                      min={0} max={8} 
-                      className="text-center text-2xl h-16"
-                      value={scoreFor}
-                      onChange={(e) => { setScoreFor(Number(e.target.value)); setScoreAgainst(0); }}
-                      data-testid="input-score-for"
+                      min={-8} max={8} 
+                      className="text-center text-3xl h-20 font-bold"
+                      value={scoreFor > 0 ? scoreFor : (scoreAgainst > 0 ? -scoreAgainst : 0)}
+                      onChange={(e) => { 
+                        const val = Number(e.target.value);
+                        if (val >= 0) {
+                          setScoreFor(val);
+                          setScoreAgainst(0);
+                        } else {
+                          setScoreFor(0);
+                          setScoreAgainst(Math.abs(val));
+                        }
+                      }}
+                      data-testid="input-score"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-center block">Shots Against</Label>
-                    <Input 
-                      type="number" 
-                      min={0} max={8} 
-                      className="text-center text-2xl h-16"
-                      value={scoreAgainst}
-                      onChange={(e) => { setScoreAgainst(Number(e.target.value)); setScoreFor(0); }}
-                      data-testid="input-score-against"
-                    />
+                    <p className="text-xs text-center text-muted-foreground">
+                      Positive = shots for you, Negative = shots against
+                    </p>
                   </div>
                 </div>
               )}
@@ -476,11 +477,18 @@ export default function GameRecording() {
           {/* Running Total */}
           <Card className="bg-muted/30">
             <CardContent className="py-4">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Running Score</span>
-                <div className="flex gap-4">
-                  <span className="text-lg font-bold text-primary">{totalFor + (currentEnd.scoreFor || 0)} For</span>
-                  <span className="text-lg font-bold text-destructive">{totalAgainst + (currentEnd.scoreAgainst || 0)} Against</span>
+              <div className="text-center space-y-2">
+                <span className="text-sm font-medium text-muted-foreground">Running Total</span>
+                <div className="flex justify-center gap-8">
+                  <div>
+                    <span className="text-2xl font-bold text-primary">{totalFor + (currentEnd.scoreFor || 0)}</span>
+                    <p className="text-xs text-muted-foreground">Us</p>
+                  </div>
+                  <div className="text-2xl font-bold text-muted-foreground">-</div>
+                  <div>
+                    <span className="text-2xl font-bold text-destructive">{totalAgainst + (currentEnd.scoreAgainst || 0)}</span>
+                    <p className="text-xs text-muted-foreground">Them</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
