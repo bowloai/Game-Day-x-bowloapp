@@ -16,11 +16,10 @@ export default function Home() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">Game Day</h1>
+        <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">It's Game Day</h1>
         <p className="text-xs text-primary/70">x bowlo.ai</p>
         <p className="text-muted-foreground mt-1">Track. Analyse. Improve.</p>
       </div>
-
       {/* Active Games Section */}
       {activeGames.length > 0 && (
         <section className="space-y-4">
@@ -51,7 +50,6 @@ export default function Home() {
           ))}
         </section>
       )}
-
       {/* Menu Tiles */}
       <section className="grid grid-cols-3 gap-4">
         <Link href="/new-game">
