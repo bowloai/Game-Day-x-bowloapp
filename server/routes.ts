@@ -1,18 +1,53 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGameSchema, insertEndSchema, insertBowlSchema, updateGameSchema, updateEndSchema } from "@shared/schema";
+import { insertGameSchema, insertEndSchema, insertBowlSchema, updateGameSchema, updateEndSchema, updateUserSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
-  // Games
-  app.post("/api/games", async (req, res) => {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const game = insertGameSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error: any) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user profile
+  app.patch('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updates = updateUserSchema.parse(req.body);
+      const user = await storage.updateUser(userId, updates);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: fromError(error).toString() });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Games - protected routes
+  app.post("/api/games", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const game = insertGameSchema.parse({ ...req.body, userId });
       const newGame = await storage.createGame(game);
       res.json(newGame);
     } catch (error: any) {
@@ -23,20 +58,25 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/games", async (req, res) => {
+  app.get("/api/games", isAuthenticated, async (req: any, res) => {
     try {
-      const games = await storage.getGames();
+      const userId = req.user.claims.sub;
+      const games = await storage.getGamesByUser(userId);
       res.json(games);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  app.get("/api/games/:id", async (req, res) => {
+  app.get("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const game = await storage.getGame(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
+      }
+      if (game.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
       }
       res.json(game);
     } catch (error: any) {
@@ -44,14 +84,19 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/games/:id", async (req, res) => {
+  app.patch("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const updates = updateGameSchema.parse(req.body);
-      const game = await storage.updateGame(req.params.id, updates);
+      const userId = req.user.claims.sub;
+      const game = await storage.getGame(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
       }
-      res.json(game);
+      if (game.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const updates = updateGameSchema.parse(req.body);
+      const updated = await storage.updateGame(req.params.id, updates);
+      res.json(updated);
     } catch (error: any) {
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: fromError(error).toString() });
@@ -60,8 +105,16 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/games/:id", async (req, res) => {
+  app.delete("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const game = await storage.getGame(req.params.id);
+      if (!game) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      if (game.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
       await storage.deleteGame(req.params.id);
       res.status(204).send();
     } catch (error: any) {
@@ -70,7 +123,7 @@ export async function registerRoutes(
   });
 
   // Ends
-  app.post("/api/ends", async (req, res) => {
+  app.post("/api/ends", isAuthenticated, async (req, res) => {
     try {
       const end = insertEndSchema.parse(req.body);
       const newEnd = await storage.createEnd(end);
@@ -83,7 +136,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/games/:gameId/ends", async (req, res) => {
+  app.get("/api/games/:gameId/ends", isAuthenticated, async (req, res) => {
     try {
       const ends = await storage.getEndsByGame(req.params.gameId);
       res.json(ends);
@@ -92,7 +145,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/ends/:id", async (req, res) => {
+  app.patch("/api/ends/:id", isAuthenticated, async (req, res) => {
     try {
       const updates = updateEndSchema.parse(req.body);
       const end = await storage.updateEnd(req.params.id, updates);
@@ -109,7 +162,7 @@ export async function registerRoutes(
   });
 
   // Bowls
-  app.post("/api/bowls", async (req, res) => {
+  app.post("/api/bowls", isAuthenticated, async (req, res) => {
     try {
       const bowl = insertBowlSchema.parse(req.body);
       const newBowl = await storage.createBowl(bowl);
@@ -122,7 +175,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/ends/:endId/bowls", async (req, res) => {
+  app.get("/api/ends/:endId/bowls", isAuthenticated, async (req, res) => {
     try {
       const bowls = await storage.getBowlsByEnd(req.params.endId);
       res.json(bowls);
@@ -131,7 +184,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/bowls/:id", async (req, res) => {
+  app.patch("/api/bowls/:id", isAuthenticated, async (req, res) => {
     try {
       const updates = insertBowlSchema.partial().parse(req.body);
       const bowl = await storage.updateBowl(req.params.id, updates);
@@ -148,11 +201,15 @@ export async function registerRoutes(
   });
 
   // Composite endpoint: Get game with all ends and bowls
-  app.get("/api/games/:id/full", async (req, res) => {
+  app.get("/api/games/:id/full", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const game = await storage.getGame(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
+      }
+      if (game.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
       }
 
       const gameEnds = await storage.getEndsByGame(req.params.id);

@@ -1,12 +1,18 @@
 import { db } from "./db";
-import { games, ends, bowls, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl } from "@shared/schema";
+import { games, ends, bowls, users, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (required for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<UpsertUser>): Promise<User | undefined>;
+  
   // Games
   createGame(game: InsertGame): Promise<Game>;
   getGame(id: string): Promise<Game | undefined>;
   getGames(): Promise<Game[]>;
+  getGamesByUser(userId: string): Promise<Game[]>;
   updateGame(id: string, updates: Partial<InsertGame>): Promise<Game | undefined>;
   deleteGame(id: string): Promise<void>;
   
@@ -24,6 +30,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
   // Games
   async createGame(game: InsertGame): Promise<Game> {
     const [newGame] = await db.insert(games).values(game).returning();
@@ -37,6 +72,10 @@ export class DatabaseStorage implements IStorage {
 
   async getGames(): Promise<Game[]> {
     return db.select().from(games).orderBy(desc(games.createdAt));
+  }
+
+  async getGamesByUser(userId: string): Promise<Game[]> {
+    return db.select().from(games).where(eq(games.userId, userId)).orderBy(desc(games.createdAt));
   }
 
   async updateGame(id: string, updates: Partial<InsertGame>): Promise<Game | undefined> {
