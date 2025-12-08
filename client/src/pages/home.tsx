@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, ArrowRight, MapPin, BarChart3, List } from "lucide-react";
-import generatedImage from '@assets/generated_images/bowlo_logo_transparent_background.png';
+import generatedImage from '@assets/generated_images/green_gold_bowls_logo_transparent.png';
 
 export default function Home() {
   const { data: games, isLoading } = useGames();

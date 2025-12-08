@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, BarChart3, Trophy } from "lucide-react";
-import generatedImage from '@assets/generated_images/bowlo_logo_transparent_background.png';
+import generatedImage from '@assets/generated_images/green_gold_bowls_logo_transparent.png';
 
 export default function Landing() {
   return (

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import generatedImage from '@assets/generated_images/bowlo_logo_transparent_background.png';
+import generatedImage from '@assets/generated_images/green_gold_bowls_logo_transparent.png';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
