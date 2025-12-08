@@ -1,14 +1,16 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, PlusCircle, BarChart3, ClipboardList, Menu, User } from "lucide-react";
+import { LayoutDashboard, PlusCircle, BarChart3, ClipboardList, Menu, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
 
   const navItems = [
     { href: "/", label: "Home", icon: LayoutDashboard },
@@ -17,6 +19,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/analysis", label: "Analysis", icon: BarChart3 },
     { href: "/account", label: "Account", icon: User },
   ];
+
+  // Add Admin link for admin users
+  if (user?.isAdmin) {
+    navItems.push({ href: "/admin", label: "Admin", icon: Shield });
+  }
 
   const NavContent = () => (
     <div className="flex flex-col gap-6 py-4">
@@ -70,7 +77,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-card px-4 py-6 sticky top-0">
           <NavContent />
           <div className="mt-auto">
-            {/* Optional footer content */}
           </div>
         </aside>
 

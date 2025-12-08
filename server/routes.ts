@@ -1,9 +1,26 @@
-import type { Express } from "express";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertEndSchema, insertBowlSchema, updateGameSchema, updateEndSchema, updateUserSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+
+// Admin middleware - checks if user is admin
+const isAdmin: RequestHandler = async (req: any, res, next) => {
+  try {
+    const userId = req.user?.claims?.sub;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user?.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ message: "Failed to verify admin status" });
+  }
+};
 
 export async function registerRoutes(
   httpServer: Server,
@@ -43,7 +60,134 @@ export async function registerRoutes(
     }
   });
 
-  // Games - protected routes
+  // ==================== ADMIN ROUTES ====================
+  
+  // Get all users (admin only)
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const query = req.query.q as string;
+      const users = query 
+        ? await storage.searchUsers(query)
+        : await storage.getAllUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user details with stats (admin only)
+  app.get("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const stats = await storage.getUserStats(req.params.id);
+      res.json({ ...user, stats });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Suspend user (admin only)
+  app.post("/api/admin/users/:id/suspend", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const targetId = req.params.id;
+      
+      // Prevent self-suspension
+      if (adminId === targetId) {
+        return res.status(400).json({ error: "Cannot suspend yourself" });
+      }
+
+      const user = await storage.suspendUser(targetId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Log the action
+      await storage.createAuditLog({
+        adminId,
+        action: "SUSPEND_USER",
+        targetUserId: targetId,
+        details: `Suspended user ${user.email}`,
+      });
+
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Activate user (admin only)
+  app.post("/api/admin/users/:id/activate", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const targetId = req.params.id;
+
+      const user = await storage.activateUser(targetId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Log the action
+      await storage.createAuditLog({
+        adminId,
+        action: "ACTIVATE_USER",
+        targetUserId: targetId,
+        details: `Activated user ${user.email}`,
+      });
+
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete user and all their data (admin only)
+  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const targetId = req.params.id;
+
+      // Prevent self-deletion
+      if (adminId === targetId) {
+        return res.status(400).json({ error: "Cannot delete yourself" });
+      }
+
+      const user = await storage.getUser(targetId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Log before deletion
+      await storage.createAuditLog({
+        adminId,
+        action: "DELETE_USER",
+        targetUserId: targetId,
+        details: `Deleted user ${user.email} and all associated data`,
+      });
+
+      await storage.deleteUserAndData(targetId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get audit logs (admin only)
+  app.get("/api/admin/audit-logs", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const logs = await storage.getAuditLogs(limit);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== GAMES ROUTES ====================
+
   app.post("/api/games", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

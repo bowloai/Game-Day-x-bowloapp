@@ -1,12 +1,22 @@
 import { db } from "./db";
-import { games, ends, bowls, users, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { games, ends, bowls, users, auditLogs, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser, type AuditLog, type InsertAuditLog } from "@shared/schema";
+import { eq, desc, ilike, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<UpsertUser>): Promise<User | undefined>;
+  
+  // Admin operations
+  getAllUsers(): Promise<User[]>;
+  searchUsers(query: string): Promise<User[]>;
+  suspendUser(id: string): Promise<User | undefined>;
+  activateUser(id: string): Promise<User | undefined>;
+  deleteUserAndData(id: string): Promise<void>;
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(limit?: number): Promise<AuditLog[]>;
+  getUserStats(userId: string): Promise<{ gameCount: number; bowlCount: number }>;
   
   // Games
   createGame(game: InsertGame): Promise<Game>;
@@ -57,6 +67,68 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return updated;
+  }
+
+  // Admin operations
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async searchUsers(query: string): Promise<User[]> {
+    const searchPattern = `%${query}%`;
+    return db.select().from(users).where(
+      or(
+        ilike(users.email, searchPattern),
+        ilike(users.firstName, searchPattern),
+        ilike(users.lastName, searchPattern),
+        ilike(users.club, searchPattern)
+      )
+    ).orderBy(desc(users.createdAt));
+  }
+
+  async suspendUser(id: string): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ isSuspended: true, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async activateUser(id: string): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ isSuspended: false, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUserAndData(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [newLog] = await db.insert(auditLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getAuditLogs(limit: number = 100): Promise<AuditLog[]> {
+    return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit);
+  }
+
+  async getUserStats(userId: string): Promise<{ gameCount: number; bowlCount: number }> {
+    const userGames = await db.select().from(games).where(eq(games.userId, userId));
+    const gameIds = userGames.map(g => g.id);
+    
+    let bowlCount = 0;
+    for (const gameId of gameIds) {
+      const gameEnds = await db.select().from(ends).where(eq(ends.gameId, gameId));
+      for (const end of gameEnds) {
+        const endBowls = await db.select().from(bowls).where(eq(bowls.endId, end.id));
+        bowlCount += endBowls.length;
+      }
+    }
+    
+    return { gameCount: userGames.length, bowlCount };
   }
 
   // Games

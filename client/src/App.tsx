@@ -12,6 +12,7 @@ import GameRecording from "@/pages/game-recording";
 import Games from "@/pages/games";
 import Analysis from "@/pages/analysis";
 import Account from "@/pages/account";
+import Admin from "@/pages/admin";
 import Landing from "@/pages/landing";
 
 function Router() {
@@ -41,6 +42,7 @@ function Router() {
         <Route path="/games" component={Games} />
         <Route path="/analysis" component={Analysis} />
         <Route path="/account" component={Account} />
+        <Route path="/admin" component={Admin} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
