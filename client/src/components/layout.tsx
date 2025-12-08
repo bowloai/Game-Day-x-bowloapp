@@ -20,7 +20,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/account", label: "Account", icon: User },
   ];
 
-  // Add Admin link for admin users
   if (user?.isAdmin) {
     navItems.push({ href: "/admin", label: "Admin", icon: Shield });
   }
@@ -28,8 +27,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const NavContent = () => (
     <div className="flex flex-col gap-6 py-4">
       <div className="flex items-center gap-3 px-2">
-        <img src={generatedImage} alt="PennantPro" className="w-8 h-8" />
-        <span className="font-display text-xl font-bold tracking-tight text-primary">PennantPro</span>
+        <img src={generatedImage} alt="Bowlo" className="w-12 h-12 drop-shadow-md" />
+        <div className="flex flex-col">
+          <span className="font-display text-xl font-bold tracking-tight text-primary">Game Day</span>
+          <span className="text-xs text-muted-foreground font-medium -mt-0.5">by Bowlo</span>
+        </div>
       </div>
       <nav className="flex flex-col gap-2">
         {navItems.map((item) => (
@@ -56,9 +58,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background font-sans">
       {/* Mobile Header */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md md:hidden">
-        <div className="flex items-center gap-2">
-          <img src={generatedImage} alt="PennantPro" className="w-8 h-8" />
-          <span className="font-display text-lg font-bold text-primary">PennantPro</span>
+        <div className="flex items-center gap-3">
+          <img src={generatedImage} alt="Bowlo" className="w-10 h-10 drop-shadow-md" />
+          <div className="flex flex-col">
+            <span className="font-display text-lg font-bold text-primary leading-tight">Game Day</span>
+            <span className="text-[10px] text-muted-foreground font-medium -mt-0.5">by Bowlo</span>
+          </div>
         </div>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>

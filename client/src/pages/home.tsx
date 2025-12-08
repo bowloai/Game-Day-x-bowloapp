@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, ArrowRight, MapPin, BarChart3, List } from "lucide-react";
+import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
 
 export default function Home() {
   const { data: games, isLoading } = useGames();
@@ -16,7 +17,9 @@ export default function Home() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">PennantPro</h1>
+        <img src={generatedImage} alt="Bowlo" className="w-16 h-16 mx-auto mb-2 drop-shadow-md" />
+        <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">Game Day</h1>
+        <p className="text-sm text-muted-foreground">by Bowlo</p>
         <p className="text-muted-foreground mt-1">Track. Analyse. Improve.</p>
       </div>
 

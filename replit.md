@@ -1,14 +1,23 @@
-# PennantPro - Lawn Bowls Tracking Application
+# Game Day by Bowlo - Lawn Bowls Tracking Application
 
 ## Overview
 
-PennantPro is a progressive web application designed to track and analyze lawn bowls performance in pennant games (four-player format). The application enables players to record detailed statistics for each bowl delivered during a game, including hand position, accuracy metrics, and game outcomes. It provides comprehensive analysis tools to help players improve their performance through data-driven insights.
+Game Day by Bowlo is a progressive web application designed to track and analyze lawn bowls performance in pennant games (four-player format). This is the first app in the Bowlo suite - future apps will include drill tracking and training tools. The application enables players to record detailed statistics for each bowl delivered during a game, including hand position, accuracy metrics, and game outcomes. It provides comprehensive analysis tools to help players improve their performance through data-driven insights.
 
 The application follows a modern full-stack architecture with a React frontend, Express backend, and PostgreSQL database using Drizzle ORM for data persistence.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Branding
+
+- **App Name**: Game Day (by Bowlo)
+- **Product Suite**: Bowlo - future apps will include drill tracking
+- **Primary Color**: Lawn green (#22c55e)
+- **Accent Color**: Gold
+- **Logo**: Green and gold geometric lawn bowls icon (jack and bowl design)
+- **Tagline**: Track. Analyse. Improve.
 
 ## System Architecture
 
@@ -24,7 +33,7 @@ Preferred communication style: Simple, everyday language.
 
 **Design Pattern:**
 The frontend follows a component-based architecture with separation of concerns:
-- **Pages** (`client/src/pages/`): Route-level components (Home, GameSetup, GameRecording, Games, Analysis)
+- **Pages** (`client/src/pages/`): Route-level components (Home, GameSetup, GameRecording, Games, Analysis, Account, Admin, Landing)
 - **Components** (`client/src/components/`): Reusable UI components from shadcn/ui
 - **Hooks** (`client/src/hooks/`): Custom React hooks for data fetching and UI state
 - **Library** (`client/src/lib/`): Utility functions, API client, and query client configuration
@@ -40,6 +49,8 @@ The frontend follows a component-based architecture with separation of concerns:
 - `/play/:id` - Active game recording interface with 3x3 grid for bowl position tracking
 - `/games` - Game history with filtering capabilities
 - `/analysis` - Statistical analysis dashboard with filtering options
+- `/account` - User profile and settings
+- `/admin` - Admin dashboard (admin users only)
 
 ### Backend Architecture
 
@@ -49,6 +60,7 @@ The frontend follows a component-based architecture with separation of concerns:
 - Drizzle ORM for database interactions
 - PostgreSQL for data persistence
 - Zod for runtime validation
+- Replit Auth for authentication (Google OAuth)
 
 **Design Pattern:**
 The backend follows a layered architecture:
@@ -56,40 +68,74 @@ The backend follows a layered architecture:
 - **Storage Layer** (`server/storage.ts`): Database abstraction with IStorage interface
 - **Database Layer** (`server/db.ts`): Database connection and Drizzle initialization
 - **Schema Layer** (`shared/schema.ts`): Shared type definitions and validation schemas
+- **Auth Layer** (`server/replitAuth.ts`): Authentication middleware and session handling
 
 **API Design:**
 RESTful API with standard HTTP methods:
 - `POST /api/games` - Create new game
-- `GET /api/games` - List all games
+- `GET /api/games` - List all games for current user
 - `GET /api/games/:id` - Get single game
 - `GET /api/games/:id/full` - Get game with all ends and bowls
 - `PATCH /api/games/:id` - Update game
 - `DELETE /api/games/:id` - Delete game
 - Similar patterns for `/api/ends` and `/api/bowls` endpoints
+- Admin endpoints at `/api/admin/*` for user management
 
 **Error Handling:**
 - Zod validation errors converted to user-friendly messages using zod-validation-error
 - Standard HTTP status codes (400 for validation, 404 for not found, 500 for server errors)
 - Structured error responses with error messages
 
+### Authentication & Authorization
+
+**Authentication:**
+- Replit Auth integration with Google OAuth
+- Session-based authentication with PostgreSQL session store
+- Automatic user creation on first login
+
+**Authorization:**
+- All game data is scoped to the authenticated user
+- Admin role-based access control (isAdmin field on users)
+- Server-side middleware protects all routes
+
+**Admin System:**
+- User search and listing
+- Suspend/activate user accounts
+- Delete user accounts and all associated data
+- Audit logging for all admin actions
+- To make a user admin: `UPDATE users SET is_admin = true WHERE email = 'user@example.com';`
+
 ### Data Storage Solutions
 
 **Database Schema:**
-Three main tables with cascading relationships:
+Five main tables with cascading relationships:
 
-1. **games** - Core game information
+1. **users** - User accounts
+   - Profile data (firstName, lastName, email, club)
+   - Authentication (id from Replit Auth)
+   - Admin flags (isAdmin, isSuspended)
+   - Timestamps (createdAt, updatedAt)
+
+2. **sessions** - Authentication sessions
+   - Session data for connect-pg-simple
+
+3. **audit_logs** - Admin action tracking
+   - Admin user, action type, target user, details, timestamp
+
+4. **games** - Core game information
    - Game metadata (opponent, venue, surface, rink, type)
    - Configuration (totalEnds, position)
    - Status tracking (IN_PROGRESS or COMPLETED)
+   - User ownership (userId)
    - UUID primary key with automatic generation
 
-2. **ends** - Individual end records
+5. **ends** - Individual end records
    - Foreign key to games with cascade delete
    - End-specific data (endNumber, jackEffective, length)
    - Scoring (scoreFor, scoreAgainst)
    - State flags (isDead, isCompleted)
 
-3. **bowls** - Individual bowl deliveries
+6. **bowls** - Individual bowl deliveries
    - Foreign key to ends with cascade delete
    - Bowl metadata (bowlNumber, hand)
    - Result classification (9 possible outcomes based on 3x3 grid)
@@ -151,3 +197,5 @@ Repository pattern implemented through DatabaseStorage class:
 - Custom theme emphasizing lawn green (#22c55e) and gold accent colors
 - Statistical analysis calculations performed client-side for responsiveness
 - Cascading deletes ensure data integrity when removing games
+- Toast notifications positioned at bottom center with compact pill design
+- Green bowl icon featured prominently in navigation and landing page
