@@ -6,7 +6,8 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 space-y-8">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-primary" data-testid="heading-landing">PennantPro</h1>
+        <h1 className="text-4xl font-bold text-primary" data-testid="heading-landing">Game Day</h1>
+        <p className="text-sm text-primary/70">x bowlo.ai</p>
         <p className="text-xl text-muted-foreground">Track. Analyse. Improve.</p>
         <p className="text-muted-foreground max-w-md mx-auto">
           The ultimate tracking app for lawn bowls players. Record every bowl, 

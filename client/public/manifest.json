@@ -1,6 +1,6 @@
 {
-  "name": "PennantPro",
-  "short_name": "PennantPro",
+  "name": "Game Day x bowlo.ai",
+  "short_name": "Game Day",
   "description": "Track and analyse your lawn bowls performance",
   "start_url": "/",
   "display": "standalone",

@@ -28,8 +28,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const NavContent = () => (
     <div className="flex flex-col gap-6 py-4">
       <div className="flex items-center gap-3 px-2">
-        <img src={generatedImage} alt="PennantPro" className="w-8 h-8" />
-        <span className="font-display text-xl font-bold tracking-tight text-primary">PennantPro</span>
+        <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
+        <span className="font-display text-xl font-bold tracking-tight text-primary">Game Day</span>
       </div>
       <nav className="flex flex-col gap-2">
         {navItems.map((item) => (
@@ -57,8 +57,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md md:hidden">
         <div className="flex items-center gap-2">
-          <img src={generatedImage} alt="PennantPro" className="w-8 h-8" />
-          <span className="font-display text-lg font-bold text-primary">PennantPro</span>
+          <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
+          <span className="font-display text-lg font-bold text-primary">Game Day</span>
         </div>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
