@@ -58,7 +58,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md md:hidden">
         <div className="flex items-center gap-2">
           <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
-          <span className="font-display text-lg font-bold text-primary">Game Day</span>
+          <span className="font-display text-lg font-bold text-primary">Game Day x bowlo.ai</span>
         </div>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
@@ -71,7 +71,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </SheetContent>
         </Sheet>
       </header>
-
       <div className="flex">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-card px-4 py-6 sticky top-0">
