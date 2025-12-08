@@ -1,19 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target, BarChart3, Trophy } from "lucide-react";
-import generatedImage from '@assets/generated_images/green_gold_bowls_logo_transparent.png';
 
 export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 space-y-8">
       <div className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-4">
-          <img src={generatedImage} alt="Bowlo" className="w-20 h-20 drop-shadow-lg" />
-          <div className="text-left">
-            <h1 className="text-4xl font-bold text-primary" data-testid="heading-landing">Game Day</h1>
-            <p className="text-sm text-muted-foreground font-medium">by Bowlo</p>
-          </div>
-        </div>
+        <h1 className="text-4xl font-bold text-primary" data-testid="heading-landing">PennantPro</h1>
         <p className="text-xl text-muted-foreground">Track. Analyse. Improve.</p>
         <p className="text-muted-foreground max-w-md mx-auto">
           The ultimate tracking app for lawn bowls players. Record every bowl, 

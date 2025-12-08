@@ -1,7 +1,7 @@
 {
-  "name": "Game Day by Bowlo",
-  "short_name": "Game Day",
-  "description": "Track and analyse your lawn bowls performance on game day",
+  "name": "PennantPro",
+  "short_name": "PennantPro",
+  "description": "Track and analyse your lawn bowls performance",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

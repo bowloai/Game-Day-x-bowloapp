@@ -3,7 +3,6 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, ArrowRight, MapPin, BarChart3, List } from "lucide-react";
-import generatedImage from '@assets/generated_images/green_gold_bowls_logo_transparent.png';
 
 export default function Home() {
   const { data: games, isLoading } = useGames();
@@ -16,14 +15,10 @@ export default function Home() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-center gap-4">
-        <img src={generatedImage} alt="Bowlo" className="w-14 h-14 drop-shadow-md" />
-        <div>
-          <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">Game Day</h1>
-          <p className="text-sm text-muted-foreground">by Bowlo</p>
-        </div>
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">PennantPro</h1>
+        <p className="text-muted-foreground mt-1">Track. Analyse. Improve.</p>
       </div>
-      <p className="text-muted-foreground text-center -mt-4">Track. Analyse. Improve.</p>
 
       {/* Active Games Section */}
       {activeGames.length > 0 && (
