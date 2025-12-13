@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useEffect } from "react";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download } from "lucide-react";
+import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -400,6 +400,15 @@ export default function Games() {
                           Analyze
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/games/${game.id}/edit`)}
+                        data-testid={`button-edit-${game.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

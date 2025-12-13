@@ -13,6 +13,7 @@ import Games from "@/pages/games";
 import Analysis from "@/pages/analysis";
 import Account from "@/pages/account";
 import Admin from "@/pages/admin";
+import GameEdit from "@/pages/game-edit";
 import Landing from "@/pages/landing";
 
 function Router() {
@@ -43,6 +44,7 @@ function Router() {
         <Route path="/analysis" component={Analysis} />
         <Route path="/account" component={Account} />
         <Route path="/admin" component={Admin} />
+        <Route path="/games/:id/edit" component={GameEdit} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
