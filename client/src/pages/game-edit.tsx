@@ -18,7 +18,7 @@ const RESULT_LABELS: Record<string, string> = {
   "SHORT": "Short",
   "SHORT_WIDE": "Short Wide",
   "NARROW": "Narrow",
-  "GOOD": "Good",
+  "GOOD": "Effective",
   "WIDE": "Wide",
   "LONG_NARROW": "Long Narrow",
   "LONG": "Long",
@@ -381,7 +381,7 @@ export default function GameEdit() {
                   />
                   <GridCell 
                     r={1} c={1} 
-                    label="Good"
+                    label="Effective"
                     isCenter
                     selected={editingBowl.result === "GOOD"} 
                     onClick={() => setEditingBowl({ ...editingBowl, result: "GOOD" })}
