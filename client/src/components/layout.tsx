@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, PlusCircle, BarChart3, ClipboardList, Menu, User, Shield } from "lucide-react";
+import { LayoutDashboard, PlusCircle, BarChart3, ClipboardList, Menu, User, Shield, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,6 +17,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/new-game", label: "New Game", icon: PlusCircle },
     { href: "/games", label: "My Games", icon: ClipboardList },
     { href: "/analysis", label: "Analysis", icon: BarChart3 },
+    { href: "/help", label: "Help", icon: HelpCircle },
     { href: "/account", label: "Account", icon: User },
   ];
 

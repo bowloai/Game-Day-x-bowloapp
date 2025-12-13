@@ -15,6 +15,7 @@ import Account from "@/pages/account";
 import Admin from "@/pages/admin";
 import GameEdit from "@/pages/game-edit";
 import Landing from "@/pages/landing";
+import Help from "@/pages/help";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,7 @@ function Router() {
         <Route path="/account" component={Account} />
         <Route path="/admin" component={Admin} />
         <Route path="/games/:id/edit" component={GameEdit} />
+        <Route path="/help" component={Help} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
