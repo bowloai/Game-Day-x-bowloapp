@@ -163,6 +163,8 @@ export default function GameRecording() {
           setViewState('bowling');
           setActiveBowl(1);
           setGridSelection(null);
+          // Alternate hand based on end number - odd ends use Forehand, even ends use Backhand
+          setHand(nextEndNumber % 2 === 1 ? "Forehand" : "Backhand");
         },
       }
     );
