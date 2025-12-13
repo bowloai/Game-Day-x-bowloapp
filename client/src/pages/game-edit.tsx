@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Save, Check } from "lucide-react";
@@ -14,20 +13,20 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Bowl, End } from "@shared/schema";
 
-const RESULT_OPTIONS = [
-  { value: "SHORT_NARROW", label: "Short Narrow", position: { row: 0, col: 0 } },
-  { value: "SHORT", label: "Short", position: { row: 0, col: 1 } },
-  { value: "SHORT_WIDE", label: "Short Wide", position: { row: 0, col: 2 } },
-  { value: "NARROW", label: "Narrow", position: { row: 1, col: 0 } },
-  { value: "GOOD", label: "Good", position: { row: 1, col: 1 } },
-  { value: "WIDE", label: "Wide", position: { row: 1, col: 2 } },
-  { value: "LONG_NARROW", label: "Long Narrow", position: { row: 2, col: 0 } },
-  { value: "LONG", label: "Long", position: { row: 2, col: 1 } },
-  { value: "LONG_WIDE", label: "Long Wide", position: { row: 2, col: 2 } },
-];
+const RESULT_LABELS: Record<string, string> = {
+  "SHORT_NARROW": "Short Narrow",
+  "SHORT": "Short",
+  "SHORT_WIDE": "Short Wide",
+  "NARROW": "Narrow",
+  "GOOD": "Good",
+  "WIDE": "Wide",
+  "LONG_NARROW": "Long Narrow",
+  "LONG": "Long",
+  "LONG_WIDE": "Long Wide",
+};
 
 const getResultLabel = (result: string) => {
-  return RESULT_OPTIONS.find(r => r.value === result)?.label || result;
+  return RESULT_LABELS[result] || result;
 };
 
 const getResultColor = (result: string) => {
@@ -37,6 +36,32 @@ const getResultColor = (result: string) => {
 };
 
 type BowlWithEnd = Bowl & { endId: string };
+
+const GridCell = ({ r, c, label, selected, isCenter, onClick }: { 
+  r: number; 
+  c: number; 
+  label?: string; 
+  selected: boolean;
+  isCenter?: boolean;
+  onClick: () => void;
+}) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "h-16 w-full border rounded-lg flex items-center justify-center transition-all relative font-medium text-sm",
+        selected 
+          ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" 
+          : "bg-background hover:bg-secondary",
+        isCenter ? "bg-accent/20 border-accent text-accent-foreground" : ""
+      )}
+      data-testid={`grid-cell-${r}-${c}`}
+    >
+      {label}
+    </button>
+  );
+};
 
 export default function GameEdit() {
   const { id } = useParams<{ id: string }>();
@@ -294,39 +319,97 @@ export default function GameEdit() {
           
           {editingBowl && (
             <div className="space-y-6">
-              <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <Label>Hand</Label>
-                <Select
-                  value={editingBowl.hand}
-                  onValueChange={(value) => setEditingBowl({ ...editingBowl, hand: value as "FOREHAND" | "BACKHAND" })}
-                >
-                  <SelectTrigger data-testid="select-hand">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FOREHAND">Forehand</SelectItem>
-                    <SelectItem value="BACKHAND">Backhand</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex bg-secondary p-1 rounded-md">
+                  <button 
+                    type="button"
+                    className={cn(
+                      "px-4 py-2 rounded text-sm transition-all",
+                      editingBowl.hand === "FOREHAND" 
+                        ? "bg-white shadow text-primary font-medium" 
+                        : "text-muted-foreground"
+                    )}
+                    onClick={() => setEditingBowl({ ...editingBowl, hand: "FOREHAND" })}
+                    data-testid="button-hand-forehand"
+                  >
+                    Forehand
+                  </button>
+                  <button 
+                    type="button"
+                    className={cn(
+                      "px-4 py-2 rounded text-sm transition-all",
+                      editingBowl.hand === "BACKHAND" 
+                        ? "bg-white shadow text-primary font-medium" 
+                        : "text-muted-foreground"
+                    )}
+                    onClick={() => setEditingBowl({ ...editingBowl, hand: "BACKHAND" })}
+                    data-testid="button-hand-backhand"
+                  >
+                    Backhand
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Result</Label>
-                <div className="grid grid-cols-3 gap-1">
-                  {RESULT_OPTIONS.map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={editingBowl.result === option.value ? "default" : "outline"}
-                      className={cn(
-                        "h-12 text-xs",
-                        editingBowl.result === option.value && "ring-2 ring-primary"
-                      )}
-                      onClick={() => setEditingBowl({ ...editingBowl, result: option.value })}
-                      data-testid={`button-result-${option.value}`}
-                    >
-                      {option.label.replace(" ", "\n")}
-                    </Button>
-                  ))}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Row 0: Short */}
+                  <GridCell 
+                    r={0} c={0} 
+                    selected={editingBowl.result === "SHORT_NARROW"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "SHORT_NARROW" })}
+                  />
+                  <GridCell 
+                    r={0} c={1} 
+                    label="Short"
+                    selected={editingBowl.result === "SHORT"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "SHORT" })}
+                  />
+                  <GridCell 
+                    r={0} c={2} 
+                    selected={editingBowl.result === "SHORT_WIDE"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "SHORT_WIDE" })}
+                  />
+                  
+                  {/* Row 1: Middle */}
+                  <GridCell 
+                    r={1} c={0} 
+                    label={editingBowl.hand === "FOREHAND" ? "Wide" : "Narrow"}
+                    selected={editingBowl.result === "NARROW"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "NARROW" })}
+                  />
+                  <GridCell 
+                    r={1} c={1} 
+                    label="Good"
+                    isCenter
+                    selected={editingBowl.result === "GOOD"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "GOOD" })}
+                  />
+                  <GridCell 
+                    r={1} c={2} 
+                    label={editingBowl.hand === "FOREHAND" ? "Narrow" : "Wide"}
+                    selected={editingBowl.result === "WIDE"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "WIDE" })}
+                  />
+                  
+                  {/* Row 2: Long */}
+                  <GridCell 
+                    r={2} c={0} 
+                    selected={editingBowl.result === "LONG_NARROW"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "LONG_NARROW" })}
+                  />
+                  <GridCell 
+                    r={2} c={1} 
+                    label="Long"
+                    selected={editingBowl.result === "LONG"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "LONG" })}
+                  />
+                  <GridCell 
+                    r={2} c={2} 
+                    selected={editingBowl.result === "LONG_WIDE"} 
+                    onClick={() => setEditingBowl({ ...editingBowl, result: "LONG_WIDE" })}
+                  />
                 </div>
               </div>
             </div>
