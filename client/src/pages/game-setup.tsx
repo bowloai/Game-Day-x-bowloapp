@@ -1,6 +1,6 @@
 import { useCreateGame } from "@/lib/hooks";
 import { useLocation } from "wouter";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   opponent: z.string().min(2, "Opponent name is required"),
@@ -31,15 +32,50 @@ const formSchema = z.object({
   rink: z.string().min(1, "Rink number is required"),
   type: z.enum(["Practice", "Tournament", "Pennant"] as const),
   totalEnds: z.coerce.number().min(1, "Must have at least 1 end"),
-  position: z.enum(["Lead", "Second", "Third", "Skip"] as const),
+  gameFormat: z.enum(["singles", "pairs", "triples", "fours"] as const),
+  pairsType: z.enum(["3_bowl", "2_4_2", "walking"] as const).optional().nullable(),
+  position: z.string().optional().nullable(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
+
+const getPositionOptions = (gameFormat: string, pairsType?: string | null) => {
+  switch (gameFormat) {
+    case "singles":
+      return [];
+    case "pairs":
+      if (pairsType === "2_4_2") return [];
+      if (pairsType === "walking") return ["Lead & Third", "Second & Skip"];
+      return ["Lead", "Second", "Third", "Skip"];
+    case "triples":
+      return ["Lead", "Second", "Skip"];
+    case "fours":
+    default:
+      return ["Lead", "Second", "Third", "Skip"];
+  }
+};
+
+const getBowlsPerEnd = (gameFormat: string, pairsType?: string | null) => {
+  switch (gameFormat) {
+    case "singles":
+      return 4;
+    case "pairs":
+      if (pairsType === "3_bowl") return 3;
+      return 4;
+    case "triples":
+      return 2;
+    case "fours":
+    default:
+      return 2;
+  }
+};
 
 export default function GameSetup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createGame = useCreateGame();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       opponent: "",
@@ -48,13 +84,40 @@ export default function GameSetup() {
       rink: "",
       type: "Pennant",
       totalEnds: 21,
+      gameFormat: "fours",
+      pairsType: null,
       position: "Lead",
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  const gameFormat = useWatch({ control: form.control, name: "gameFormat" });
+  const pairsType = useWatch({ control: form.control, name: "pairsType" });
+
+  const positionOptions = getPositionOptions(gameFormat, pairsType);
+  const showPosition = positionOptions.length > 0;
+  const showPairsType = gameFormat === "pairs";
+
+  useEffect(() => {
+    if (gameFormat !== "pairs") {
+      form.setValue("pairsType", null);
+    }
+    if (!showPosition) {
+      form.setValue("position", null);
+    } else if (positionOptions.length > 0 && !positionOptions.includes(form.getValues("position") || "")) {
+      form.setValue("position", positionOptions[0]);
+    }
+  }, [gameFormat, pairsType, form, showPosition, positionOptions]);
+
+  function onSubmit(values: FormValues) {
+    const bowlsPerEnd = getBowlsPerEnd(values.gameFormat, values.pairsType);
     createGame.mutate(
-      { ...values, status: "IN_PROGRESS" },
+      { 
+        ...values, 
+        bowlsPerEnd,
+        status: "IN_PROGRESS",
+        position: values.position || null,
+        pairsType: values.pairsType || null,
+      },
       {
         onSuccess: (game) => {
           toast({
@@ -202,21 +265,21 @@ export default function GameSetup() {
 
                 <FormField
                   control={form.control}
-                  name="position"
+                  name="gameFormat"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>My Position</FormLabel>
+                      <FormLabel>Format</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-position">
-                            <SelectValue placeholder="Select position" />
+                          <SelectTrigger data-testid="select-format">
+                            <SelectValue placeholder="Select format" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Lead">Lead</SelectItem>
-                          <SelectItem value="Second">Second</SelectItem>
-                          <SelectItem value="Third">Third</SelectItem>
-                          <SelectItem value="Skip">Skip</SelectItem>
+                          <SelectItem value="singles">Singles (4 bowls)</SelectItem>
+                          <SelectItem value="pairs">Pairs</SelectItem>
+                          <SelectItem value="triples">Triples (2 bowls)</SelectItem>
+                          <SelectItem value="fours">Fours (2 bowls)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -224,6 +287,83 @@ export default function GameSetup() {
                   )}
                 />
               </div>
+
+              {showPairsType && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="pairsType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pairs Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-pairs-type">
+                              <SelectValue placeholder="Select pairs type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="3_bowl">3 Bowl (3 bowls)</SelectItem>
+                            <SelectItem value="2_4_2">2-4-2 (4 bowls)</SelectItem>
+                            <SelectItem value="walking">Walking (4 bowls)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {showPosition && (
+                    <FormField
+                      control={form.control}
+                      name="position"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>My Position</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-position">
+                                <SelectValue placeholder="Select position" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {positionOptions.map((pos) => (
+                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
+
+              {!showPairsType && showPosition && (
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>My Position</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-position">
+                            <SelectValue placeholder="Select position" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {positionOptions.map((pos) => (
+                            <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="pt-4">
                 <Button 
