@@ -37,6 +37,7 @@ const formSchema = z.object({
   gameFormat: z.enum(["singles", "pairs", "triples", "fours"] as const),
   pairsType: z.enum(["3_bowl", "2_4_2", "walking"] as const).optional().nullable(),
   position: z.string().optional().nullable(),
+  bowlsPerEnd: z.coerce.number().min(1, "Must have at least 1 bowl").max(4, "Maximum 4 bowls per end"),
 }).refine((data) => {
   if (data.gameEndType === "ends") {
     return data.totalEnds && data.totalEnds >= 1;
@@ -102,6 +103,7 @@ export default function GameSetup() {
       gameFormat: "fours",
       pairsType: null,
       position: "Lead",
+      bowlsPerEnd: 2,
     },
   });
 
@@ -122,14 +124,15 @@ export default function GameSetup() {
     } else if (positionOptions.length > 0 && !positionOptions.includes(form.getValues("position") || "")) {
       form.setValue("position", positionOptions[0]);
     }
+    // Update bowls per end default when format changes
+    const defaultBowls = getBowlsPerEnd(gameFormat, pairsType);
+    form.setValue("bowlsPerEnd", defaultBowls);
   }, [gameFormat, pairsType, form, showPosition, positionOptions]);
 
   function onSubmit(values: FormValues) {
-    const bowlsPerEnd = getBowlsPerEnd(values.gameFormat, values.pairsType);
     createGame.mutate(
       { 
-        ...values, 
-        bowlsPerEnd,
+        ...values,
         status: "IN_PROGRESS",
         position: values.position || null,
         pairsType: values.pairsType || null,
@@ -174,6 +177,77 @@ export default function GameSetup() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               
+              {/* Game Type and Format - First selections */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Game Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-type">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Practice">Practice</SelectItem>
+                          <SelectItem value="Tournament">Tournament</SelectItem>
+                          <SelectItem value="Pennant">Pennant</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="gameFormat"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Format</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-format">
+                            <SelectValue placeholder="Select format" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="singles">Singles</SelectItem>
+                          <SelectItem value="pairs">Pairs</SelectItem>
+                          <SelectItem value="triples">Triples</SelectItem>
+                          <SelectItem value="fours">Fours</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Bowls per end - editable with smart default */}
+              <FormField
+                control={form.control}
+                name="bowlsPerEnd"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bowls Per End</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={1}
+                        max={4}
+                        {...field} 
+                        data-testid="input-bowls-per-end" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -306,55 +380,6 @@ export default function GameSetup() {
                     )}
                   />
                 )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Game Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-type">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Practice">Practice</SelectItem>
-                          <SelectItem value="Tournament">Tournament</SelectItem>
-                          <SelectItem value="Pennant">Pennant</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="gameFormat"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Format</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-format">
-                            <SelectValue placeholder="Select format" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="singles">Singles (4 bowls)</SelectItem>
-                          <SelectItem value="pairs">Pairs</SelectItem>
-                          <SelectItem value="triples">Triples (2 bowls)</SelectItem>
-                          <SelectItem value="fours">Fours (2 bowls)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               {showPairsType && (
