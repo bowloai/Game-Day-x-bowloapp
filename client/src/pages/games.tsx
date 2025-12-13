@@ -336,94 +336,56 @@ export default function Games() {
             return (
               <Card key={game.id} className="hover:bg-muted/50 transition-colors">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-semibold text-lg truncate" data-testid={`text-opponent-${game.id}`}>
-                          vs {game.opponent}
-                        </h3>
-                        {/* Score Display */}
-                        <div className="flex items-center gap-1 font-mono text-lg">
+                  <div className="space-y-3">
+                    {/* Top row: Game info and delete button */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h3 className="font-semibold text-lg truncate" data-testid={`text-opponent-${game.id}`}>
+                            vs {game.opponent}
+                          </h3>
+                          {/* Score Display */}
+                          <div className="flex items-center gap-1 font-mono text-lg">
+                            <span className={cn(
+                              "font-bold",
+                              scoreFor > scoreAgainst ? "text-green-600 dark:text-green-400" : 
+                              scoreFor < scoreAgainst ? "text-red-600 dark:text-red-400" : ""
+                            )} data-testid={`text-score-for-${game.id}`}>
+                              {scoreFor}
+                            </span>
+                            <span className="text-muted-foreground">-</span>
+                            <span className={cn(
+                              "font-bold",
+                              scoreAgainst > scoreFor ? "text-green-600 dark:text-green-400" : 
+                              scoreAgainst < scoreFor ? "text-red-600 dark:text-red-400" : ""
+                            )} data-testid={`text-score-against-${game.id}`}>
+                              {scoreAgainst}
+                            </span>
+                          </div>
                           <span className={cn(
-                            "font-bold",
-                            scoreFor > scoreAgainst ? "text-green-600 dark:text-green-400" : 
-                            scoreFor < scoreAgainst ? "text-red-600 dark:text-red-400" : ""
-                          )} data-testid={`text-score-for-${game.id}`}>
-                            {scoreFor}
-                          </span>
-                          <span className="text-muted-foreground">-</span>
-                          <span className={cn(
-                            "font-bold",
-                            scoreAgainst > scoreFor ? "text-green-600 dark:text-green-400" : 
-                            scoreAgainst < scoreFor ? "text-red-600 dark:text-red-400" : ""
-                          )} data-testid={`text-score-against-${game.id}`}>
-                            {scoreAgainst}
+                            "text-xs px-2 py-0.5 rounded-full",
+                            isCompleted ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                            isInProgress ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                          )}>
+                            {isInProgress ? `End ${completedEnds + 1}` : game.status.replace('_', ' ')}
                           </span>
                         </div>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full",
-                          isCompleted ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                          isInProgress ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                          "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                        )}>
-                          {isInProgress ? `End ${completedEnds + 1}` : game.status.replace('_', ' ')}
-                        </span>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                          <span>{format(new Date(game.createdAt), "MMM d, yyyy")}</span>
+                          <span>{game.venue}</span>
+                          <span>{game.type}</span>
+                          <span>{game.surface}</span>
+                          <span>{game.position}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-                        <span>{format(new Date(game.createdAt), "MMM d, yyyy")}</span>
-                        <span>{game.venue}</span>
-                        <span>{game.type}</span>
-                        <span>{game.surface}</span>
-                        <span>{game.position}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {isInProgress && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => setLocation(`/play/${game.id}`)}
-                          data-testid={`button-continue-${game.id}`}
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          Continue
-                        </Button>
-                      )}
-                      {isCompleted && (
-                        <>
-                          <ShareGameSummary 
-                            game={game} 
-                            scoreFor={scoreFor} 
-                            scoreAgainst={scoreAgainst} 
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setLocation(`/analysis?game=${game.id}`)}
-                            data-testid={`button-analyze-${game.id}`}
-                          >
-                            <BarChart3 className="h-4 w-4 mr-1" />
-                            Analyze
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setLocation(`/games/${game.id}/edit`)}
-                        data-testid={`button-edit-${game.id}`}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                             data-testid={`button-delete-${game.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -450,6 +412,48 @@ export default function Games() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    </div>
+                    
+                    {/* Bottom row: Action buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      {isInProgress && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => setLocation(`/play/${game.id}`)}
+                          data-testid={`button-continue-${game.id}`}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Continue
+                        </Button>
+                      )}
+                      {isCompleted && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/analysis?game=${game.id}`)}
+                            data-testid={`button-analyze-${game.id}`}
+                          >
+                            <BarChart3 className="h-4 w-4 mr-1" />
+                            Analyze
+                          </Button>
+                          <ShareGameSummary 
+                            game={game} 
+                            scoreFor={scoreFor} 
+                            scoreAgainst={scoreAgainst} 
+                          />
+                        </>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/games/${game.id}/edit`)}
+                        data-testid={`button-edit-${game.id}`}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
