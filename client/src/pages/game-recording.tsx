@@ -40,7 +40,9 @@ export default function GameRecording() {
 
   const [viewState, setViewState] = useState<ViewState>('end-setup');
   const [currentEndId, setCurrentEndId] = useState<string | null>(null);
-  const [activeBowl, setActiveBowl] = useState<1 | 2>(1);
+  const [activeBowl, setActiveBowl] = useState<number>(1);
+  
+  const bowlsPerEnd = game?.bowlsPerEnd || 2;
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: 0|1|2, col: 0|1|2} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);
@@ -79,10 +81,11 @@ export default function GameRecording() {
     ? completedEnds.reduce((latest, end) => end.endNumber > latest.endNumber ? end : latest)
     : null;
   const wonLastEnd = !lastCompletedEnd || (lastCompletedEnd.scoreFor || 0) > (lastCompletedEnd.scoreAgainst || 0);
-  const canDeliverJack = game?.position === 'Lead' && wonLastEnd;
+  // Jack delivery eligibility: Singles (no position), or any position containing "Lead"
+  const isLeadRole = !game?.position || game.position === 'Lead' || game.position.includes('Lead');
+  const canDeliverJack = isLeadRole && wonLastEnd;
   
-  const bowl1 = currentEnd?.bowls?.find(b => b.bowlNumber === 1);
-  const bowl2 = currentEnd?.bowls?.find(b => b.bowlNumber === 2);
+  const endBowls = currentEnd?.bowls?.sort((a, b) => a.bowlNumber - b.bowlNumber) || [];
 
   useEffect(() => {
     if (!game) return;
@@ -92,20 +95,21 @@ export default function GameRecording() {
     
     if (incompleteEnd) {
       setCurrentEndId(incompleteEnd.id);
-      if (incompleteEnd.bowls?.length === 0) {
+      const bowlCount = incompleteEnd.bowls?.length || 0;
+      if (bowlCount === 0) {
         setViewState('bowling');
         setActiveBowl(1);
-      } else if (incompleteEnd.bowls?.length === 1) {
+      } else if (bowlCount < bowlsPerEnd) {
         setViewState('bowling');
-        setActiveBowl(2);
-      } else if (incompleteEnd.bowls?.length >= 2) {
+        setActiveBowl(bowlCount + 1);
+      } else {
         setViewState('score-entry');
       }
     } else {
       setCurrentEndId(null);
       setViewState('end-setup');
     }
-  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState]);
+  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd]);
 
   if (isLoading) return <div className="text-center py-12">Loading game...</div>;
   if (!game) return <div className="text-center py-12">Game not found</div>;
@@ -189,8 +193,8 @@ export default function GameRecording() {
         onSuccess: () => {
           toast({ title: `Bowl ${activeBowl} recorded` });
           setGridSelection(null);
-          if (activeBowl === 1) {
-            setActiveBowl(2);
+          if (activeBowl < bowlsPerEnd) {
+            setActiveBowl(activeBowl + 1);
           } else {
             setViewState('score-entry');
           }
@@ -371,7 +375,7 @@ export default function GameRecording() {
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold" data-testid="text-bowl-number">
-              Bowl {activeBowl} of 2
+              Bowl {activeBowl} of {bowlsPerEnd}
             </h3>
             <div className="flex bg-secondary p-1 rounded-md">
               <button 
@@ -427,15 +431,16 @@ export default function GameRecording() {
               <CardTitle>Record End Score</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-background p-3 rounded border">
-                  <span className="block font-semibold text-foreground">Bowl 1</span>
-                  {bowl1?.hand} - {bowl1?.result}
-                </div>
-                <div className="bg-background p-3 rounded border">
-                  <span className="block font-semibold text-foreground">Bowl 2</span>
-                  {bowl2?.hand} - {bowl2?.result}
-                </div>
+              <div className={cn(
+                "grid gap-4 text-sm",
+                bowlsPerEnd <= 2 ? "grid-cols-2" : bowlsPerEnd === 3 ? "grid-cols-3" : "grid-cols-4"
+              )}>
+                {endBowls.map((bowl) => (
+                  <div key={bowl.id} className="bg-background p-3 rounded border">
+                    <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
+                    {bowl.hand} - {bowl.result}
+                  </div>
+                ))}
               </div>
 
               <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
