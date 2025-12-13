@@ -31,7 +31,9 @@ const formSchema = z.object({
   surface: z.enum(["Grass", "Plastic", "Carpet"] as const),
   rink: z.string().min(1, "Rink number is required"),
   type: z.enum(["Practice", "Tournament", "Pennant"] as const),
-  totalEnds: z.coerce.number().min(1, "Must have at least 1 end"),
+  gameEndType: z.enum(["ends", "score"] as const),
+  totalEnds: z.coerce.number().optional().nullable(),
+  targetScore: z.coerce.number().optional().nullable(),
   gameFormat: z.enum(["singles", "pairs", "triples", "fours"] as const),
   pairsType: z.enum(["3_bowl", "2_4_2", "walking"] as const).optional().nullable(),
   position: z.string().optional().nullable(),
@@ -83,7 +85,9 @@ export default function GameSetup() {
       surface: "Grass",
       rink: "",
       type: "Pennant",
+      gameEndType: "ends",
       totalEnds: 21,
+      targetScore: 25,
       gameFormat: "fours",
       pairsType: null,
       position: "Lead",
@@ -92,6 +96,7 @@ export default function GameSetup() {
 
   const gameFormat = useWatch({ control: form.control, name: "gameFormat" });
   const pairsType = useWatch({ control: form.control, name: "pairsType" });
+  const gameEndType = useWatch({ control: form.control, name: "gameEndType" });
 
   const positionOptions = getPositionOptions(gameFormat, pairsType);
   const showPosition = positionOptions.length > 0;
@@ -117,6 +122,8 @@ export default function GameSetup() {
         status: "IN_PROGRESS",
         position: values.position || null,
         pairsType: values.pairsType || null,
+        totalEnds: values.gameEndType === "ends" ? values.totalEnds : null,
+        targetScore: values.gameEndType === "score" ? values.targetScore : null,
       },
       {
         onSuccess: (game) => {
@@ -186,7 +193,7 @@ export default function GameSetup() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
                   control={form.control}
                   name="surface"
@@ -223,20 +230,71 @@ export default function GameSetup() {
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="totalEnds"
+                  name="gameEndType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ends to Play</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} data-testid="input-total-ends" />
-                      </FormControl>
+                      <FormLabel>Game Ends When</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-game-end-type">
+                            <SelectValue placeholder="Select end condition" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ends">Total Ends Played</SelectItem>
+                          <SelectItem value="score">First to Target Score</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {gameEndType === "ends" ? (
+                  <FormField
+                    control={form.control}
+                    name="totalEnds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total Ends</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            value={field.value ?? ""} 
+                            data-testid="input-total-ends" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="targetScore"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target Score (First to)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            {...field} 
+                            value={field.value ?? ""} 
+                            placeholder="e.g. 25"
+                            data-testid="input-target-score" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
