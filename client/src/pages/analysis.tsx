@@ -4,12 +4,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Share2, Download, Loader2 } from "lucide-react";
+import { toPng } from "html-to-image";
+import { toast } from "sonner";
 
 type Bowl = {
   id: string;
@@ -186,6 +188,49 @@ export default function Analysis() {
   const [filterVenue, setFilterVenue] = useState<string>("All");
   const [filterOpponent, setFilterOpponent] = useState<string>("All");
   const [filterFormat, setFilterFormat] = useState<string>("All");
+  
+  // Share as image
+  const statsRef = useRef<HTMLDivElement>(null);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShareImage = async () => {
+    if (!statsRef.current || typeof window === 'undefined') return;
+    
+    setIsSharing(true);
+    try {
+      const dataUrl = await toPng(statsRef.current, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'bowlo-analysis.png', { type: 'image/png' });
+      
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'My Bowls Analysis',
+          text: `Bowl Effectiveness: ${allStats?.effectivePercent}% | Weight Control: ${allStats?.goodWeightPercent}% Good | Line Control: ${allStats?.goodLinePercent}% Good`,
+          files: [file],
+        });
+        toast.success('Shared successfully!');
+      } else {
+        const link = document.createElement('a');
+        link.download = 'bowlo-analysis.png';
+        link.href = dataUrl;
+        link.click();
+        toast.success('Image downloaded! You can now share it on social media.');
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Share failed:', error);
+        toast.error('Failed to create image');
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   // Fetch full game details for completed games
   useEffect(() => {
@@ -538,7 +583,7 @@ export default function Analysis() {
       )}
 
       {/* Stats Breakdown - Three Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-1">
         <StatBlock 
           title="All Bowls" 
           icon={Target}
@@ -554,6 +599,29 @@ export default function Analysis() {
           icon={CircleDot}
           stats={backhandStats!} 
         />
+      </div>
+
+      {/* Share Analysis Button */}
+      <div className="flex justify-center">
+        <Button
+          onClick={handleShareImage}
+          disabled={isSharing}
+          variant="outline"
+          className="gap-2"
+          data-testid="button-share-analysis-image"
+        >
+          {isSharing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating Image...
+            </>
+          ) : (
+            <>
+              <Share2 className="h-4 w-4" />
+              Share Analysis as Image
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );
