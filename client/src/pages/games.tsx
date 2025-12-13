@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useState, useMemo, useEffect } from "react";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil } from "lucide-react";
+import { ShareGameSummary } from "@/components/share-game-summary";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -390,15 +391,22 @@ export default function Games() {
                         </Button>
                       )}
                       {isCompleted && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setLocation(`/analysis?game=${game.id}`)}
-                          data-testid={`button-analyze-${game.id}`}
-                        >
-                          <BarChart3 className="h-4 w-4 mr-1" />
-                          Analyze
-                        </Button>
+                        <>
+                          <ShareGameSummary 
+                            game={game} 
+                            scoreFor={scoreFor} 
+                            scoreAgainst={scoreAgainst} 
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/analysis?game=${game.id}`)}
+                            data-testid={`button-analyze-${game.id}`}
+                          >
+                            <BarChart3 className="h-4 w-4 mr-1" />
+                            Analyze
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="outline"
