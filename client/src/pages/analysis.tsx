@@ -185,6 +185,7 @@ export default function Analysis() {
   const [filterPosition, setFilterPosition] = useState<string>("All");
   const [filterVenue, setFilterVenue] = useState<string>("All");
   const [filterOpponent, setFilterOpponent] = useState<string>("All");
+  const [filterFormat, setFilterFormat] = useState<string>("All");
 
   // Fetch full game details for completed games
   useEffect(() => {
@@ -247,6 +248,9 @@ export default function Analysis() {
     if (filterOpponent !== "All") {
       filteredGames = filteredGames.filter(g => g.opponent === filterOpponent);
     }
+    if (filterFormat !== "All") {
+      filteredGames = filteredGames.filter(g => (g.gameFormat || 'fours') === filterFormat);
+    }
 
     if (filteredGames.length === 0) {
       return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0 };
@@ -266,7 +270,7 @@ export default function Analysis() {
       backhandStats: calculateStats(backhandBowls),
       totalGames: filteredGames.length,
     };
-  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent]);
+  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat]);
 
   if (isLoading || loadingDetails) {
     return <div className="text-center py-12">Loading...</div>;
@@ -282,7 +286,7 @@ export default function Analysis() {
   }
 
   const hasActiveFilters = filterType !== "All" || filterSurface !== "All" || 
-    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All";
+    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All";
   
   // Get the selected game details for display
   const selectedGame = gameIdFromUrl ? gamesWithDetails.find(g => g.id === gameIdFromUrl) : null;
@@ -428,7 +432,7 @@ export default function Analysis() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Game Type */}
                 <div className="space-y-1">
                   <Label className="text-xs">Type</Label>
@@ -506,6 +510,23 @@ export default function Analysis() {
                       {uniqueOpponents.map(o => (
                         <SelectItem key={o} value={o}>{o}</SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Format */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Format</Label>
+                  <Select value={filterFormat} onValueChange={setFilterFormat}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-format">
+                      <SelectValue placeholder="All Formats" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Formats</SelectItem>
+                      <SelectItem value="singles">Singles</SelectItem>
+                      <SelectItem value="pairs">Pairs</SelectItem>
+                      <SelectItem value="triples">Triples</SelectItem>
+                      <SelectItem value="fours">Fours</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
