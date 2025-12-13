@@ -305,6 +305,12 @@ export default function GameRecording() {
 
   const totalFor = completedEnds.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
   const totalAgainst = completedEnds.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0);
+  
+  const isScoreBased = game?.gameEndType === "score";
+  const targetScore = game?.targetScore || 0;
+  const targetReached = isScoreBased && targetScore > 0 && (totalFor >= targetScore || totalAgainst >= targetScore);
+  const isEndsBased = game?.gameEndType === "ends" || !game?.gameEndType;
+  const totalEndsReached = isEndsBased && game?.totalEnds && game.totalEnds > 0 && completedEnds.length >= game.totalEnds;
 
   return (
     <div className="max-w-xl mx-auto space-y-6 pb-20">
@@ -319,7 +325,9 @@ export default function GameRecording() {
               : `End ${currentEnd?.endNumber || nextEndNumber}`
             }
           </h2>
-          <p className="text-xs text-muted-foreground">{game.venue} • {game.surface}</p>
+          <p className="text-xs text-muted-foreground">
+            {game.venue} • {game.surface} • {isScoreBased ? `First to ${targetScore}` : `${game.totalEnds} ends`}
+          </p>
         </div>
         <Button 
           variant="destructive" 
@@ -332,11 +340,35 @@ export default function GameRecording() {
         </Button>
       </div>
 
+      {/* Game Complete Alert */}
+      {(targetReached || totalEndsReached) && viewState === 'end-setup' && (
+        <Card className="border-primary bg-primary/10">
+          <CardContent className="py-4">
+            <div className="text-center space-y-2">
+              <p className="text-lg font-semibold text-primary">
+                {targetReached 
+                  ? `Target Score Reached! ${totalFor >= targetScore ? "You won!" : "Opponent won."}`
+                  : `All ${game.totalEnds} ends completed!`
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Final Score: {totalFor} - {totalAgainst}
+              </p>
+              <Button onClick={handleFinishGame} className="mt-2" data-testid="button-finish-game-alert">
+                Finish Game
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* End Setup View */}
       {viewState === 'end-setup' && (
         <Card>
           <CardHeader>
-            <CardTitle>Start End {nextEndNumber}</CardTitle>
+            <CardTitle>
+              {targetReached || totalEndsReached ? "Continue Playing?" : `Start End ${nextEndNumber}`}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {canDeliverJack && (

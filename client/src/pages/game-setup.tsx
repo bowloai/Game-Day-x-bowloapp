@@ -32,12 +32,23 @@ const formSchema = z.object({
   rink: z.string().min(1, "Rink number is required"),
   type: z.enum(["Practice", "Tournament", "Pennant"] as const),
   gameEndType: z.enum(["ends", "score"] as const),
-  totalEnds: z.coerce.number().optional().nullable(),
-  targetScore: z.coerce.number().optional().nullable(),
+  totalEnds: z.coerce.number().min(1, "Must have at least 1 end").optional().nullable(),
+  targetScore: z.coerce.number().min(1, "Target score must be at least 1").optional().nullable(),
   gameFormat: z.enum(["singles", "pairs", "triples", "fours"] as const),
   pairsType: z.enum(["3_bowl", "2_4_2", "walking"] as const).optional().nullable(),
   position: z.string().optional().nullable(),
-});
+}).refine((data) => {
+  if (data.gameEndType === "ends") {
+    return data.totalEnds && data.totalEnds >= 1;
+  }
+  return true;
+}, { message: "Total ends is required for ends-based games", path: ["totalEnds"] })
+.refine((data) => {
+  if (data.gameEndType === "score") {
+    return data.targetScore && data.targetScore >= 1;
+  }
+  return true;
+}, { message: "Target score is required for score-based games", path: ["targetScore"] });
 
 type FormValues = z.infer<typeof formSchema>;
 
