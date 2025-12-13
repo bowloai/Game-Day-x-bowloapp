@@ -227,6 +227,32 @@ export default function GameSetup() {
                 />
               </div>
 
+              {/* Pairs Type - shown only when pairs is selected */}
+              {showPairsType && (
+                <FormField
+                  control={form.control}
+                  name="pairsType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pairs Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-pairs-type">
+                            <SelectValue placeholder="Select pairs type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="3_bowl">3 Bowl (3 bowls)</SelectItem>
+                          <SelectItem value="2_4_2">2-4-2 (4 bowls)</SelectItem>
+                          <SelectItem value="walking">Walking (4 bowls)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               {/* Bowls per end - editable with smart default */}
               <FormField
                 control={form.control}
@@ -382,59 +408,7 @@ export default function GameSetup() {
                 )}
               </div>
 
-              {showPairsType && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="pairsType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pairs Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || undefined}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-pairs-type">
-                              <SelectValue placeholder="Select pairs type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="3_bowl">3 Bowl (3 bowls)</SelectItem>
-                            <SelectItem value="2_4_2">2-4-2 (4 bowls)</SelectItem>
-                            <SelectItem value="walking">Walking (4 bowls)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {showPosition && (
-                    <FormField
-                      control={form.control}
-                      name="position"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>My Position</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-position">
-                                <SelectValue placeholder="Select position" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {positionOptions.map((pos) => (
-                                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </div>
-              )}
-
-              {!showPairsType && showPosition && (
+              {showPosition && (
                 <FormField
                   control={form.control}
                   name="position"
