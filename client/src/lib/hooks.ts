@@ -33,12 +33,16 @@ export function useGamesFull() {
   });
 }
 
+function invalidateAllGameQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['games'] });
+}
+
 export function useCreateGame() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (game: InsertGame) => api.createGame(game),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['games'] });
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
@@ -48,7 +52,7 @@ export function useDeleteGame() {
   return useMutation({
     mutationFn: (id: string) => api.deleteGame(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['games'] });
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
@@ -58,10 +62,8 @@ export function useUpdateGame() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<InsertGame> }) => 
       api.updateGame(id, updates),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['games'] });
-      queryClient.invalidateQueries({ queryKey: ['games', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['games', variables.id, 'full'] });
+    onSuccess: () => {
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
@@ -71,9 +73,8 @@ export function useCreateEnd() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (end: InsertEnd) => api.createEnd(end),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['games', variables.gameId, 'full'] });
-      queryClient.invalidateQueries({ queryKey: ['games', variables.gameId, 'ends'] });
+    onSuccess: () => {
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
@@ -83,8 +84,8 @@ export function useUpdateEnd() {
   return useMutation({
     mutationFn: ({ id, gameId, updates }: { id: string; gameId: string; updates: Partial<InsertEnd> }) => 
       api.updateEnd(id, updates),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['games', variables.gameId, 'full'] });
+    onSuccess: () => {
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
@@ -95,8 +96,8 @@ export function useCreateBowl() {
   return useMutation({
     mutationFn: ({ bowl, gameId }: { bowl: InsertBowl; gameId: string }) => 
       api.createBowl(bowl),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['games', variables.gameId, 'full'] });
+    onSuccess: () => {
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
@@ -106,8 +107,8 @@ export function useUpdateBowl() {
   return useMutation({
     mutationFn: ({ id, gameId, updates }: { id: string; gameId: string; updates: Partial<InsertBowl> }) => 
       api.updateBowl(id, updates),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['games', variables.gameId, 'full'] });
+    onSuccess: () => {
+      invalidateAllGameQueries(queryClient);
     },
   });
 }
