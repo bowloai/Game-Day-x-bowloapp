@@ -212,6 +212,17 @@ export async function registerRoutes(
     }
   });
 
+  // Get all games with ends and bowls for analysis (optimized) - must come before :id routes
+  app.get("/api/games/full", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const games = await storage.getGamesFullByUser(userId);
+      res.json(games);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -344,27 +355,18 @@ export async function registerRoutes(
     }
   });
 
-  // Composite endpoint: Get game with all ends and bowls
+  // Composite endpoint: Get game with all ends and bowls (optimized single query)
   app.get("/api/games/:id/full", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const game = await storage.getGame(req.params.id);
+      const game = await storage.getGameFull(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
       }
       if (game.userId !== userId) {
         return res.status(403).json({ error: "Access denied" });
       }
-
-      const gameEnds = await storage.getEndsByGame(req.params.id);
-      const endsWithBowls = await Promise.all(
-        gameEnds.map(async (end) => {
-          const endBowls = await storage.getBowlsByEnd(end.id);
-          return { ...end, bowls: endBowls };
-        })
-      );
-
-      res.json({ ...game, ends: endsWithBowls });
+      res.json(game);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

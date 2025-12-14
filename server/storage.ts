@@ -1,6 +1,10 @@
 import { db } from "./db";
 import { games, ends, bowls, users, auditLogs, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser, type AuditLog, type InsertAuditLog } from "@shared/schema";
-import { eq, desc, ilike, or, sql } from "drizzle-orm";
+import { eq, desc, ilike, or, sql, inArray } from "drizzle-orm";
+
+export type GameWithEndsAndBowls = Game & {
+  ends: (End & { bowls: Bowl[] })[];
+};
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -21,8 +25,10 @@ export interface IStorage {
   // Games
   createGame(game: InsertGame): Promise<Game>;
   getGame(id: string): Promise<Game | undefined>;
+  getGameFull(id: string): Promise<GameWithEndsAndBowls | undefined>;
   getGames(): Promise<Game[]>;
   getGamesByUser(userId: string): Promise<Game[]>;
+  getGamesFullByUser(userId: string): Promise<GameWithEndsAndBowls[]>;
   updateGame(id: string, updates: Partial<InsertGame>): Promise<Game | undefined>;
   deleteGame(id: string): Promise<void>;
   
@@ -116,19 +122,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserStats(userId: string): Promise<{ gameCount: number; bowlCount: number }> {
-    const userGames = await db.select().from(games).where(eq(games.userId, userId));
-    const gameIds = userGames.map(g => g.id);
+    const result = await db
+      .select({
+        gameCount: sql<number>`count(distinct ${games.id})::int`,
+        bowlCount: sql<number>`count(${bowls.id})::int`,
+      })
+      .from(games)
+      .leftJoin(ends, eq(ends.gameId, games.id))
+      .leftJoin(bowls, eq(bowls.endId, ends.id))
+      .where(eq(games.userId, userId));
     
-    let bowlCount = 0;
-    for (const gameId of gameIds) {
-      const gameEnds = await db.select().from(ends).where(eq(ends.gameId, gameId));
-      for (const end of gameEnds) {
-        const endBowls = await db.select().from(bowls).where(eq(bowls.endId, end.id));
-        bowlCount += endBowls.length;
-      }
-    }
-    
-    return { gameCount: userGames.length, bowlCount };
+    return { 
+      gameCount: result[0]?.gameCount ?? 0, 
+      bowlCount: result[0]?.bowlCount ?? 0 
+    };
   }
 
   // Games
@@ -142,12 +149,81 @@ export class DatabaseStorage implements IStorage {
     return game;
   }
 
+  async getGameFull(id: string): Promise<GameWithEndsAndBowls | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.id, id));
+    if (!game) return undefined;
+
+    const gameEnds = await db.select().from(ends).where(eq(ends.gameId, id));
+    if (gameEnds.length === 0) {
+      return { ...game, ends: [] };
+    }
+
+    const endIds = gameEnds.map(e => e.id);
+    const allBowls = await db.select().from(bowls).where(inArray(bowls.endId, endIds));
+
+    const bowlsByEndId = new Map<string, Bowl[]>();
+    for (const bowl of allBowls) {
+      if (!bowlsByEndId.has(bowl.endId)) {
+        bowlsByEndId.set(bowl.endId, []);
+      }
+      bowlsByEndId.get(bowl.endId)!.push(bowl);
+    }
+
+    const endsWithBowls = gameEnds.map(end => ({
+      ...end,
+      bowls: bowlsByEndId.get(end.id) ?? [],
+    }));
+
+    return { ...game, ends: endsWithBowls };
+  }
+
   async getGames(): Promise<Game[]> {
     return db.select().from(games).orderBy(desc(games.createdAt));
   }
 
   async getGamesByUser(userId: string): Promise<Game[]> {
     return db.select().from(games).where(eq(games.userId, userId)).orderBy(desc(games.createdAt));
+  }
+
+  async getGamesFullByUser(userId: string): Promise<GameWithEndsAndBowls[]> {
+    const userGames = await db.select().from(games).where(eq(games.userId, userId)).orderBy(desc(games.createdAt));
+    if (userGames.length === 0) {
+      return [];
+    }
+
+    const gameIds = userGames.map(g => g.id);
+    const allEnds = await db.select().from(ends).where(inArray(ends.gameId, gameIds));
+    
+    if (allEnds.length === 0) {
+      return userGames.map(game => ({ ...game, ends: [] }));
+    }
+
+    const endIds = allEnds.map(e => e.id);
+    const allBowls = await db.select().from(bowls).where(inArray(bowls.endId, endIds));
+
+    const bowlsByEndId = new Map<string, Bowl[]>();
+    for (const bowl of allBowls) {
+      if (!bowlsByEndId.has(bowl.endId)) {
+        bowlsByEndId.set(bowl.endId, []);
+      }
+      bowlsByEndId.get(bowl.endId)!.push(bowl);
+    }
+
+    const endsByGameId = new Map<string, (End & { bowls: Bowl[] })[]>();
+    for (const end of allEnds) {
+      if (!endsByGameId.has(end.gameId)) {
+        endsByGameId.set(end.gameId, []);
+      }
+      endsByGameId.get(end.gameId)!.push({
+        ...end,
+        bowls: bowlsByEndId.get(end.id) ?? [],
+      });
+    }
+
+    return userGames.map(game => ({
+      ...game,
+      ends: endsByGameId.get(game.id) ?? [],
+    }));
   }
 
   async updateGame(id: string, updates: Partial<InsertGame>): Promise<Game | undefined> {

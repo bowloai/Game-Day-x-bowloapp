@@ -35,6 +35,12 @@ export async function getGameFull(id: string): Promise<GameWithDetails> {
   return res.json();
 }
 
+export async function getGamesFull(): Promise<GameWithDetails[]> {
+  const res = await fetch(`${API_BASE}/games/full`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function updateGame(id: string, updates: Partial<InsertGame>): Promise<Game> {
   const res = await fetch(`${API_BASE}/games/${id}`, {
     method: 'PATCH',

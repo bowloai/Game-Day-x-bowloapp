@@ -1,12 +1,11 @@
-import { useGames } from "@/lib/hooks";
+import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
-import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
 import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote } from "lucide-react";
@@ -167,11 +166,15 @@ function StatBlock({ title, icon: Icon, stats }: {
 }
 
 export default function Analysis() {
-  const { data: games, isLoading } = useGames();
-  const [gamesWithDetails, setGamesWithDetails] = useState<GameWithDetails[]>([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const { data: allGames, isLoading } = useGamesFull();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
+  
+  // Filter to only completed games
+  const gamesWithDetails = useMemo(() => {
+    if (!allGames) return [];
+    return allGames.filter(g => g.status === 'COMPLETED');
+  }, [allGames]);
   
   // Get game ID from URL params
   const urlParams = new URLSearchParams(searchString);
@@ -186,30 +189,6 @@ export default function Analysis() {
   const [filterVenue, setFilterVenue] = useState<string>("All");
   const [filterOpponent, setFilterOpponent] = useState<string>("All");
   const [filterFormat, setFilterFormat] = useState<string>("All");
-  
-  // Fetch full game details for completed games
-  useEffect(() => {
-    async function fetchDetails() {
-      if (!games) return;
-      const completedGames = games.filter(g => g.status === 'COMPLETED');
-      if (completedGames.length === 0) {
-        setGamesWithDetails([]);
-        return;
-      }
-      
-      setLoadingDetails(true);
-      try {
-        const details = await Promise.all(
-          completedGames.map(g => api.getGameFull(g.id))
-        );
-        setGamesWithDetails(details);
-      } catch (err) {
-        console.error('Failed to load game details', err);
-      }
-      setLoadingDetails(false);
-    }
-    fetchDetails();
-  }, [games]);
 
   // Get unique values for filters
   const uniqueVenues = useMemo(() => {
@@ -272,7 +251,7 @@ export default function Analysis() {
     };
   }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat]);
 
-  if (isLoading || loadingDetails) {
+  if (isLoading) {
     return <div className="text-center py-12">Loading...</div>;
   }
 

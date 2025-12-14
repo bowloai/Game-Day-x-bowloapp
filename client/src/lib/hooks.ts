@@ -26,10 +26,27 @@ export function useGameFull(id: string | undefined) {
   });
 }
 
+export function useGamesFull() {
+  return useQuery({
+    queryKey: ['games', 'full'],
+    queryFn: api.getGamesFull,
+  });
+}
+
 export function useCreateGame() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (game: InsertGame) => api.createGame(game),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+    },
+  });
+}
+
+export function useDeleteGame() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteGame(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['games'] });
     },
@@ -45,16 +62,6 @@ export function useUpdateGame() {
       queryClient.invalidateQueries({ queryKey: ['games'] });
       queryClient.invalidateQueries({ queryKey: ['games', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['games', variables.id, 'full'] });
-    },
-  });
-}
-
-export function useDeleteGame() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteGame(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['games'] });
     },
   });
 }
