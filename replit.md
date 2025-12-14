@@ -1,8 +1,8 @@
-# Game Day x bowlo.ai - Lawn Bowls Tracking Application
+# Game Day x bowlo.app - Lawn Bowls Tracking Application
 
 ## Overview
 
-Game Day x bowlo.ai is a progressive web application designed to track and analyze lawn bowls performance in pennant games (four-player format). The application enables players to record detailed statistics for each bowl delivered during a game, including hand position, accuracy metrics, and game outcomes. It provides comprehensive analysis tools to help players improve their performance through data-driven insights.
+Game Day x bowlo.app is a progressive web application designed to track and analyze lawn bowls performance in pennant games (four-player format). The application enables players to record detailed statistics for each bowl delivered during a game, including hand position, accuracy metrics, and game outcomes. It provides comprehensive analysis tools to help players improve their performance through data-driven insights.
 
 The application follows a modern full-stack architecture with a React frontend, Express backend, and PostgreSQL database using Drizzle ORM for data persistence.
 
