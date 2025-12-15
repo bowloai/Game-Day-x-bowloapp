@@ -379,8 +379,17 @@ export default function Analysis() {
       g.ends?.flatMap(e => e.bowls || []) || []
     );
 
-    const forehandBowls = allBowls.filter(b => b.hand === 'Forehand');
-    const backhandBowls = allBowls.filter(b => b.hand === 'Backhand');
+    // Use case-insensitive matching to handle any data inconsistencies
+    const forehandBowls = allBowls.filter(b => b.hand?.toLowerCase() === 'forehand');
+    const backhandBowls = allBowls.filter(b => b.hand?.toLowerCase() === 'backhand');
+    
+    // Debug: Log bowls with unexpected hand values
+    const unknownHandBowls = allBowls.filter(b => 
+      b.hand?.toLowerCase() !== 'forehand' && b.hand?.toLowerCase() !== 'backhand'
+    );
+    if (unknownHandBowls.length > 0) {
+      console.warn('Bowls with unexpected hand values:', unknownHandBowls.map(b => ({ id: b.id, hand: b.hand })));
+    }
 
     // Calculate heatmaps
     const allHeatmap = calculateHeatmap(allBowls);
