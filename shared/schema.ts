@@ -66,6 +66,7 @@ export const games = pgTable("games", {
   mentalFeeling: text("mental_feeling"),
   performanceRating: integer("performance_rating"),
   notes: text("notes"),
+  ourMat: boolean("our_mat").notNull().default(true),
 });
 
 export const ends = pgTable("ends", {

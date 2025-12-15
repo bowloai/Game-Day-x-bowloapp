@@ -76,14 +76,15 @@ export default function GameRecording() {
     : incompleteEnd;
   const nextEndNumber = completedEnds.length + 1;
   
-  // Check if we won the last end (or it's the first end) - determines if we deliver the jack
+  // Check if we won the last end - determines if we deliver the jack
   const lastCompletedEnd = completedEnds.length > 0 
     ? completedEnds.reduce((latest, end) => end.endNumber > latest.endNumber ? end : latest)
     : null;
-  const wonLastEnd = !lastCompletedEnd || (lastCompletedEnd.scoreFor || 0) > (lastCompletedEnd.scoreAgainst || 0);
+  const wonLastEnd = lastCompletedEnd ? (lastCompletedEnd.scoreFor || 0) > (lastCompletedEnd.scoreAgainst || 0) : false;
   // Jack delivery eligibility: Singles (no position), or any position containing "Lead"
   const isLeadRole = !game?.position || game.position === 'Lead' || game.position.includes('Lead');
-  const canDeliverJack = isLeadRole && wonLastEnd;
+  // For first end, use ourMat setting; for subsequent ends, use wonLastEnd
+  const canDeliverJack = isLeadRole && (nextEndNumber === 1 ? (game?.ourMat ?? true) : wonLastEnd);
   
   const endBowls = currentEnd?.bowls?.sort((a, b) => a.bowlNumber - b.bowlNumber) || [];
 

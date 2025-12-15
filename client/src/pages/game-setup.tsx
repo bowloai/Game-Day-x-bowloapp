@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,7 @@ const formSchema = z.object({
   pairsType: z.enum(["3_bowl", "2_4_2", "walking"] as const).optional().nullable(),
   position: z.string().optional().nullable(),
   bowlsPerEnd: z.coerce.number().min(1, "Must have at least 1 bowl").max(4, "Maximum 4 bowls per end"),
+  ourMat: z.boolean(),
 }).refine((data) => {
   if (data.gameEndType === "ends") {
     return data.totalEnds && data.totalEnds >= 1;
@@ -104,6 +106,7 @@ export default function GameSetup() {
       pairsType: null,
       position: "Lead",
       bowlsPerEnd: 2,
+      ourMat: true,
     },
   });
 
@@ -432,6 +435,28 @@ export default function GameSetup() {
                   )}
                 />
               )}
+
+              <FormField
+                control={form.control}
+                name="ourMat"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Our Mat (First End)</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Does your team deliver the jack on the first end?
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-our-mat"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
               <div className="pt-4">
                 <Button 
