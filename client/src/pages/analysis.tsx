@@ -78,14 +78,16 @@ function calculateHeatmap(bowls: Bowl[]): number[][] {
 
 function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCount: number, title: string }) {
   const getHeatColor = (count: number): string => {
-    if (count === 0) return "bg-slate-50 dark:bg-slate-900";
+    if (count === 0) return "bg-slate-100 dark:bg-slate-900";
     const intensity = Math.min(count / Math.max(maxCount, 1), 1);
     
-    // Use green gradient for effective zone, orange/red for others
-    if (intensity <= 0.25) return "bg-green-100 dark:bg-green-950/40";
-    if (intensity <= 0.5) return "bg-green-300 dark:bg-green-900/60";
-    if (intensity <= 0.75) return "bg-green-500 dark:bg-green-700";
-    return "bg-green-600 dark:bg-green-600";
+    // Standard YlOrRd (Yellow-Orange-Red) heatmap gradient
+    // Low intensity = pale yellow, high intensity = deep red
+    if (intensity <= 0.2) return "bg-yellow-100 dark:bg-yellow-950/40";
+    if (intensity <= 0.4) return "bg-amber-200 dark:bg-amber-900/50";
+    if (intensity <= 0.6) return "bg-orange-400 dark:bg-orange-700";
+    if (intensity <= 0.8) return "bg-orange-500 dark:bg-orange-600";
+    return "bg-red-600 dark:bg-red-700";
   };
 
   const getZoneLabel = (row: number, col: number): string => {
@@ -126,7 +128,7 @@ function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCou
                   className={`
                     aspect-square flex items-center justify-center text-xs font-medium rounded-sm
                     ${getHeatColor(count)}
-                    ${isEffectiveZone(rowIdx, colIdx) ? "ring-1 ring-green-400/50" : ""}
+                    ${isEffectiveZone(rowIdx, colIdx) ? "ring-1 ring-primary/30" : ""}
                     ${isJack ? "ring-2 ring-primary" : ""}
                   `}
                   title={`${count} bowl${count !== 1 ? 's' : ''} (Row ${rowIdx}, Col ${colIdx})`}
