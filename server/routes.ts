@@ -60,6 +60,17 @@ export async function registerRoutes(
     }
   });
 
+  // Delete all user game data (user can delete their own data)
+  app.delete("/api/auth/data", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.deleteAllUserGameData(userId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== ADMIN ROUTES ====================
   
   // Get all users (admin only)

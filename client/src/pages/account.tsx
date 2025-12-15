@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LogOut, User, Building2 } from "lucide-react";
+import { LogOut, User, Building2, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Account() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function Account() {
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [club, setClub] = useState(user?.club || "");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const updateProfile = useMutation({
     mutationFn: async (data: { firstName?: string; lastName?: string; club?: string }) => {
@@ -56,6 +58,32 @@ export default function Account() {
   const handleLogout = () => {
     window.location.href = "/api/logout";
   };
+
+  const deleteAllData = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/auth/data", {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete data");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      setShowDeleteDialog(false);
+      toast({
+        title: "Data deleted",
+        description: "All your game data has been permanently deleted.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete data. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -162,7 +190,40 @@ export default function Account() {
           <LogOut className="w-4 h-4 mr-2" />
           Sign Out
         </Button>
+
+        <Button 
+          variant="destructive" 
+          onClick={() => setShowDeleteDialog(true)}
+          data-testid="button-delete-all-data"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete All Data
+        </Button>
       </div>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete All Data?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all your games, ends, and bowl records. Your account will remain active. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => deleteAllData.mutate()}
+              disabled={deleteAllData.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteAllData.isPending ? "Deleting..." : "Delete Everything"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

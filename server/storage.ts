@@ -18,6 +18,7 @@ export interface IStorage {
   suspendUser(id: string): Promise<User | undefined>;
   activateUser(id: string): Promise<User | undefined>;
   deleteUserAndData(id: string): Promise<void>;
+  deleteAllUserGameData(userId: string): Promise<void>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(limit?: number): Promise<AuditLog[]>;
   getUserStats(userId: string): Promise<{ gameCount: number; bowlCount: number }>;
@@ -110,6 +111,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUserAndData(id: string): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  async deleteAllUserGameData(userId: string): Promise<void> {
+    // Delete all games for a user (ends and bowls will cascade)
+    await db.delete(games).where(eq(games.userId, userId));
   }
 
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
