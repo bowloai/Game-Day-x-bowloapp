@@ -1,4 +1,4 @@
-import { useGameFull, useCreateEnd, useCreateBowl, useUpdateEnd, useUpdateGame } from "@/lib/hooks";
+import { useGameFull, useCreateEnd, useCreateBowl, useUpdateEnd, useUpdateGame, useUpdateBowl } from "@/lib/hooks";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, ArrowLeft, ArrowRight, Flag } from "lucide-react";
+import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type BowlResult = 
@@ -37,6 +37,7 @@ export default function GameRecording() {
   const createBowl = useCreateBowl();
   const updateEnd = useUpdateEnd();
   const updateGame = useUpdateGame();
+  const updateBowl = useUpdateBowl();
 
   const [viewState, setViewState] = useState<ViewState>('end-setup');
   const [currentEndId, setCurrentEndId] = useState<string | null>(null);
@@ -50,6 +51,11 @@ export default function GameRecording() {
   const [scoreFor, setScoreFor] = useState(0);
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [isDead, setIsDead] = useState(false);
+  
+  // Bowl editing state
+  const [editingBowl, setEditingBowl] = useState<{ id: string; bowlNumber: number; hand: "Forehand" | "Backhand"; gridRow?: number | null; gridCol?: number | null } | null>(null);
+  const [editHand, setEditHand] = useState<"Forehand" | "Backhand">("Forehand");
+  const [editGridSelection, setEditGridSelection] = useState<{row: number, col: number} | null>(null);
   
   // Survey dialog state
   const [showSurveyDialog, setShowSurveyDialog] = useState(false);
@@ -67,6 +73,75 @@ export default function GameRecording() {
     setSurveyPerformanceRating([5]);
     setSurveyRatingTouched(false);
     setSurveyNotes("");
+  };
+
+  const openEditBowl = (bowl: { id: string; bowlNumber: number; hand: "Forehand" | "Backhand"; gridRow?: number | null; gridCol?: number | null }) => {
+    setEditingBowl(bowl);
+    setEditHand(bowl.hand);
+    setEditGridSelection(bowl.gridRow != null && bowl.gridCol != null ? { row: bowl.gridRow, col: bowl.gridCol } : null);
+  };
+
+  const closeEditBowl = () => {
+    setEditingBowl(null);
+    setEditGridSelection(null);
+  };
+
+  const calculateEditResult = (): BowlResult => {
+    if (!editGridSelection) return 'Effective';
+    const { row, col } = editGridSelection;
+    
+    const isShort = row <= 2;
+    const isHeavy = row >= 6;
+    const isLeft = col <= 2;
+    const isRight = col >= 6;
+    const isCenterLength = row >= 3 && row <= 5;
+    const isCenterLine = col >= 3 && col <= 5;
+
+    let lengthStr = '';
+    if (isShort) lengthStr = 'Short';
+    if (isHeavy) lengthStr = 'Heavy';
+
+    let lineStr = '';
+    if (isLeft) {
+       lineStr = editHand === 'Forehand' ? 'Wide' : 'Narrow';
+    } else if (isRight) {
+       lineStr = editHand === 'Forehand' ? 'Narrow' : 'Wide';
+    }
+
+    if (isCenterLength && isCenterLine) {
+      return 'Effective';
+    } else if (lengthStr && lineStr) {
+      return `${lengthStr} & ${lineStr}` as BowlResult;
+    } else if (lengthStr) {
+      return lengthStr as BowlResult;
+    } else if (lineStr) {
+      return lineStr as BowlResult;
+    }
+    return 'Effective';
+  };
+
+  const saveEditedBowl = () => {
+    if (!editingBowl || !editGridSelection || !game) return;
+    
+    const result = calculateEditResult();
+    updateBowl.mutate(
+      {
+        id: editingBowl.id,
+        gameId: game.id,
+        updates: {
+          hand: editHand,
+          result,
+          gridRow: editGridSelection.row,
+          gridCol: editGridSelection.col,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: `Bowl ${editingBowl.bowlNumber} updated` });
+          closeEditBowl();
+        },
+      }
+    );
   };
 
   const completedEnds = game?.ends?.filter(e => e.isCompleted) || [];
@@ -365,6 +440,53 @@ export default function GameRecording() {
     );
   };
 
+  const getEditZoneLabel = (row: number, col: number): string => {
+    const isZoneCenter = (row % 3 === 1) && (col % 3 === 1);
+    if (!isZoneCenter) return "";
+    
+    const zoneRow = Math.floor(row / 3);
+    const zoneCol = Math.floor(col / 3);
+    
+    const leftLabel = editHand === 'Forehand' ? 'Wide' : 'Narrow';
+    const rightLabel = editHand === 'Forehand' ? 'Narrow' : 'Wide';
+    
+    if (zoneRow === 0 && zoneCol === 1) return "Short";
+    if (zoneRow === 2 && zoneCol === 1) return "Heavy";
+    if (zoneRow === 1 && zoneCol === 0) return leftLabel;
+    if (zoneRow === 1 && zoneCol === 1) return "Effective";
+    if (zoneRow === 1 && zoneCol === 2) return rightLabel;
+    
+    return "";
+  };
+
+  const EditGridCell9x9 = ({ r, c }: { r: number, c: number }) => {
+    const isSelected = editGridSelection?.row === r && editGridSelection?.col === c;
+    const label = getEditZoneLabel(r, c);
+    const isJackCell = r === 4 && c === 4;
+    
+    return (
+      <button
+        type="button"
+        onClick={() => setEditGridSelection({ row: r, col: c })}
+        className={cn(
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
+          isSelected 
+            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10" 
+            : getZoneColor(r, c),
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50",
+          isJackCell && !isSelected ? "ring-2 ring-primary/30" : ""
+        )}
+        data-testid={`edit-grid-cell-${r}-${c}`}
+      >
+        {isJackCell && !label && !isSelected && (
+          <div className="w-2 h-2 rounded-full bg-primary/60" />
+        )}
+        {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
+        {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
+      </button>
+    );
+  };
+
   const totalFor = completedEnds.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
   const totalAgainst = completedEnds.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0);
   
@@ -527,7 +649,16 @@ export default function GameRecording() {
                 bowlsPerEnd <= 2 ? "grid-cols-2" : bowlsPerEnd === 3 ? "grid-cols-3" : "grid-cols-4"
               )}>
                 {endBowls.map((bowl) => (
-                  <div key={bowl.id} className="bg-background p-3 rounded border">
+                  <div key={bowl.id} className="bg-background p-3 rounded border relative">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1 h-6 w-6 p-0"
+                      onClick={() => openEditBowl(bowl)}
+                      data-testid={`button-edit-bowl-${bowl.bowlNumber}`}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
                     <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
                     {bowl.hand} - {bowl.result}
                   </div>
@@ -952,6 +1083,60 @@ export default function GameRecording() {
           </div>
         );
       })()}
+
+      {/* Bowl Edit Dialog */}
+      <Dialog open={!!editingBowl} onOpenChange={(open) => !open && closeEditBowl()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Bowl {editingBowl?.bowlNumber}</DialogTitle>
+            <DialogDescription>Tap a cell to update where your bowl landed.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="flex bg-secondary p-1 rounded-md">
+                <button 
+                  type="button"
+                  className={cn("px-3 py-1 rounded text-sm transition-all", editHand === "Forehand" ? "bg-white shadow text-primary font-medium" : "text-muted-foreground")}
+                  onClick={() => setEditHand("Forehand")}
+                  data-testid="button-edit-hand-forehand"
+                >
+                  Forehand
+                </button>
+                <button 
+                  type="button"
+                  className={cn("px-3 py-1 rounded text-sm transition-all", editHand === "Backhand" ? "bg-white shadow text-primary font-medium" : "text-muted-foreground")}
+                  onClick={() => setEditHand("Backhand")}
+                  data-testid="button-edit-hand-backhand"
+                >
+                  Backhand
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-9 gap-0.5">
+              {Array.from({ length: 9 }, (_, row) =>
+                Array.from({ length: 9 }, (_, col) => (
+                  <EditGridCell9x9 key={`edit-${row}-${col}`} r={row} c={col} />
+                ))
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={closeEditBowl}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={saveEditedBowl}
+              disabled={!editGridSelection || updateBowl.isPending}
+              data-testid="button-save-edit-bowl"
+            >
+              {updateBowl.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Post-Game Survey Dialog */}
       <Dialog 
