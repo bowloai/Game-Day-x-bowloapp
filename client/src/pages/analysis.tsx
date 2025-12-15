@@ -15,7 +15,144 @@ type Bowl = {
   result: string;
   hand: string;
   bowlNumber: number;
+  gridRow?: number | null;
+  gridCol?: number | null;
 };
+
+function mapResultToGrid(result: string): { row: number, col: number } {
+  // Map old 3x3 result strings to center of corresponding 9x9 zone
+  switch (result) {
+    case 'Short & Narrow':
+    case 'Short-Narrow':
+      return { row: 1, col: 1 }; // center of top-left zone
+    case 'Short':
+      return { row: 1, col: 4 }; // center of top-center zone
+    case 'Short & Wide':
+    case 'Short-Wide':
+      return { row: 1, col: 7 }; // center of top-right zone
+    case 'Narrow':
+      return { row: 4, col: 1 }; // center of left zone
+    case 'Effective':
+      return { row: 4, col: 4 }; // center (jack position)
+    case 'Wide':
+      return { row: 4, col: 7 }; // center of right zone
+    case 'Heavy & Narrow':
+    case 'Heavy-Narrow':
+      return { row: 7, col: 1 }; // center of bottom-left zone
+    case 'Heavy':
+      return { row: 7, col: 4 }; // center of bottom-center zone
+    case 'Heavy & Wide':
+    case 'Heavy-Wide':
+      return { row: 7, col: 7 }; // center of bottom-right zone
+    default:
+      return { row: 4, col: 4 }; // default to center
+  }
+}
+
+function calculateHeatmap(bowls: Bowl[]): number[][] {
+  // Create 9x9 grid initialized with zeros
+  const grid = Array.from({ length: 9 }, () => Array(9).fill(0));
+  
+  bowls.forEach(bowl => {
+    let row: number, col: number;
+    
+    // Use gridRow/gridCol if available (new data), otherwise map from result (old data)
+    if (bowl.gridRow !== null && bowl.gridRow !== undefined && 
+        bowl.gridCol !== null && bowl.gridCol !== undefined) {
+      row = bowl.gridRow;
+      col = bowl.gridCol;
+    } else {
+      const mapped = mapResultToGrid(bowl.result);
+      row = mapped.row;
+      col = mapped.col;
+    }
+    
+    // Ensure within bounds
+    if (row >= 0 && row < 9 && col >= 0 && col < 9) {
+      grid[row][col]++;
+    }
+  });
+  
+  return grid;
+}
+
+function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCount: number, title: string }) {
+  const getHeatColor = (count: number): string => {
+    if (count === 0) return "bg-slate-50 dark:bg-slate-900";
+    const intensity = Math.min(count / Math.max(maxCount, 1), 1);
+    
+    // Use green gradient for effective zone, orange/red for others
+    if (intensity <= 0.25) return "bg-green-100 dark:bg-green-950/40";
+    if (intensity <= 0.5) return "bg-green-300 dark:bg-green-900/60";
+    if (intensity <= 0.75) return "bg-green-500 dark:bg-green-700";
+    return "bg-green-600 dark:bg-green-600";
+  };
+
+  const getZoneLabel = (row: number, col: number): string => {
+    const isZoneCenter = (row % 3 === 1) && (col % 3 === 1);
+    if (!isZoneCenter) return "";
+    
+    const zoneRow = Math.floor(row / 3);
+    const zoneCol = Math.floor(col / 3);
+    
+    if (zoneRow === 0 && zoneCol === 1) return "S";
+    if (zoneRow === 2 && zoneCol === 1) return "H";
+    if (zoneRow === 1 && zoneCol === 0) return "N";
+    if (zoneRow === 1 && zoneCol === 1) return "E";
+    if (zoneRow === 1 && zoneCol === 2) return "W";
+    return "";
+  };
+
+  const isEffectiveZone = (row: number, col: number) => 
+    row >= 3 && row <= 5 && col >= 3 && col <= 5;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-9 gap-0.5 max-w-[280px] mx-auto">
+          {heatmap.map((row, rowIdx) =>
+            row.map((count, colIdx) => {
+              const isJack = rowIdx === 4 && colIdx === 4;
+              const label = getZoneLabel(rowIdx, colIdx);
+              return (
+                <div
+                  key={`${rowIdx}-${colIdx}`}
+                  className={`
+                    aspect-square flex items-center justify-center text-xs font-medium rounded-sm
+                    ${getHeatColor(count)}
+                    ${isEffectiveZone(rowIdx, colIdx) ? "ring-1 ring-green-400/50" : ""}
+                    ${isJack ? "ring-2 ring-primary" : ""}
+                  `}
+                  title={`${count} bowl${count !== 1 ? 's' : ''} (Row ${rowIdx}, Col ${colIdx})`}
+                  data-testid={`heatmap-cell-${rowIdx}-${colIdx}`}
+                >
+                  {count > 0 ? count : label}
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
+          <span>Short</span>
+          <span className="text-center">E = Effective (Jack)</span>
+          <span>Heavy</span>
+        </div>
+        <div className="flex justify-center gap-4 mt-2 text-xs text-muted-foreground">
+          <span>N = Narrow</span>
+          <span>W = Wide</span>
+          <span>S = Short</span>
+          <span>H = Heavy</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function calculateStats(bowls: Bowl[]) {
   const total = bowls.length;
@@ -201,9 +338,9 @@ export default function Analysis() {
     return Array.from(new Set(gamesWithDetails.map(g => g.opponent))).sort();
   }, [gamesWithDetails]);
 
-  const { allStats, forehandStats, backhandStats, totalGames } = useMemo(() => {
+  const { allStats, forehandStats, backhandStats, totalGames, allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount } = useMemo(() => {
     if (!gamesWithDetails || gamesWithDetails.length === 0) {
-      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0 };
+      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0 };
     }
     
     let filteredGames = [...gamesWithDetails];
@@ -232,7 +369,7 @@ export default function Analysis() {
     }
 
     if (filteredGames.length === 0) {
-      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0 };
+      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0 };
     }
 
     // Get all bowls from filtered games
@@ -243,11 +380,27 @@ export default function Analysis() {
     const forehandBowls = allBowls.filter(b => b.hand === 'Forehand');
     const backhandBowls = allBowls.filter(b => b.hand === 'Backhand');
 
+    // Calculate heatmaps
+    const allHeatmap = calculateHeatmap(allBowls);
+    const forehandHeatmap = calculateHeatmap(forehandBowls);
+    const backhandHeatmap = calculateHeatmap(backhandBowls);
+    
+    // Find max count across all heatmaps for consistent coloring
+    const maxHeatmapCount = Math.max(
+      ...allHeatmap.flat(),
+      ...forehandHeatmap.flat(),
+      ...backhandHeatmap.flat()
+    );
+
     return {
       allStats: calculateStats(allBowls),
       forehandStats: calculateStats(forehandBowls),
       backhandStats: calculateStats(backhandBowls),
       totalGames: filteredGames.length,
+      allHeatmap,
+      forehandHeatmap,
+      backhandHeatmap,
+      maxHeatmapCount,
     };
   }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat]);
 
@@ -534,6 +687,37 @@ export default function Analysis() {
           stats={backhandStats!} 
         />
       </div>
+
+      {/* Heatmap Section */}
+      {allHeatmap && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">Bowl Landing Heatmap</h2>
+          <p className="text-sm text-muted-foreground">
+            Shows where your bowls landed on a 9x9 grid (1 foot per cell). Center is the jack position.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <HeatmapGrid 
+              heatmap={allHeatmap} 
+              maxCount={maxHeatmapCount} 
+              title="All Bowls" 
+            />
+            {forehandHeatmap && (
+              <HeatmapGrid 
+                heatmap={forehandHeatmap} 
+                maxCount={maxHeatmapCount} 
+                title="Forehand" 
+              />
+            )}
+            {backhandHeatmap && (
+              <HeatmapGrid 
+                heatmap={backhandHeatmap} 
+                maxCount={maxHeatmapCount} 
+                title="Backhand" 
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -44,7 +44,7 @@ export default function GameRecording() {
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
-  const [gridSelection, setGridSelection] = useState<{row: 0|1|2, col: 0|1|2} | null>(null);
+  const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);
   const [endLength, setEndLength] = useState<string>("Medium");
   const [scoreFor, setScoreFor] = useState(0);
@@ -117,12 +117,16 @@ export default function GameRecording() {
   const calculateResult = (): BowlResult => {
     if (!gridSelection) return 'Effective';
     const { row, col } = gridSelection;
-    const isShort = row === 0;
-    const isHeavy = row === 2;
-    const isLeft = col === 0;
-    const isRight = col === 2;
-    const isCenterLength = row === 1;
-    const isCenterLine = col === 1;
+    
+    // Map 9x9 grid to 3x3 zones
+    // Rows 0-2: Short, Rows 3-5: Good weight, Rows 6-8: Heavy
+    // Cols 0-2: Left side, Cols 3-5: Center line, Cols 6-8: Right side
+    const isShort = row <= 2;
+    const isHeavy = row >= 6;
+    const isLeft = col <= 2;
+    const isRight = col >= 6;
+    const isCenterLength = row >= 3 && row <= 5;
+    const isCenterLine = col >= 3 && col <= 5;
 
     let lengthStr = '';
     if (isShort) lengthStr = 'Short';
@@ -186,6 +190,8 @@ export default function GameRecording() {
           bowlNumber: activeBowl,
           hand,
           result,
+          gridRow: gridSelection.row,
+          gridCol: gridSelection.col,
         },
         gameId: game.id,
       },
@@ -282,23 +288,78 @@ export default function GameRecording() {
     );
   };
 
-  const GridCell = ({ r, c, label }: { r: 0|1|2, c: 0|1|2, label?: string }) => {
+  const getZoneColor = (row: number, col: number) => {
+    // Center 3x3 (rows 3-5, cols 3-5) = Effective zone (green)
+    const isEffective = row >= 3 && row <= 5 && col >= 3 && col <= 5;
+    if (isEffective) return "bg-green-100 dark:bg-green-950/40 border-green-400";
+    
+    // Short zones (rows 0-2)
+    if (row <= 2) {
+      if (col <= 2) return "bg-red-50 dark:bg-red-950/20 border-red-200"; // Short-Left
+      if (col >= 6) return "bg-red-50 dark:bg-red-950/20 border-red-200"; // Short-Right
+      return "bg-red-100 dark:bg-red-950/30 border-red-300"; // Short center
+    }
+    
+    // Heavy zones (rows 6-8)
+    if (row >= 6) {
+      if (col <= 2) return "bg-slate-50 dark:bg-slate-950/20 border-slate-200"; // Heavy-Left
+      if (col >= 6) return "bg-slate-50 dark:bg-slate-950/20 border-slate-200"; // Heavy-Right
+      return "bg-slate-100 dark:bg-slate-950/30 border-slate-300"; // Heavy center
+    }
+    
+    // Good weight but off-line (rows 3-5, cols 0-2 or 6-8)
+    if (col <= 2) return "bg-orange-50 dark:bg-orange-950/20 border-orange-200"; // Left
+    if (col >= 6) return "bg-blue-50 dark:bg-blue-950/20 border-blue-200"; // Right
+    
+    return "bg-background border-border";
+  };
+
+  const getZoneLabel = (row: number, col: number): string => {
+    // Only show labels at zone centers (middle cell of each 3x3 zone)
+    const isZoneCenter = (row % 3 === 1) && (col % 3 === 1);
+    if (!isZoneCenter) return "";
+    
+    const zoneRow = Math.floor(row / 3); // 0=Short, 1=Good, 2=Heavy
+    const zoneCol = Math.floor(col / 3); // 0=Left, 1=Center, 2=Right
+    
+    // Map left/right to wide/narrow based on hand
+    const leftLabel = hand === 'Forehand' ? 'Wide' : 'Narrow';
+    const rightLabel = hand === 'Forehand' ? 'Narrow' : 'Wide';
+    
+    if (zoneRow === 0 && zoneCol === 1) return "Short";
+    if (zoneRow === 2 && zoneCol === 1) return "Heavy";
+    if (zoneRow === 1 && zoneCol === 0) return leftLabel;
+    if (zoneRow === 1 && zoneCol === 1) return "Effective";
+    if (zoneRow === 1 && zoneCol === 2) return rightLabel;
+    
+    return "";
+  };
+
+  const GridCell9x9 = ({ r, c }: { r: number, c: number }) => {
     const isSelected = gridSelection?.row === r && gridSelection?.col === c;
+    const label = getZoneLabel(r, c);
+    const isEffectiveZone = r >= 3 && r <= 5 && c >= 3 && c <= 5;
+    const isJackCell = r === 4 && c === 4;
+    
     return (
       <button
         type="button"
         onClick={() => setGridSelection({ row: r, col: c })}
         className={cn(
-          "h-20 w-full border rounded-lg flex items-center justify-center transition-all relative font-medium text-sm",
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
           isSelected 
-            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" 
-            : "bg-background hover:bg-secondary",
-          r === 1 && c === 1 ? "bg-accent/20 border-accent text-accent-foreground" : ""
+            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10" 
+            : getZoneColor(r, c),
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50",
+          isJackCell && !isSelected ? "ring-2 ring-primary/30" : ""
         )}
         data-testid={`grid-cell-${r}-${c}`}
       >
-        {label}
-        {isSelected && <CheckCircle2 className="absolute top-1 right-1 w-4 h-4" />}
+        {isJackCell && !label && !isSelected && (
+          <div className="w-2 h-2 rounded-full bg-primary/60" />
+        )}
+        {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
+        {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
       </button>
     );
   };
@@ -429,19 +490,16 @@ export default function GameRecording() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <GridCell r={0} c={0} />
-            <GridCell r={0} c={1} label="Short" />
-            <GridCell r={0} c={2} />
-            
-            <GridCell r={1} c={0} label={hand === 'Forehand' ? 'Wide' : 'Narrow'} />
-            <GridCell r={1} c={1} label="Effective" />
-            <GridCell r={1} c={2} label={hand === 'Forehand' ? 'Narrow' : 'Wide'} />
-
-            <GridCell r={2} c={0} />
-            <GridCell r={2} c={1} label="Heavy" />
-            <GridCell r={2} c={2} />
+          <div className="grid grid-cols-9 gap-0.5">
+            {Array.from({ length: 9 }, (_, row) =>
+              Array.from({ length: 9 }, (_, col) => (
+                <GridCell9x9 key={`${row}-${col}`} r={row} c={col} />
+              ))
+            )}
           </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Tap a cell to mark where your bowl landed. Each cell = 1 foot.
+          </p>
           
           <Button 
             size="lg" 

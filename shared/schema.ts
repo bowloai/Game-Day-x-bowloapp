@@ -86,6 +86,8 @@ export const bowls = pgTable("bowls", {
   bowlNumber: integer("bowl_number").notNull(),
   hand: text("hand").notNull(),
   result: text("result").notNull(),
+  gridRow: integer("grid_row"),
+  gridCol: integer("grid_col"),
 });
 
 // Insert schemas
