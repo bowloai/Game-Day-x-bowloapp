@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, index, jsonb, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -89,6 +89,10 @@ export const bowls = pgTable("bowls", {
   result: text("result").notNull(),
   gridRow: integer("grid_row"),
   gridCol: integer("grid_col"),
+  weightDistanceFeet: doublePrecision("weight_distance_feet"),
+  lineDistanceFeet: doublePrecision("line_distance_feet"),
+  totalDistanceFeet: doublePrecision("total_distance_feet"),
+  locationSource: text("location_source"),
 });
 
 // Insert schemas
