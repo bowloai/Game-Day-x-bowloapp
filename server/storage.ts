@@ -2,6 +2,26 @@ import { db } from "./db";
 import { games, ends, bowls, users, auditLogs, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser, type AuditLog, type InsertAuditLog } from "@shared/schema";
 import { eq, desc, ilike, or, sql, inArray } from "drizzle-orm";
 
+function calculateBowlDistances(gridRow: number | null | undefined, gridCol: number | null | undefined) {
+  if (gridRow == null || gridCol == null) {
+    return {
+      weightDistanceFeet: null,
+      lineDistanceFeet: null,
+      totalDistanceFeet: null,
+      locationSource: null,
+    };
+  }
+  const weightDistance = Math.abs(gridRow - 4);
+  const lineDistance = Math.abs(gridCol - 4);
+  const totalDistance = Math.sqrt(Math.pow(gridRow - 4, 2) + Math.pow(gridCol - 4, 2));
+  return {
+    weightDistanceFeet: weightDistance,
+    lineDistanceFeet: lineDistance,
+    totalDistanceFeet: totalDistance,
+    locationSource: 'exact' as const,
+  };
+}
+
 export type GameWithEndsAndBowls = Game & {
   ends: (End & { bowls: Bowl[] })[];
 };
@@ -269,7 +289,11 @@ export class DatabaseStorage implements IStorage {
 
   // Bowls
   async createBowl(bowl: InsertBowl): Promise<Bowl> {
-    const [newBowl] = await db.insert(bowls).values(bowl).returning();
+    const distances = calculateBowlDistances(bowl.gridRow, bowl.gridCol);
+    const [newBowl] = await db.insert(bowls).values({
+      ...bowl,
+      ...distances,
+    }).returning();
     return newBowl;
   }
 
@@ -283,8 +307,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBowl(id: string, updates: Partial<InsertBowl>): Promise<Bowl | undefined> {
+    let finalUpdates: any = { ...updates };
+    if (updates.gridRow !== undefined || updates.gridCol !== undefined) {
+      const existing = await this.getBowl(id);
+      const newGridRow = updates.gridRow ?? existing?.gridRow;
+      const newGridCol = updates.gridCol ?? existing?.gridCol;
+      const distances = calculateBowlDistances(newGridRow, newGridCol);
+      finalUpdates = { ...finalUpdates, ...distances };
+    }
     const [updated] = await db.update(bowls)
-      .set(updates)
+      .set(finalUpdates)
       .where(eq(bowls.id, id))
       .returning();
     return updated;
