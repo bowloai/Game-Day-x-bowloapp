@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useGameFull, useUpdateEnd, useUpdateBowl } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Save, Check } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Save, Check, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Bowl, End } from "@shared/schema";
@@ -19,10 +19,19 @@ const RESULT_LABELS: Record<string, string> = {
   "SHORT_WIDE": "Short Wide",
   "NARROW": "Narrow",
   "GOOD": "Effective",
+  "Effective": "Effective",
   "WIDE": "Wide",
   "LONG_NARROW": "Long Narrow",
   "LONG": "Long",
   "LONG_WIDE": "Long Wide",
+  "Short": "Short",
+  "Short & Narrow": "Short Narrow",
+  "Short & Wide": "Short Wide",
+  "Heavy": "Heavy",
+  "Heavy & Narrow": "Heavy Narrow",
+  "Heavy & Wide": "Heavy Wide",
+  "Narrow": "Narrow",
+  "Wide": "Wide",
 };
 
 const getResultLabel = (result: string) => {
@@ -30,37 +39,84 @@ const getResultLabel = (result: string) => {
 };
 
 const getResultColor = (result: string) => {
-  if (result === "GOOD") return "bg-green-500 text-white";
-  if (result.includes("NARROW") || result.includes("WIDE")) return "bg-yellow-500 text-white";
+  if (result === "GOOD" || result === "Effective") return "bg-green-500 text-white";
+  if (result.includes("NARROW") || result.includes("WIDE") || result.includes("Narrow") || result.includes("Wide")) return "bg-yellow-500 text-white";
   return "bg-orange-500 text-white";
 };
 
 type BowlWithEnd = Bowl & { endId: string };
 
-const GridCell = ({ r, c, label, selected, isCenter, onClick }: { 
-  r: number; 
-  c: number; 
-  label?: string; 
-  selected: boolean;
-  isCenter?: boolean;
-  onClick: () => void;
-}) => {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "h-16 w-full border rounded-lg flex items-center justify-center transition-all relative font-medium text-sm",
-        selected 
-          ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" 
-          : "bg-background hover:bg-secondary",
-        isCenter ? "bg-accent/20 border-accent text-accent-foreground" : ""
-      )}
-      data-testid={`grid-cell-${r}-${c}`}
-    >
-      {label}
-    </button>
-  );
+const getZoneColor = (row: number, col: number) => {
+  const isEffective = row >= 3 && row <= 5 && col >= 3 && col <= 5;
+  if (isEffective) return "bg-green-100 dark:bg-green-950/40 border-green-400";
+  
+  if (row <= 2) {
+    if (col <= 2) return "bg-red-50 dark:bg-red-950/20 border-red-200";
+    if (col >= 6) return "bg-red-50 dark:bg-red-950/20 border-red-200";
+    return "bg-red-100 dark:bg-red-950/30 border-red-300";
+  }
+  
+  if (row >= 6) {
+    if (col <= 2) return "bg-slate-50 dark:bg-slate-950/20 border-slate-200";
+    if (col >= 6) return "bg-slate-50 dark:bg-slate-950/20 border-slate-200";
+    return "bg-slate-100 dark:bg-slate-950/30 border-slate-300";
+  }
+  
+  if (col <= 2) return "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200";
+  if (col >= 6) return "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200";
+  
+  return "bg-background border-border";
+};
+
+const mapResultToGrid = (result: string, hand: string): { row: number; col: number } => {
+  const normalized = result.toUpperCase().replace(/ & /g, '_').replace(/ /g, '_');
+  
+  let row = 4;
+  let col = 4;
+  
+  if (normalized.includes('SHORT')) row = 1;
+  else if (normalized.includes('HEAVY') || normalized.includes('LONG')) row = 7;
+  
+  const isForward = hand === 'FOREHAND' || hand === 'Forehand';
+  if (normalized.includes('NARROW')) {
+    col = isForward ? 7 : 1;
+  } else if (normalized.includes('WIDE')) {
+    col = isForward ? 1 : 7;
+  }
+  
+  return { row, col };
+};
+
+const calculateResultFromGrid = (row: number, col: number, hand: string): string => {
+  const isShort = row <= 2;
+  const isHeavy = row >= 6;
+  const isLeft = col <= 2;
+  const isRight = col >= 6;
+  const isCenterLength = row >= 3 && row <= 5;
+  const isCenterLine = col >= 3 && col <= 5;
+
+  let lengthStr = '';
+  if (isShort) lengthStr = 'Short';
+  if (isHeavy) lengthStr = 'Heavy';
+
+  let lineStr = '';
+  const isForward = hand === 'FOREHAND' || hand === 'Forehand';
+  if (isLeft) {
+    lineStr = isForward ? 'Wide' : 'Narrow';
+  } else if (isRight) {
+    lineStr = isForward ? 'Narrow' : 'Wide';
+  }
+
+  if (isCenterLength && isCenterLine) {
+    return 'Effective';
+  } else if (lengthStr && lineStr) {
+    return `${lengthStr} & ${lineStr}`;
+  } else if (lengthStr) {
+    return lengthStr;
+  } else if (lineStr) {
+    return lineStr;
+  }
+  return 'Effective';
 };
 
 export default function GameEdit() {
@@ -74,6 +130,71 @@ export default function GameEdit() {
   const [openEnds, setOpenEnds] = useState<Set<string>>(new Set());
   const [editingBowl, setEditingBowl] = useState<BowlWithEnd | null>(null);
   const [editingEndScores, setEditingEndScores] = useState<{ endId: string; scoreFor: number; scoreAgainst: number } | null>(null);
+  const [gridSelection, setGridSelection] = useState<{ row: number; col: number } | null>(null);
+  const [editHand, setEditHand] = useState<string>("FOREHAND");
+
+  useEffect(() => {
+    if (editingBowl) {
+      setEditHand(editingBowl.hand || "FOREHAND");
+      if (editingBowl.gridRow !== null && editingBowl.gridRow !== undefined && 
+          editingBowl.gridCol !== null && editingBowl.gridCol !== undefined) {
+        setGridSelection({ row: editingBowl.gridRow, col: editingBowl.gridCol });
+      } else {
+        const mapped = mapResultToGrid(editingBowl.result || "Effective", editingBowl.hand || "FOREHAND");
+        setGridSelection(mapped);
+      }
+    } else {
+      setGridSelection(null);
+    }
+  }, [editingBowl]);
+
+  const getEditZoneLabel = (row: number, col: number): string => {
+    const isZoneCenter = (row % 3 === 1) && (col % 3 === 1);
+    if (!isZoneCenter) return "";
+    
+    const zoneRow = Math.floor(row / 3);
+    const zoneCol = Math.floor(col / 3);
+    
+    const isForward = editHand === 'FOREHAND' || editHand === 'Forehand';
+    const leftLabel = isForward ? 'Wide' : 'Narrow';
+    const rightLabel = isForward ? 'Narrow' : 'Wide';
+    
+    if (zoneRow === 0 && zoneCol === 1) return "Short";
+    if (zoneRow === 2 && zoneCol === 1) return "Heavy";
+    if (zoneRow === 1 && zoneCol === 0) return leftLabel;
+    if (zoneRow === 1 && zoneCol === 1) return "Effective";
+    if (zoneRow === 1 && zoneCol === 2) return rightLabel;
+    
+    return "";
+  };
+
+  const EditGridCell9x9 = ({ r, c }: { r: number, c: number }) => {
+    const isSelected = gridSelection?.row === r && gridSelection?.col === c;
+    const label = getEditZoneLabel(r, c);
+    const isJackCell = r === 4 && c === 4;
+    
+    return (
+      <button
+        type="button"
+        onClick={() => setGridSelection({ row: r, col: c })}
+        className={cn(
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
+          isSelected 
+            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10" 
+            : getZoneColor(r, c),
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50",
+          isJackCell && !isSelected ? "ring-2 ring-primary/30" : ""
+        )}
+        data-testid={`edit-grid-cell-${r}-${c}`}
+      >
+        {isJackCell && !label && !isSelected && (
+          <div className="w-2 h-2 rounded-full bg-primary/60" />
+        )}
+        {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
+        {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
+      </button>
+    );
+  };
 
   const toggleEnd = (endId: string) => {
     setOpenEnds(prev => {
@@ -88,19 +209,24 @@ export default function GameEdit() {
   };
 
   const handleSaveBowl = async () => {
-    if (!editingBowl || !id) return;
+    if (!editingBowl || !id || !gridSelection) return;
+    
+    const result = calculateResultFromGrid(gridSelection.row, gridSelection.col, editHand);
     
     try {
       await updateBowl.mutateAsync({
         id: editingBowl.id,
         gameId: id,
         updates: {
-          hand: editingBowl.hand,
-          result: editingBowl.result,
+          hand: editHand,
+          result: result,
+          gridRow: gridSelection.row,
+          gridCol: gridSelection.col,
         },
       });
       toast({ title: "Bowl updated" });
       setEditingBowl(null);
+      setGridSelection(null);
     } catch (error) {
       toast({ title: "Failed to update bowl", variant: "destructive" });
     }
@@ -312,13 +438,13 @@ export default function GameEdit() {
 
       {/* Edit Bowl Dialog */}
       <Dialog open={!!editingBowl} onOpenChange={() => setEditingBowl(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Bowl {editingBowl?.bowlNumber}</DialogTitle>
           </DialogHeader>
           
           {editingBowl && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Hand</Label>
                 <div className="flex bg-secondary p-1 rounded-md">
@@ -326,11 +452,11 @@ export default function GameEdit() {
                     type="button"
                     className={cn(
                       "px-4 py-2 rounded text-sm transition-all",
-                      editingBowl.hand === "FOREHAND" 
+                      editHand === "FOREHAND" 
                         ? "bg-white shadow text-primary font-medium" 
                         : "text-muted-foreground"
                     )}
-                    onClick={() => setEditingBowl({ ...editingBowl, hand: "FOREHAND" })}
+                    onClick={() => setEditHand("FOREHAND")}
                     data-testid="button-hand-forehand"
                   >
                     Forehand
@@ -339,11 +465,11 @@ export default function GameEdit() {
                     type="button"
                     className={cn(
                       "px-4 py-2 rounded text-sm transition-all",
-                      editingBowl.hand === "BACKHAND" 
+                      editHand === "BACKHAND" 
                         ? "bg-white shadow text-primary font-medium" 
                         : "text-muted-foreground"
                     )}
-                    onClick={() => setEditingBowl({ ...editingBowl, hand: "BACKHAND" })}
+                    onClick={() => setEditHand("BACKHAND")}
                     data-testid="button-hand-backhand"
                   >
                     Backhand
@@ -352,65 +478,17 @@ export default function GameEdit() {
               </div>
 
               <div className="space-y-2">
-                <Label>Result</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Row 0: Short */}
-                  <GridCell 
-                    r={0} c={0} 
-                    selected={editingBowl.result === "SHORT_NARROW"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "SHORT_NARROW" })}
-                  />
-                  <GridCell 
-                    r={0} c={1} 
-                    label="Short"
-                    selected={editingBowl.result === "SHORT"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "SHORT" })}
-                  />
-                  <GridCell 
-                    r={0} c={2} 
-                    selected={editingBowl.result === "SHORT_WIDE"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "SHORT_WIDE" })}
-                  />
-                  
-                  {/* Row 1: Middle */}
-                  <GridCell 
-                    r={1} c={0} 
-                    label={editingBowl.hand === "FOREHAND" ? "Wide" : "Narrow"}
-                    selected={editingBowl.result === "NARROW"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "NARROW" })}
-                  />
-                  <GridCell 
-                    r={1} c={1} 
-                    label="Effective"
-                    isCenter
-                    selected={editingBowl.result === "GOOD"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "GOOD" })}
-                  />
-                  <GridCell 
-                    r={1} c={2} 
-                    label={editingBowl.hand === "FOREHAND" ? "Narrow" : "Wide"}
-                    selected={editingBowl.result === "WIDE"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "WIDE" })}
-                  />
-                  
-                  {/* Row 2: Long */}
-                  <GridCell 
-                    r={2} c={0} 
-                    selected={editingBowl.result === "LONG_NARROW"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "LONG_NARROW" })}
-                  />
-                  <GridCell 
-                    r={2} c={1} 
-                    label="Long"
-                    selected={editingBowl.result === "LONG"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "LONG" })}
-                  />
-                  <GridCell 
-                    r={2} c={2} 
-                    selected={editingBowl.result === "LONG_WIDE"} 
-                    onClick={() => setEditingBowl({ ...editingBowl, result: "LONG_WIDE" })}
-                  />
+                <Label>Where did the bowl land?</Label>
+                <div className="grid grid-cols-9 gap-0.5">
+                  {Array.from({ length: 9 }, (_, row) =>
+                    Array.from({ length: 9 }, (_, col) => (
+                      <EditGridCell9x9 key={`edit-${row}-${col}`} r={row} c={col} />
+                    ))
+                  )}
                 </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Tap a cell to mark where your bowl landed. Each cell = 1 foot.
+                </p>
               </div>
             </div>
           )}
