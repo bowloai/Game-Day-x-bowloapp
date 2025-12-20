@@ -12,9 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil, Play } from "lucide-react";
+import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { BowlReplayAnimation } from "@/components/bowl-replay-animation";
 
 type BowlResult = 
   | 'Short' 
@@ -57,9 +56,6 @@ export default function GameRecording() {
   const [editingBowl, setEditingBowl] = useState<{ id: string; bowlNumber: number; hand: "Forehand" | "Backhand"; gridRow?: number | null; gridCol?: number | null } | null>(null);
   const [editHand, setEditHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [editGridSelection, setEditGridSelection] = useState<{row: number, col: number} | null>(null);
-  
-  // Bowl replay animation state
-  const [replayBowl, setReplayBowl] = useState<{ bowlNumber: number; hand: "Forehand" | "Backhand"; gridRow: number; gridCol: number; result: string } | null>(null);
   
   // Survey dialog state
   const [showSurveyDialog, setShowSurveyDialog] = useState(false);
@@ -654,37 +650,15 @@ export default function GameRecording() {
               )}>
                 {endBowls.map((bowl) => (
                   <div key={bowl.id} className="bg-background p-3 rounded border relative">
-                    <div className="absolute top-1 right-1 flex gap-1">
-                      {bowl.gridRow != null && bowl.gridCol != null && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => setReplayBowl({
-                            bowlNumber: bowl.bowlNumber,
-                            hand: bowl.hand as "Forehand" | "Backhand",
-                            gridRow: bowl.gridRow!,
-                            gridCol: bowl.gridCol!,
-                            result: bowl.result,
-                          })}
-                          data-testid={`button-replay-bowl-${bowl.bowlNumber}`}
-                        >
-                          <Play className="h-3 w-3" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => openEditBowl({
-                          ...bowl,
-                          hand: bowl.hand as "Forehand" | "Backhand"
-                        })}
-                        data-testid={`button-edit-bowl-${bowl.bowlNumber}`}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1 h-6 w-6 p-0"
+                      onClick={() => openEditBowl(bowl)}
+                      data-testid={`button-edit-bowl-${bowl.bowlNumber}`}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
                     <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
                     {bowl.hand} - {bowl.result}
                   </div>
@@ -1278,17 +1252,6 @@ export default function GameRecording() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Bowl Replay Animation */}
-      <BowlReplayAnimation
-        isOpen={!!replayBowl}
-        onClose={() => setReplayBowl(null)}
-        hand={replayBowl?.hand || "Forehand"}
-        gridRow={replayBowl?.gridRow || 4}
-        gridCol={replayBowl?.gridCol || 4}
-        bowlNumber={replayBowl?.bowlNumber || 1}
-        result={replayBowl?.result || ""}
-      />
     </div>
   );
 }
