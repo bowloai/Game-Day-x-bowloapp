@@ -422,13 +422,11 @@ export default function GameRecording() {
         type="button"
         onClick={() => setGridSelection({ row: r, col: c })}
         className={cn(
-          "aspect-square w-full border rounded flex items-center justify-center relative text-xs font-medium",
-          "transition-all duration-200 ease-out transform",
-          "active:scale-90 active:transition-none",
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
           isSelected 
-            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10 scale-105 shadow-lg" 
+            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10" 
             : getZoneColor(r, c),
-          isSelected ? "animate-[pulse_0.3s_ease-out]" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50 hover:scale-[1.02]",
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50",
           isJackCell && !isSelected ? "ring-2 ring-primary/30" : ""
         )}
         data-testid={`grid-cell-${r}-${c}`}
@@ -471,13 +469,11 @@ export default function GameRecording() {
         type="button"
         onClick={() => setEditGridSelection({ row: r, col: c })}
         className={cn(
-          "aspect-square w-full border rounded flex items-center justify-center relative text-xs font-medium",
-          "transition-all duration-200 ease-out transform",
-          "active:scale-90 active:transition-none",
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
           isSelected 
-            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10 scale-105 shadow-lg" 
+            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10" 
             : getZoneColor(r, c),
-          isSelected ? "animate-[pulse_0.3s_ease-out]" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50 hover:scale-[1.02]",
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50",
           isJackCell && !isSelected ? "ring-2 ring-primary/30" : ""
         )}
         data-testid={`edit-grid-cell-${r}-${c}`}
