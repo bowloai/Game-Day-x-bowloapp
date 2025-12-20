@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
 
+const BUILD_ID = "2024.12.20.1";
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -27,12 +29,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const NavContent = () => (
-    <div className="flex flex-col gap-6 py-4">
+    <div className="flex flex-col gap-6 py-4 h-full">
       <div className="flex items-center gap-3 px-2">
         <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
         <span className="font-display text-xl font-bold tracking-tight text-primary">Game Day</span>
       </div>
-      <nav className="flex flex-col gap-2">
+      <nav className="flex flex-col gap-2 flex-1">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
             <div 
@@ -50,13 +52,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
       </nav>
+      <div className="mt-auto px-2 pt-4 border-t">
+        <span className="text-xs text-muted-foreground">Build: {BUILD_ID}</span>
+      </div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-background font-sans">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b bg-background px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2 backdrop-blur-md md:hidden">
         <div className="flex items-center gap-2">
           <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
           <span className="font-display text-lg font-bold text-primary">Game Day x bowlo.ai</span>
