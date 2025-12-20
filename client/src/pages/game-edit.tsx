@@ -162,23 +162,10 @@ export default function GameEdit() {
     if (zoneRow === 0 && zoneCol === 1) return "Short";
     if (zoneRow === 2 && zoneCol === 1) return "Heavy";
     if (zoneRow === 1 && zoneCol === 0) return leftLabel;
-    if (zoneRow === 1 && zoneCol === 1) return "Eff";
+    if (zoneRow === 1 && zoneCol === 1) return "Effective";
     if (zoneRow === 1 && zoneCol === 2) return rightLabel;
     
     return "";
-  };
-
-  const getZoneBorder = (row: number, col: number): string => {
-    const borders: string[] = [];
-    if (row === 0) borders.push("border-t-2");
-    if (row === 2 || row === 5) borders.push("border-b-2");
-    if (row === 3 || row === 6) borders.push("border-t-2");
-    if (row === 8) borders.push("border-b-2");
-    if (col === 0) borders.push("border-l-2");
-    if (col === 2 || col === 5) borders.push("border-r-2");
-    if (col === 3 || col === 6) borders.push("border-l-2");
-    if (col === 8) borders.push("border-r-2");
-    return borders.join(" ");
   };
 
   const EditGridCell9x9 = ({ r, c }: { r: number, c: number }) => {
@@ -191,21 +178,20 @@ export default function GameEdit() {
         type="button"
         onClick={() => setGridSelection({ row: r, col: c })}
         className={cn(
-          "aspect-square w-full border flex items-center justify-center transition-all relative text-xs font-medium",
-          getZoneBorder(r, c),
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
           isSelected 
-            ? "bg-primary text-primary-foreground z-10" 
+            ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-1 z-10" 
             : getZoneColor(r, c),
-          isSelected ? "" : "hover:opacity-80",
-          isJackCell && !isSelected ? "ring-1 ring-inset ring-primary/40" : ""
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-primary/50",
+          isJackCell && !isSelected ? "ring-2 ring-primary/30" : ""
         )}
         data-testid={`edit-grid-cell-${r}-${c}`}
       >
         {isJackCell && !label && !isSelected && (
           <div className="w-2 h-2 rounded-full bg-primary/60" />
         )}
-        {label && <span className="text-center leading-tight text-[10px]">{label}</span>}
-        {isSelected && <CheckCircle2 className="absolute -top-0.5 -right-0.5 w-3 h-3" />}
+        {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
+        {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
       </button>
     );
   };
@@ -493,37 +479,16 @@ export default function GameEdit() {
 
               <div className="space-y-2">
                 <Label>Where did the bowl land?</Label>
-                <div className="flex flex-col items-center">
-                  {/* Y-axis label */}
-                  <div className="text-[10px] text-muted-foreground mb-1">Weight (ft)</div>
-                  <div className="flex">
-                    {/* Y-axis numbers */}
-                    <div className="flex flex-col justify-around pr-1 text-[9px] text-muted-foreground">
-                      {["-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4"].map((label, i) => (
-                        <div key={i} className="h-[calc((100%-0px)/9)] flex items-center justify-end w-4">{label}</div>
-                      ))}
-                    </div>
-                    {/* Grid */}
-                    <div className="grid grid-cols-9 gap-0">
-                      {Array.from({ length: 9 }, (_, row) =>
-                        Array.from({ length: 9 }, (_, col) => (
-                          <EditGridCell9x9 key={`edit-${row}-${col}`} r={row} c={col} />
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  {/* X-axis numbers */}
-                  <div className="flex justify-center mt-1">
-                    <div className="w-4"></div>
-                    <div className="grid grid-cols-9 gap-0 text-[9px] text-muted-foreground" style={{ width: 'calc(100% - 16px)' }}>
-                      {["-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4"].map((label, i) => (
-                        <div key={i} className="text-center">{label}</div>
-                      ))}
-                    </div>
-                  </div>
-                  {/* X-axis label */}
-                  <div className="text-[10px] text-muted-foreground mt-1">Line (ft)</div>
+                <div className="grid grid-cols-9 gap-0.5">
+                  {Array.from({ length: 9 }, (_, row) =>
+                    Array.from({ length: 9 }, (_, col) => (
+                      <EditGridCell9x9 key={`edit-${row}-${col}`} r={row} c={col} />
+                    ))
+                  )}
                 </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Tap a cell to mark where your bowl landed. Each cell = 1 foot.
+                </p>
               </div>
             </div>
           )}
