@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
 
-const BUILD_ID = "2024.12.20.4";
+const BUILD_ID = "2024.12.20.5";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
