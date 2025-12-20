@@ -56,7 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background font-sans">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
         <div className="flex items-center gap-2">
           <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
           <span className="font-display text-lg font-bold text-primary">Game Day x bowlo.ai</span>
