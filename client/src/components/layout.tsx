@@ -56,7 +56,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background font-sans">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-gradient-to-r from-primary/5 via-background/90 to-primary/5 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl md:hidden shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
         <div className="flex items-center gap-2">
           <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
           <span className="font-display text-lg font-bold text-primary">Game Day x bowlo.ai</span>
@@ -74,7 +74,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-card px-4 py-6 sticky top-0">
+        <aside className="hidden md:flex h-screen w-64 flex-col border-r border-primary/10 bg-gradient-to-b from-primary/5 via-card to-card px-4 py-6 sticky top-0">
           <NavContent />
           <div className="mt-auto">
           </div>

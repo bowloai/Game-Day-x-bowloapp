@@ -15,8 +15,8 @@ export default function Home() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-primary" data-testid="heading-dashboard">It's Game Day</h1>
+      <div className="text-center relative py-6 -mx-4 md:-mx-8 px-4 md:px-8 bg-gradient-to-b from-primary/8 via-primary/3 to-transparent rounded-b-3xl">
+        <h1 className="text-3xl font-bold text-primary drop-shadow-sm" data-testid="heading-dashboard">It's Game Day</h1>
         <p className="text-xs text-primary/70">x bowlo.ai</p>
         <p className="text-muted-foreground mt-1">Track. Analyse. Improve.</p>
       </div>
