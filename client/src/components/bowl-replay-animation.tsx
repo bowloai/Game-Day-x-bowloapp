@@ -81,19 +81,21 @@ export function BowlReplayAnimation({
             className="relative w-full max-w-md mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute -top-12 right-0 text-white hover:bg-white/20"
-              onClick={onClose}
-              data-testid="button-close-replay"
-            >
-              <X className="h-6 w-6" />
-            </Button>
-
-            <div className="text-center mb-4">
-              <h3 className="text-white font-display text-xl">Bowl {bowlNumber} Replay</h3>
-              <p className="text-white/70 text-sm">{hand} - {result}</p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-left">
+                <h3 className="text-white font-display text-xl">Bowl {bowlNumber} Replay</h3>
+                <p className="text-white/70 text-sm">{hand} - {result}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                onClick={onClose}
+                data-testid="button-close-replay"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Close
+              </Button>
             </div>
 
             <div className="relative bg-gradient-to-b from-green-700 via-green-600 to-green-500 rounded-lg overflow-hidden aspect-[3/4] shadow-2xl border-4 border-green-800">
@@ -187,9 +189,14 @@ export function BowlReplayAnimation({
               )}
             </div>
 
-            <p className="text-center text-white/50 text-xs mt-4">
-              Tap anywhere to close
-            </p>
+            <Button
+              variant="ghost"
+              className="w-full mt-4 text-white/70 hover:text-white hover:bg-white/10"
+              onClick={onClose}
+              data-testid="button-close-replay-bottom"
+            >
+              Tap to close
+            </Button>
           </motion.div>
         </motion.div>
       )}
