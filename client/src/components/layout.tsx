@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
 
-const BUILD_ID = "2024.12.20.1";
+const BUILD_ID = "2024.12.20.2";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -61,7 +61,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background font-sans">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b bg-background px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2 backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between border-b bg-background px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3 backdrop-blur-md md:hidden">
         <div className="flex items-center gap-2">
           <img src={generatedImage} alt="Game Day" className="w-8 h-8" />
           <span className="font-display text-lg font-bold text-primary">Game Day x bowlo.ai</span>
@@ -72,7 +72,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Menu className="w-6 h-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[280px] sm:w-[350px]">
+          <SheetContent side="right" className="w-[280px] sm:w-[350px] pt-[max(env(safe-area-inset-top),16px)]">
             <NavContent />
           </SheetContent>
         </Sheet>
