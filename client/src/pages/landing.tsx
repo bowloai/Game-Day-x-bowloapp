@@ -44,27 +44,29 @@ export default function Landing() {
           </div>
           
           <div className="space-y-3">
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="w-full py-6 gap-3 bg-white hover:bg-gray-50 border-gray-300 text-gray-700 font-medium"
-              onClick={() => window.location.href = '/api/login'}
-              data-testid="button-google-signin"
-            >
-              <GoogleIcon className="w-5 h-5" />
-              Sign in with Google
-            </Button>
-            
-            <Button 
-              size="lg" 
-              className="w-full py-6 gap-3 font-medium"
-              style={{ backgroundColor: '#1877F2' }}
-              onClick={() => window.location.href = '/api/login'}
-              data-testid="button-facebook-signin"
-            >
-              <FacebookIcon className="w-5 h-5" />
-              Continue with Facebook
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="flex-1 py-6 gap-2 bg-white hover:bg-gray-50 border-gray-300 text-gray-700 font-medium"
+                onClick={() => window.location.href = '/api/login'}
+                data-testid="button-google-signin"
+              >
+                <GoogleIcon className="w-5 h-5" />
+                Google
+              </Button>
+              
+              <Button 
+                size="lg" 
+                className="flex-1 py-6 gap-2 font-medium"
+                style={{ backgroundColor: '#1877F2' }}
+                onClick={() => window.location.href = '/api/login'}
+                data-testid="button-facebook-signin"
+              >
+                <FacebookIcon className="w-5 h-5" />
+                Facebook
+              </Button>
+            </div>
 
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
