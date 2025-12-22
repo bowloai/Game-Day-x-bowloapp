@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
@@ -76,71 +76,105 @@ function calculateHeatmap(bowls: Bowl[]): number[][] {
   return grid;
 }
 
+function HeatmapCanvas({ heatmap, maxCount }: { heatmap: number[][], maxCount: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const size = 280;
+  const cellSize = size / 9;
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set up for high DPI displays
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+    
+    // Clear with dark background
+    ctx.fillStyle = 'rgb(15, 23, 42)';
+    ctx.fillRect(0, 0, size, size);
+    
+    // Apply blur filter for smooth blending
+    ctx.filter = 'blur(12px)';
+    
+    // Draw radial gradients for each cell with data
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        const count = heatmap[row][col];
+        if (count === 0) continue;
+        
+        const intensity = Math.min(count / Math.max(maxCount, 1), 1);
+        const x = col * cellSize + cellSize / 2;
+        const y = row * cellSize + cellSize / 2;
+        const radius = cellSize * (0.8 + intensity * 0.6);
+        
+        // Create radial gradient
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        
+        // Thermal color based on intensity
+        const color = getThermalColor(intensity);
+        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.7 + intensity * 0.3})`);
+        gradient.addColorStop(0.5, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.3 + intensity * 0.2})`);
+        gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // Reset filter for overlays
+    ctx.filter = 'none';
+    
+    // Draw jack marker (center)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw effective zone border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cellSize * 3, cellSize * 3, cellSize * 3, cellSize * 3);
+    
+  }, [heatmap, maxCount]);
+  
+  return (
+    <canvas 
+      ref={canvasRef}
+      style={{ width: size, height: size }}
+      className="rounded-lg mx-auto"
+    />
+  );
+}
+
+function getThermalColor(intensity: number): { r: number, g: number, b: number } {
+  // Thermal gradient: blue -> cyan -> green -> yellow -> orange -> red
+  if (intensity <= 0.2) {
+    const t = intensity / 0.2;
+    return { r: 0, g: Math.round(100 + t * 155), b: Math.round(200 - t * 50) };
+  } else if (intensity <= 0.4) {
+    const t = (intensity - 0.2) / 0.2;
+    return { r: 0, g: Math.round(255 - t * 55), b: Math.round(150 - t * 100) };
+  } else if (intensity <= 0.6) {
+    const t = (intensity - 0.4) / 0.2;
+    return { r: Math.round(t * 255), g: 200, b: Math.round(50 - t * 50) };
+  } else if (intensity <= 0.8) {
+    const t = (intensity - 0.6) / 0.2;
+    return { r: 255, g: Math.round(200 - t * 80), b: 0 };
+  } else {
+    const t = (intensity - 0.8) / 0.2;
+    return { r: 255, g: Math.round(120 - t * 80), b: Math.round(t * 40) };
+  }
+}
+
 function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCount: number, title: string }) {
-  // Thermal heatmap colors - blue (cold) to red (hot)
-  const getHeatStyle = (count: number): React.CSSProperties => {
-    if (count === 0) {
-      return { backgroundColor: 'rgb(30, 41, 59)' }; // slate-800 for empty
-    }
-    
-    const intensity = Math.min(count / Math.max(maxCount, 1), 1);
-    
-    // Thermal gradient: blue -> cyan -> green -> yellow -> orange -> red
-    let r: number, g: number, b: number;
-    
-    if (intensity <= 0.2) {
-      // Blue to cyan
-      const t = intensity / 0.2;
-      r = 0;
-      g = Math.round(100 + t * 155);
-      b = Math.round(200 - t * 50);
-    } else if (intensity <= 0.4) {
-      // Cyan to green
-      const t = (intensity - 0.2) / 0.2;
-      r = 0;
-      g = Math.round(255 - t * 55);
-      b = Math.round(150 - t * 100);
-    } else if (intensity <= 0.6) {
-      // Green to yellow
-      const t = (intensity - 0.4) / 0.2;
-      r = Math.round(t * 255);
-      g = 200;
-      b = Math.round(50 - t * 50);
-    } else if (intensity <= 0.8) {
-      // Yellow to orange
-      const t = (intensity - 0.6) / 0.2;
-      r = 255;
-      g = Math.round(200 - t * 80);
-      b = 0;
-    } else {
-      // Orange to red
-      const t = (intensity - 0.8) / 0.2;
-      r = 255;
-      g = Math.round(120 - t * 80);
-      b = Math.round(t * 40);
-    }
-    
-    return { backgroundColor: `rgb(${r}, ${g}, ${b})` };
-  };
-
-  const getZoneLabel = (row: number, col: number): string => {
-    const isZoneCenter = (row % 3 === 1) && (col % 3 === 1);
-    if (!isZoneCenter) return "";
-    
-    const zoneRow = Math.floor(row / 3);
-    const zoneCol = Math.floor(col / 3);
-    
-    if (zoneRow === 0 && zoneCol === 1) return "S";
-    if (zoneRow === 2 && zoneCol === 1) return "H";
-    if (zoneRow === 1 && zoneCol === 0) return "N";
-    if (zoneRow === 1 && zoneCol === 1) return "E";
-    if (zoneRow === 1 && zoneCol === 2) return "W";
-    return "";
-  };
-
-  const isEffectiveZone = (row: number, col: number) => 
-    row >= 3 && row <= 5 && col >= 3 && col <= 5;
-
   return (
     <Card className="shadow-soft overflow-hidden">
       <CardHeader className="pb-2 bg-gradient-to-r from-primary/5 to-transparent">
@@ -150,33 +184,10 @@ function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCou
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4">
-        <div className="grid grid-cols-9 gap-[1px] max-w-[280px] mx-auto bg-slate-700/20 rounded-lg overflow-hidden p-[1px]">
-          {heatmap.map((row, rowIdx) =>
-            row.map((count, colIdx) => {
-              const isJack = rowIdx === 4 && colIdx === 4;
-              const label = getZoneLabel(rowIdx, colIdx);
-              return (
-                <div
-                  key={`${rowIdx}-${colIdx}`}
-                  className={`
-                    aspect-square flex items-center justify-center text-xs font-medium
-                    ${isEffectiveZone(rowIdx, colIdx) ? "ring-1 ring-inset ring-white/20" : ""}
-                    ${isJack ? "ring-2 ring-inset ring-white" : ""}
-                    ${count > 0 ? "text-white" : "text-slate-500"}
-                  `}
-                  style={getHeatStyle(count)}
-                  title={`${count} bowl${count !== 1 ? 's' : ''} (Row ${rowIdx}, Col ${colIdx})`}
-                  data-testid={`heatmap-cell-${rowIdx}-${colIdx}`}
-                >
-                  {count > 0 ? count : (label || '')}
-                </div>
-              );
-            })
-          )}
-        </div>
+        <HeatmapCanvas heatmap={heatmap} maxCount={maxCount} />
         
         {/* Legend */}
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2 max-w-[280px] mx-auto">
           <div className="flex justify-between items-center text-xs text-muted-foreground">
             <span>Short</span>
             <span>Heavy</span>
@@ -192,7 +203,7 @@ function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCou
         
         <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
           <span>N=Narrow</span>
-          <span>E=Effective</span>
+          <span className="text-white/60">&#9711; Jack</span>
           <span>W=Wide</span>
         </div>
       </CardContent>
