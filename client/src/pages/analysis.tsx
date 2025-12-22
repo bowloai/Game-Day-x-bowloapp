@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
@@ -77,17 +77,50 @@ function calculateHeatmap(bowls: Bowl[]): number[][] {
 }
 
 function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCount: number, title: string }) {
-  const getHeatColor = (count: number): string => {
-    if (count === 0) return "bg-slate-100 dark:bg-slate-900";
+  // Thermal heatmap colors - blue (cold) to red (hot)
+  const getHeatStyle = (count: number): React.CSSProperties => {
+    if (count === 0) {
+      return { backgroundColor: 'rgb(30, 41, 59)' }; // slate-800 for empty
+    }
+    
     const intensity = Math.min(count / Math.max(maxCount, 1), 1);
     
-    // Standard YlOrRd (Yellow-Orange-Red) heatmap gradient
-    // Low intensity = pale yellow, high intensity = deep red
-    if (intensity <= 0.2) return "bg-yellow-100 dark:bg-yellow-950/40";
-    if (intensity <= 0.4) return "bg-amber-200 dark:bg-amber-900/50";
-    if (intensity <= 0.6) return "bg-orange-400 dark:bg-orange-700";
-    if (intensity <= 0.8) return "bg-orange-500 dark:bg-orange-600";
-    return "bg-red-600 dark:bg-red-700";
+    // Thermal gradient: blue -> cyan -> green -> yellow -> orange -> red
+    let r: number, g: number, b: number;
+    
+    if (intensity <= 0.2) {
+      // Blue to cyan
+      const t = intensity / 0.2;
+      r = 0;
+      g = Math.round(100 + t * 155);
+      b = Math.round(200 - t * 50);
+    } else if (intensity <= 0.4) {
+      // Cyan to green
+      const t = (intensity - 0.2) / 0.2;
+      r = 0;
+      g = Math.round(255 - t * 55);
+      b = Math.round(150 - t * 100);
+    } else if (intensity <= 0.6) {
+      // Green to yellow
+      const t = (intensity - 0.4) / 0.2;
+      r = Math.round(t * 255);
+      g = 200;
+      b = Math.round(50 - t * 50);
+    } else if (intensity <= 0.8) {
+      // Yellow to orange
+      const t = (intensity - 0.6) / 0.2;
+      r = 255;
+      g = Math.round(200 - t * 80);
+      b = 0;
+    } else {
+      // Orange to red
+      const t = (intensity - 0.8) / 0.2;
+      r = 255;
+      g = Math.round(120 - t * 80);
+      b = Math.round(t * 40);
+    }
+    
+    return { backgroundColor: `rgb(${r}, ${g}, ${b})` };
   };
 
   const getZoneLabel = (row: number, col: number): string => {
@@ -109,15 +142,15 @@ function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCou
     row >= 3 && row <= 5 && col >= 3 && col <= 5;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="shadow-soft overflow-hidden">
+      <CardHeader className="pb-2 bg-gradient-to-r from-primary/5 to-transparent">
         <CardTitle className="text-base flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-9 gap-0.5 max-w-[280px] mx-auto">
+      <CardContent className="pt-4">
+        <div className="grid grid-cols-9 gap-[1px] max-w-[280px] mx-auto bg-slate-700/20 rounded-lg overflow-hidden p-[1px]">
           {heatmap.map((row, rowIdx) =>
             row.map((count, colIdx) => {
               const isJack = rowIdx === 4 && colIdx === 4;
@@ -126,30 +159,41 @@ function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCou
                 <div
                   key={`${rowIdx}-${colIdx}`}
                   className={`
-                    aspect-square flex items-center justify-center text-xs font-medium rounded-sm
-                    ${getHeatColor(count)}
-                    ${isEffectiveZone(rowIdx, colIdx) ? "ring-1 ring-primary/30" : ""}
-                    ${isJack ? "ring-2 ring-primary" : ""}
+                    aspect-square flex items-center justify-center text-xs font-medium
+                    ${isEffectiveZone(rowIdx, colIdx) ? "ring-1 ring-inset ring-white/20" : ""}
+                    ${isJack ? "ring-2 ring-inset ring-white" : ""}
+                    ${count > 0 ? "text-white" : "text-slate-500"}
                   `}
+                  style={getHeatStyle(count)}
                   title={`${count} bowl${count !== 1 ? 's' : ''} (Row ${rowIdx}, Col ${colIdx})`}
                   data-testid={`heatmap-cell-${rowIdx}-${colIdx}`}
                 >
-                  {count > 0 ? count : label}
+                  {count > 0 ? count : (label || '')}
                 </div>
               );
             })
           )}
         </div>
-        <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
-          <span>Short</span>
-          <span className="text-center">E = Effective (Jack)</span>
-          <span>Heavy</span>
+        
+        {/* Legend */}
+        <div className="mt-4 space-y-2">
+          <div className="flex justify-between items-center text-xs text-muted-foreground">
+            <span>Short</span>
+            <span>Heavy</span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{
+            background: 'linear-gradient(to right, rgb(0, 100, 200), rgb(0, 200, 150), rgb(100, 200, 50), rgb(255, 200, 0), rgb(255, 120, 0), rgb(255, 40, 40))'
+          }} />
+          <div className="flex justify-between items-center text-xs text-muted-foreground">
+            <span>Low</span>
+            <span>High</span>
+          </div>
         </div>
-        <div className="flex justify-center gap-4 mt-2 text-xs text-muted-foreground">
-          <span>N = Narrow</span>
-          <span>W = Wide</span>
-          <span>S = Short</span>
-          <span>H = Heavy</span>
+        
+        <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
+          <span>N=Narrow</span>
+          <span>E=Effective</span>
+          <span>W=Wide</span>
         </div>
       </CardContent>
     </Card>
@@ -215,44 +259,48 @@ function calculateStats(bowls: Bowl[]) {
   };
 }
 
-function StatBlock({ title, icon: Icon, stats, color }: { 
+function StatBlock({ title, icon: Icon, stats, accentColor }: { 
   title: string; 
   icon: React.ElementType;
   stats: ReturnType<typeof calculateStats>;
-  color?: string;
+  accentColor?: string;
 }) {
-  const gradientClass = color || "from-primary to-emerald-600";
+  const accent = accentColor || "text-primary";
   
   return (
-    <Card className="border-0 shadow-md overflow-hidden">
-      {/* Colored Header */}
-      <div className={`bg-gradient-to-br ${gradientClass} text-white p-4`}>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-            <Icon className="h-4 w-4" />
+    <Card className="shadow-soft">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <Icon className={`h-4 w-4 ${accent}`} />
           </div>
-          <span className="font-semibold">{title}</span>
+          <div>
+            <CardTitle className="text-base">{title}</CardTitle>
+            <p className="text-xs text-muted-foreground">{stats.total} bowls</p>
+          </div>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold" data-testid={`text-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Bowl Effectiveness - Hero stat */}
+        <div className="text-center py-3 bg-primary/5 rounded-xl border border-primary/10">
+          <span className={`text-4xl font-bold ${accent}`} data-testid={`text-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
             {stats.effectivePercent}%
           </span>
-          <span className="text-white/70 text-sm">effective</span>
+          <p className="text-sm text-muted-foreground mt-1">Bowl Effectiveness</p>
+          <p className="text-xs text-muted-foreground">
+            {stats.effective} of {stats.total} effective
+          </p>
         </div>
-        <p className="text-white/60 text-xs mt-1">
-          {stats.effective} of {stats.total} bowls
-        </p>
-      </div>
-      
-      <CardContent className="p-4 space-y-4">
+
         {/* First Bowl Effectiveness */}
-        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
           <div>
-            <p className="text-xs text-muted-foreground">First Bowl</p>
-            <p className="font-medium">Effectiveness</p>
+            <p className="text-sm font-medium">First Bowl</p>
+            <p className="text-xs text-muted-foreground">Effectiveness</p>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-bold text-primary" data-testid={`text-first-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
+            <span className="text-xl font-bold text-primary" data-testid={`text-first-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
               {stats.firstBowlPercent}%
             </span>
             <p className="text-xs text-muted-foreground">
@@ -262,39 +310,39 @@ function StatBlock({ title, icon: Icon, stats, color }: {
         </div>
 
         {/* Weight Control */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2 border-t">
           <span className="text-sm font-medium">Weight Control</span>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-xl p-3">
-              <div className="text-xl font-bold">{stats.shortPercent}%</div>
-              <div className="text-xs text-white/80">Short</div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-lg font-bold text-rose-600 dark:text-rose-400">{stats.shortPercent}%</div>
+              <div className="text-xs text-muted-foreground">Short</div>
             </div>
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-xl p-3">
-              <div className="text-xl font-bold">{stats.goodWeightPercent}%</div>
-              <div className="text-xs text-white/80">Good</div>
+            <div className="bg-primary/10 rounded-lg p-2">
+              <div className="text-lg font-bold text-primary">{stats.goodWeightPercent}%</div>
+              <div className="text-xs text-muted-foreground">Good</div>
             </div>
-            <div className="bg-gradient-to-br from-slate-500 to-slate-700 text-white rounded-xl p-3">
-              <div className="text-xl font-bold">{stats.heavyPercent}%</div>
-              <div className="text-xs text-white/80">Heavy</div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-lg font-bold text-slate-600 dark:text-slate-400">{stats.heavyPercent}%</div>
+              <div className="text-xs text-muted-foreground">Heavy</div>
             </div>
           </div>
         </div>
 
         {/* Line Control */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2 border-t">
           <span className="text-sm font-medium">Line Control</span>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl p-3">
-              <div className="text-xl font-bold">{stats.narrowPercent}%</div>
-              <div className="text-xs text-white/80">Narrow</div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats.narrowPercent}%</div>
+              <div className="text-xs text-muted-foreground">Narrow</div>
             </div>
-            <div className="bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-xl p-3">
-              <div className="text-xl font-bold">{stats.goodLinePercent}%</div>
-              <div className="text-xs text-white/80">Good</div>
+            <div className="bg-primary/10 rounded-lg p-2">
+              <div className="text-lg font-bold text-primary">{stats.goodLinePercent}%</div>
+              <div className="text-xs text-muted-foreground">Good</div>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-xl p-3">
-              <div className="text-xl font-bold">{stats.widePercent}%</div>
-              <div className="text-xs text-white/80">Wide</div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-lg font-bold text-sky-600 dark:text-sky-400">{stats.widePercent}%</div>
+              <div className="text-xs text-muted-foreground">Wide</div>
             </div>
           </div>
         </div>
@@ -444,7 +492,7 @@ export default function Analysis() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 -mx-4 -mt-4">
       {/* Header */}
-      <div className="bg-gradient-to-br from-violet-600 to-purple-700 text-white px-6 py-6 rounded-b-3xl shadow-lg">
+      <div className="bg-gradient-to-br from-primary to-emerald-700 text-white px-6 py-6 rounded-b-3xl shadow-lg">
         <h1 className="text-2xl font-bold mb-1">Performance Analysis</h1>
         <p className="text-white/70 text-sm">
           {totalGames} game{totalGames !== 1 ? 's' : ''} analyzed · {allStats?.total || 0} total bowls
@@ -692,19 +740,19 @@ export default function Analysis() {
           title="All Bowls" 
           icon={Target}
           stats={allStats}
-          color="from-primary to-emerald-600"
+          accentColor="text-primary"
         />
         <StatBlock 
           title="Forehand" 
           icon={CircleDot}
           stats={forehandStats!}
-          color="from-blue-500 to-cyan-600"
+          accentColor="text-sky-600 dark:text-sky-400"
         />
         <StatBlock 
           title="Backhand" 
           icon={CircleDot}
           stats={backhandStats!}
-          color="from-violet-500 to-purple-600"
+          accentColor="text-violet-600 dark:text-violet-400"
         />
       </div>
 
