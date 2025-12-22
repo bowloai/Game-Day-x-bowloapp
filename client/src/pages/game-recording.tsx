@@ -14,31 +14,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-function formatResult(result: string): string {
-  const map: Record<string, string> = {
-    'effective_online': 'Effective',
-    'effective_narrow': 'Eff/Nar',
-    'effective_wide': 'Eff/Wide',
-    'short_online': 'Short',
-    'short_narrow': 'Short/Nar',
-    'short_wide': 'Short/Wide',
-    'heavy_online': 'Heavy',
-    'heavy_narrow': 'Heavy/Nar',
-    'heavy_wide': 'Heavy/Wide',
-  };
-  if (map[result]) return map[result];
-  // Fallback: convert snake_case to Title Case
-  return result.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-}
-
-function formatHand(hand: string): string {
-  if (hand.toLowerCase() === 'forehand') return 'Fore';
-  if (hand.toLowerCase() === 'backhand') return 'Back';
-  return hand.charAt(0).toUpperCase() + hand.slice(1, 4);
-}
+import { formatResult, formatResultShort, formatHandShort, isEffective, isShort, isHeavy, isNarrow, isWide } from "@/lib/bowlResults";
 
 type BowlResult = 
   | 'Short' 
@@ -685,11 +661,11 @@ export default function GameRecording() {
                       <Pencil className="h-3 w-3" />
                     </Button>
                     <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
-                    <span className="text-xs text-muted-foreground">{formatHand(bowl.hand)}</span>
+                    <span className="text-xs text-muted-foreground">{formatHandShort(bowl.hand)}</span>
                     <span className={cn(
                       "block text-xs",
-                      bowl.result === 'effective_online' ? "text-primary font-medium" : ""
-                    )}>{formatResult(bowl.result)}</span>
+                      isEffective(bowl.result) ? "text-primary font-medium" : ""
+                    )}>{formatResultShort(bowl.result)}</span>
                   </div>
                 ))}
               </div>
@@ -771,7 +747,7 @@ export default function GameRecording() {
         const allEndsIncludingCurrent = [...completedEnds.filter(e => e.id !== currentEnd.id), currentEnd];
         const allBowls = allEndsIncludingCurrent.flatMap(e => e.bowls || []);
         const totalBowls = allBowls.length;
-        const effectiveBowls = allBowls.filter(b => b.result === 'effective_online').length;
+        const effectiveBowls = allBowls.filter(b => isEffective(b.result)).length;
         const effectivePercent = totalBowls > 0 ? Math.round((effectiveBowls / totalBowls) * 100) : 0;
         
         // Calculate running totals - exclude current end from completedEnds since we add it separately
@@ -786,44 +762,44 @@ export default function GameRecording() {
         const evenBowls = evenEnds.flatMap(e => e.bowls || []);
         
         // Effective percentages
-        const oddEffective = oddBowls.filter(b => b.result === 'effective_online').length;
+        const oddEffective = oddBowls.filter(b => isEffective(b.result)).length;
         const oddEffectivePercent = oddBowls.length > 0 ? Math.round((oddEffective / oddBowls.length) * 100) : 0;
-        const evenEffective = evenBowls.filter(b => b.result === 'effective_online').length;
+        const evenEffective = evenBowls.filter(b => isEffective(b.result)).length;
         const evenEffectivePercent = evenBowls.length > 0 ? Math.round((evenEffective / evenBowls.length) * 100) : 0;
         
         // Specific weight breakdown - Heavy vs Short
-        const oddHeavy = oddBowls.filter(b => b.result.startsWith('heavy')).length;
+        const oddHeavy = oddBowls.filter(b => isHeavy(b.result)).length;
         const oddHeavyPercent = oddBowls.length > 0 ? Math.round((oddHeavy / oddBowls.length) * 100) : 0;
-        const oddShort = oddBowls.filter(b => b.result.startsWith('short')).length;
+        const oddShort = oddBowls.filter(b => isShort(b.result)).length;
         const oddShortPercent = oddBowls.length > 0 ? Math.round((oddShort / oddBowls.length) * 100) : 0;
-        const evenHeavy = evenBowls.filter(b => b.result.startsWith('heavy')).length;
+        const evenHeavy = evenBowls.filter(b => isHeavy(b.result)).length;
         const evenHeavyPercent = evenBowls.length > 0 ? Math.round((evenHeavy / evenBowls.length) * 100) : 0;
-        const evenShort = evenBowls.filter(b => b.result.startsWith('short')).length;
+        const evenShort = evenBowls.filter(b => isShort(b.result)).length;
         const evenShortPercent = evenBowls.length > 0 ? Math.round((evenShort / evenBowls.length) * 100) : 0;
         
         // Specific line breakdown - Narrow vs Wide
-        const oddNarrow = oddBowls.filter(b => b.result.includes('narrow')).length;
+        const oddNarrow = oddBowls.filter(b => isNarrow(b.result)).length;
         const oddNarrowPercent = oddBowls.length > 0 ? Math.round((oddNarrow / oddBowls.length) * 100) : 0;
-        const oddWide = oddBowls.filter(b => b.result.includes('wide')).length;
+        const oddWide = oddBowls.filter(b => isWide(b.result)).length;
         const oddWidePercent = oddBowls.length > 0 ? Math.round((oddWide / oddBowls.length) * 100) : 0;
-        const evenNarrow = evenBowls.filter(b => b.result.includes('narrow')).length;
+        const evenNarrow = evenBowls.filter(b => isNarrow(b.result)).length;
         const evenNarrowPercent = evenBowls.length > 0 ? Math.round((evenNarrow / evenBowls.length) * 100) : 0;
-        const evenWide = evenBowls.filter(b => b.result.includes('wide')).length;
+        const evenWide = evenBowls.filter(b => isWide(b.result)).length;
         const evenWidePercent = evenBowls.length > 0 ? Math.round((evenWide / evenBowls.length) * 100) : 0;
         
         // All bowls combined stats
-        const allHeavy = allBowls.filter(b => b.result.startsWith('heavy')).length;
+        const allHeavy = allBowls.filter(b => isHeavy(b.result)).length;
         const allHeavyPercent = totalBowls > 0 ? Math.round((allHeavy / totalBowls) * 100) : 0;
-        const allShort = allBowls.filter(b => b.result.startsWith('short')).length;
+        const allShort = allBowls.filter(b => isShort(b.result)).length;
         const allShortPercent = totalBowls > 0 ? Math.round((allShort / totalBowls) * 100) : 0;
-        const allNarrow = allBowls.filter(b => b.result.includes('narrow')).length;
+        const allNarrow = allBowls.filter(b => isNarrow(b.result)).length;
         const allNarrowPercent = totalBowls > 0 ? Math.round((allNarrow / totalBowls) * 100) : 0;
-        const allWide = allBowls.filter(b => b.result.includes('wide')).length;
+        const allWide = allBowls.filter(b => isWide(b.result)).length;
         const allWidePercent = totalBowls > 0 ? Math.round((allWide / totalBowls) * 100) : 0;
         
         // Helper to shorten result text for display
         const shortenResult = (result: string) => {
-          return formatResult(result);
+          return formatResultShort(result);
         };
 
         return (
@@ -1051,7 +1027,7 @@ export default function GameRecording() {
                         <TableCell className="text-xs px-1">
                           {end.bowls?.[0] ? (
                             <span className={cn(
-                              end.bowls[0].result === 'effective_online' ? "text-primary font-medium" : ""
+                              isEffective(end.bowls[0].result) ? "text-primary font-medium" : ""
                             )}>
                               {shortenResult(end.bowls[0].result)}
                               <span className="text-muted-foreground text-[10px] ml-0.5">
@@ -1063,7 +1039,7 @@ export default function GameRecording() {
                         <TableCell className="text-xs px-1">
                           {end.bowls?.[1] ? (
                             <span className={cn(
-                              end.bowls[1].result === 'effective_online' ? "text-primary font-medium" : ""
+                              isEffective(end.bowls[1].result) ? "text-primary font-medium" : ""
                             )}>
                               {shortenResult(end.bowls[1].result)}
                               <span className="text-muted-foreground text-[10px] ml-0.5">

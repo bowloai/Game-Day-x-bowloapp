@@ -9,6 +9,7 @@ import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
 import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote } from "lucide-react";
+import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 type Bowl = {
   id: string;
@@ -20,33 +21,22 @@ type Bowl = {
 };
 
 function mapResultToGrid(result: string): { row: number, col: number } {
-  // Map old 3x3 result strings to center of corresponding 9x9 zone
-  switch (result) {
-    case 'Short & Narrow':
-    case 'Short-Narrow':
-      return { row: 1, col: 1 }; // center of top-left zone
-    case 'Short':
-      return { row: 1, col: 4 }; // center of top-center zone
-    case 'Short & Wide':
-    case 'Short-Wide':
-      return { row: 1, col: 7 }; // center of top-right zone
-    case 'Narrow':
-      return { row: 4, col: 1 }; // center of left zone
-    case 'Effective':
-      return { row: 4, col: 4 }; // center (jack position)
-    case 'Wide':
-      return { row: 4, col: 7 }; // center of right zone
-    case 'Heavy & Narrow':
-    case 'Heavy-Narrow':
-      return { row: 7, col: 1 }; // center of bottom-left zone
-    case 'Heavy':
-      return { row: 7, col: 4 }; // center of bottom-center zone
-    case 'Heavy & Wide':
-    case 'Heavy-Wide':
-      return { row: 7, col: 7 }; // center of bottom-right zone
-    default:
-      return { row: 4, col: 4 }; // default to center
-  }
+  // Map result strings to center of corresponding 9x9 zone
+  // New format: weight_line (e.g., short_narrow, effective_online)
+  // Legacy format: Weight & Line (e.g., Short & Narrow)
+  const r = result.toLowerCase();
+  
+  // Determine row based on weight
+  let row = 4; // default: effective weight (center)
+  if (r.startsWith('short') || r === 'short') row = 1;
+  else if (r.startsWith('heavy') || r === 'heavy') row = 7;
+  
+  // Determine col based on line
+  let col = 4; // default: online (center)
+  if (r.includes('narrow')) col = 1;
+  else if (r.includes('wide')) col = 7;
+  
+  return { row, col };
 }
 
 function calculateHeatmap(bowls: Bowl[]): number[][] {
@@ -252,18 +242,18 @@ function calculateStats(bowls: Bowl[]) {
     };
   }
 
-  // Results are in format: weight_line (e.g., "effective_online", "short_wide")
-  const effective = bowls.filter(b => b.result.startsWith('effective_') && b.result.endsWith('_online')).length;
+  // Use shared utility functions for consistent result checking
+  const effective = bowls.filter(b => isEffective(b.result)).length;
   const firstBowls = bowls.filter(b => b.bowlNumber === 1);
-  const firstBowlEffective = firstBowls.filter(b => b.result.startsWith('effective_') && b.result.endsWith('_online')).length;
+  const firstBowlEffective = firstBowls.filter(b => isEffective(b.result)).length;
 
-  const short = bowls.filter(b => b.result.startsWith('short')).length;
-  const heavy = bowls.filter(b => b.result.startsWith('heavy')).length;
-  const goodWeight = bowls.filter(b => b.result.startsWith('effective')).length;
+  const short = bowls.filter(b => isShort(b.result)).length;
+  const heavy = bowls.filter(b => isHeavy(b.result)).length;
+  const goodWeight = bowls.filter(b => hasGoodWeight(b.result)).length;
 
-  const narrow = bowls.filter(b => b.result.includes('narrow')).length;
-  const wide = bowls.filter(b => b.result.includes('wide')).length;
-  const goodLine = bowls.filter(b => b.result.includes('online')).length;
+  const narrow = bowls.filter(b => isNarrow(b.result)).length;
+  const wide = bowls.filter(b => isWide(b.result)).length;
+  const goodLine = bowls.filter(b => isOnLine(b.result)).length;
 
   return {
     total,
