@@ -31,8 +31,37 @@ function randomInt(min: number, max: number): number {
 }
 
 function generateBowlResult(): { gridRow: number; gridCol: number; result: string } {
-  const gridRow = randomInt(0, 8);
-  const gridCol = randomInt(0, 8);
+  // Bias towards effective bowls (~50% should land in effective zone)
+  const isEffective = Math.random() < 0.52; // 52% chance of effective bowl
+  
+  let gridRow: number;
+  let gridCol: number;
+  
+  if (isEffective) {
+    // Land in effective zone (center 3x3)
+    gridRow = randomInt(3, 5);
+    gridCol = randomInt(3, 5);
+  } else {
+    // Land outside effective zone with realistic distribution
+    const zone = Math.random();
+    if (zone < 0.35) {
+      // Short (rows 0-2)
+      gridRow = randomInt(0, 2);
+      gridCol = randomInt(0, 8);
+    } else if (zone < 0.65) {
+      // Heavy (rows 6-8)
+      gridRow = randomInt(6, 8);
+      gridCol = randomInt(0, 8);
+    } else if (zone < 0.82) {
+      // Narrow (cols 0-2, effective weight)
+      gridRow = randomInt(3, 5);
+      gridCol = randomInt(0, 2);
+    } else {
+      // Wide (cols 6-8, effective weight)
+      gridRow = randomInt(3, 5);
+      gridCol = randomInt(6, 8);
+    }
+  }
   
   const centerRow = 4;
   const centerCol = 4;
