@@ -3,8 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, ArrowRight, MapPin, BarChart3, List, Target, TrendingUp, Zap, Trophy } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, ArrowRight, MapPin, BarChart3, List, Target } from "lucide-react";
 
 export default function Home() {
   const { user } = useAuth();
@@ -43,98 +42,78 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 -mx-4 -mt-4">
-      {/* Bold Gradient Header */}
-      <div className="bg-gradient-to-br from-primary via-primary to-emerald-600 text-white px-6 py-8 rounded-b-3xl shadow-lg">
-        <div className="flex items-center gap-4 mb-6">
-          {user?.profileImageUrl ? (
-            <img 
-              src={user.profileImageUrl} 
-              alt={firstName}
-              className="w-14 h-14 rounded-full border-2 border-white/30 shadow-md"
-            />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold">
-              {firstName[0]?.toUpperCase()}
-            </div>
-          )}
-          <div>
-            <p className="text-white/70 text-sm">Welcome back,</p>
-            <h1 className="text-2xl font-bold" data-testid="heading-dashboard">{firstName}</h1>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Simple Header */}
+      <div className="flex items-center gap-3 pt-2">
+        {user?.profileImageUrl ? (
+          <img 
+            src={user.profileImageUrl} 
+            alt={firstName}
+            className="w-12 h-12 rounded-full border-2 border-primary/20"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
+            {firstName[0]?.toUpperCase()}
           </div>
-        </div>
-
-        {/* Hero Stat Card */}
-        <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/70 text-sm mb-1">Effectiveness Rate</p>
-              <p className="text-4xl font-bold">{effectiveRate}%</p>
-              <p className="text-white/60 text-xs mt-1">{effectiveBowls.length} of {allBowls.length} bowls</p>
-            </div>
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-              <Target className="w-8 h-8" />
-            </div>
-          </div>
+        )}
+        <div>
+          <p className="text-muted-foreground text-sm">Welcome back,</p>
+          <h1 className="text-xl font-semibold" data-testid="heading-dashboard">{firstName}</h1>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="px-4 grid grid-cols-2 gap-3">
-        <StatCard 
-          icon={<Zap className="w-5 h-5" />}
-          label="Total Bowls"
-          value={allBowls.length.toLocaleString()}
-          color="bg-gradient-to-br from-violet-500 to-purple-600"
-        />
-        <StatCard 
-          icon={<Trophy className="w-5 h-5" />}
-          label="Win Rate"
-          value={`${winRate}%`}
-          color="bg-gradient-to-br from-amber-500 to-orange-500"
-        />
-        <StatCard 
-          icon={<BarChart3 className="w-5 h-5" />}
-          label="Games Played"
-          value={completedGames.length.toString()}
-          color="bg-gradient-to-br from-cyan-500 to-blue-500"
-        />
-        <StatCard 
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Total Wins"
-          value={totalWins.toString()}
-          color="bg-gradient-to-br from-emerald-500 to-green-600"
-        />
+      {/* Main Stat Card */}
+      <Card className="border shadow-soft">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-sm mb-1">Effectiveness Rate</p>
+              <p className="text-4xl font-bold text-primary">{effectiveRate}%</p>
+              <p className="text-muted-foreground text-xs mt-1">{effectiveBowls.length} of {allBowls.length} bowls</p>
+            </div>
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <Target className="w-7 h-7 text-primary" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Grid - Simple design */}
+      <div className="grid grid-cols-4 gap-2">
+        <SimpleStatCard label="Bowls" value={allBowls.length.toLocaleString()} />
+        <SimpleStatCard label="Win %" value={`${winRate}%`} />
+        <SimpleStatCard label="Games" value={completedGames.length.toString()} />
+        <SimpleStatCard label="Wins" value={totalWins.toString()} />
       </div>
 
       {/* Active Games Section */}
       {activeGames.length > 0 && (
-        <section className="px-4 space-y-3">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            Continue Playing
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary" />
+            In Progress
           </h2>
           {activeGames.map((game) => (
             <Card 
               key={game.id} 
-              className="overflow-hidden border-0 shadow-md bg-gradient-to-r from-primary/5 to-primary/10" 
+              className="border shadow-soft" 
               data-testid={`card-active-game-${game.id}`}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-semibold text-lg">vs {game.opponent}</p>
+                    <p className="font-semibold">vs {game.opponent}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {game.venue}
                     </p>
                   </div>
-                  <span className="text-xs font-medium px-3 py-1 bg-primary/10 text-primary rounded-full">
+                  <span className="text-xs font-medium px-2 py-1 bg-muted text-muted-foreground rounded">
                     {game.position}
                   </span>
                 </div>
                 <Link href={`/play/${game.id}`}>
-                  <Button className="w-full gap-2 rounded-xl h-11" data-testid={`button-continue-${game.id}`}>
-                    Continue Game <ArrowRight className="w-4 h-4" />
+                  <Button className="w-full gap-2" data-testid={`button-continue-${game.id}`}>
+                    Continue <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
               </CardContent>
@@ -144,32 +123,38 @@ export default function Home() {
       )}
 
       {/* Quick Actions */}
-      <section className="px-4 space-y-3">
-        <h2 className="text-lg font-semibold">Quick Actions</h2>
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Quick Actions</h2>
         <div className="grid grid-cols-3 gap-3">
           <Link href="/new-game">
-            <ActionTile 
-              icon={<Plus className="w-6 h-6" />}
-              label="New Game"
-              color="bg-gradient-to-br from-primary to-emerald-600"
-              testId="tile-new-game"
-            />
+            <Card className="border shadow-soft hover:shadow-md transition-shadow cursor-pointer" data-testid="tile-new-game">
+              <CardContent className="p-4 flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-medium">New Game</span>
+              </CardContent>
+            </Card>
           </Link>
           <Link href="/games">
-            <ActionTile 
-              icon={<List className="w-6 h-6" />}
-              label="My Games"
-              color="bg-gradient-to-br from-slate-600 to-slate-800"
-              testId="tile-my-games"
-            />
+            <Card className="border shadow-soft hover:shadow-md transition-shadow cursor-pointer" data-testid="tile-my-games">
+              <CardContent className="p-4 flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <List className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <span className="text-sm font-medium">My Games</span>
+              </CardContent>
+            </Card>
           </Link>
           <Link href="/analysis">
-            <ActionTile 
-              icon={<BarChart3 className="w-6 h-6" />}
-              label="Analysis"
-              color="bg-gradient-to-br from-violet-500 to-purple-600"
-              testId="tile-analysis"
-            />
+            <Card className="border shadow-soft hover:shadow-md transition-shadow cursor-pointer" data-testid="tile-analysis">
+              <CardContent className="p-4 flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <span className="text-sm font-medium">Analysis</span>
+              </CardContent>
+            </Card>
           </Link>
         </div>
       </section>
@@ -179,57 +164,11 @@ export default function Home() {
   );
 }
 
-function StatCard({ 
-  icon, 
-  label, 
-  value, 
-  color 
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string; 
-  color: string;
-}) {
+function SimpleStatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className={cn(
-      "rounded-2xl p-4 text-white shadow-lg",
-      color
-    )}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-          {icon}
-        </div>
-      </div>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-white/70 text-sm">{label}</p>
+    <div className="text-center p-3 bg-muted/30 rounded-lg">
+      <p className="text-lg font-bold">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
-  );
-}
-
-function ActionTile({ 
-  icon, 
-  label, 
-  color,
-  testId
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  color: string;
-  testId: string;
-}) {
-  return (
-    <Card 
-      className="border-0 shadow-md overflow-hidden cursor-pointer hover:scale-105 transition-transform duration-200"
-      data-testid={testId}
-    >
-      <CardContent className="p-0">
-        <div className={cn("aspect-square flex flex-col items-center justify-center text-white", color)}>
-          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-2">
-            {icon}
-          </div>
-          <span className="font-medium text-sm text-center px-1">{label}</span>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

@@ -94,12 +94,26 @@ function HeatmapCanvas({ heatmap, maxCount }: { heatmap: number[][], maxCount: n
     canvas.height = size * dpr;
     ctx.scale(dpr, dpr);
     
-    // Clear with dark background
-    ctx.fillStyle = 'rgb(15, 23, 42)';
+    // Clear with light background (soft cream/green tint)
+    ctx.fillStyle = 'rgb(248, 250, 245)';
     ctx.fillRect(0, 0, size, size);
     
+    // Draw subtle grid lines
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 9; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cellSize, 0);
+      ctx.lineTo(i * cellSize, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i * cellSize);
+      ctx.lineTo(size, i * cellSize);
+      ctx.stroke();
+    }
+    
     // Apply blur filter for smooth blending
-    ctx.filter = 'blur(12px)';
+    ctx.filter = 'blur(14px)';
     
     // Draw radial gradients for each cell with data
     for (let row = 0; row < 9; row++) {
@@ -110,15 +124,15 @@ function HeatmapCanvas({ heatmap, maxCount }: { heatmap: number[][], maxCount: n
         const intensity = Math.min(count / Math.max(maxCount, 1), 1);
         const x = col * cellSize + cellSize / 2;
         const y = row * cellSize + cellSize / 2;
-        const radius = cellSize * (0.8 + intensity * 0.6);
+        const radius = cellSize * (1.0 + intensity * 0.8);
         
         // Create radial gradient
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
         
-        // Thermal color based on intensity
+        // Thermal color based on intensity - softer on light background
         const color = getThermalColor(intensity);
-        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.7 + intensity * 0.3})`);
-        gradient.addColorStop(0.5, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.3 + intensity * 0.2})`);
+        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.6 + intensity * 0.3})`);
+        gradient.addColorStop(0.4, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.25 + intensity * 0.15})`);
         gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
         
         ctx.fillStyle = gradient;
@@ -131,17 +145,19 @@ function HeatmapCanvas({ heatmap, maxCount }: { heatmap: number[][], maxCount: n
     // Reset filter for overlays
     ctx.filter = 'none';
     
-    // Draw jack marker (center)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    // Draw jack marker (center) - darker for light background
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, 8, 0, Math.PI * 2);
     ctx.stroke();
     
     // Draw effective zone border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
     ctx.strokeRect(cellSize * 3, cellSize * 3, cellSize * 3, cellSize * 3);
+    ctx.setLineDash([]);
     
   }, [heatmap, maxCount]);
   
@@ -149,7 +165,7 @@ function HeatmapCanvas({ heatmap, maxCount }: { heatmap: number[][], maxCount: n
     <canvas 
       ref={canvasRef}
       style={{ width: size, height: size }}
-      className="rounded-lg mx-auto"
+      className="rounded-lg mx-auto border border-border/50"
     />
   );
 }
@@ -203,7 +219,7 @@ function HeatmapGrid({ heatmap, maxCount, title }: { heatmap: number[][], maxCou
         
         <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
           <span>N=Narrow</span>
-          <span className="text-white/60">&#9711; Jack</span>
+          <span>&#9711; Jack</span>
           <span>W=Wide</span>
         </div>
       </CardContent>
@@ -501,16 +517,16 @@ export default function Analysis() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 -mx-4 -mt-4">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="bg-gradient-to-br from-primary to-emerald-700 text-white px-6 py-6 rounded-b-3xl shadow-lg">
-        <h1 className="text-2xl font-bold mb-1">Performance Analysis</h1>
-        <p className="text-white/70 text-sm">
+      <div className="pt-2">
+        <h1 className="text-xl font-semibold">Performance Analysis</h1>
+        <p className="text-muted-foreground text-sm">
           {totalGames} game{totalGames !== 1 ? 's' : ''} analyzed · {allStats?.total || 0} total bowls
         </p>
       </div>
       
-      <div className="px-4 space-y-6">
+      <div className="space-y-6">
 
       {/* Single Game Banner */}
       {selectedGame && (
