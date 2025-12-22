@@ -215,87 +215,86 @@ function calculateStats(bowls: Bowl[]) {
   };
 }
 
-function StatBlock({ title, icon: Icon, stats }: { 
+function StatBlock({ title, icon: Icon, stats, color }: { 
   title: string; 
   icon: React.ElementType;
   stats: ReturnType<typeof calculateStats>;
+  color?: string;
 }) {
+  const gradientClass = color || "from-primary to-emerald-600";
+  
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Icon className="h-5 w-5 text-primary" />
-          {title}
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">{stats.total} bowls delivered</p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Bowl Effectiveness */}
-        <div className="space-y-1">
-          <div className="flex justify-between items-baseline">
-            <span className="text-sm font-medium">Bowl Effectiveness</span>
-            <span className="text-2xl font-bold text-primary" data-testid={`text-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
-              {stats.effectivePercent}%
-            </span>
+    <Card className="border-0 shadow-md overflow-hidden">
+      {/* Colored Header */}
+      <div className={`bg-gradient-to-br ${gradientClass} text-white p-4`}>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+            <Icon className="h-4 w-4" />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {stats.effective} of {stats.total} bowls marked effective
-          </p>
+          <span className="font-semibold">{title}</span>
         </div>
-
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-bold" data-testid={`text-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
+            {stats.effectivePercent}%
+          </span>
+          <span className="text-white/70 text-sm">effective</span>
+        </div>
+        <p className="text-white/60 text-xs mt-1">
+          {stats.effective} of {stats.total} bowls
+        </p>
+      </div>
+      
+      <CardContent className="p-4 space-y-4">
         {/* First Bowl Effectiveness */}
-        <div className="space-y-1">
-          <div className="flex justify-between items-baseline">
-            <span className="text-sm font-medium">First Bowl Effectiveness</span>
-            <span className="text-2xl font-bold text-accent-foreground" data-testid={`text-first-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
+          <div>
+            <p className="text-xs text-muted-foreground">First Bowl</p>
+            <p className="font-medium">Effectiveness</p>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-bold text-primary" data-testid={`text-first-effectiveness-${title.toLowerCase().replace(' ', '-')}`}>
               {stats.firstBowlPercent}%
             </span>
+            <p className="text-xs text-muted-foreground">
+              {stats.firstBowlEffective}/{stats.firstBowlTotal}
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {stats.firstBowlEffective} of {stats.firstBowlTotal} first bowls effective
-          </p>
         </div>
 
         {/* Weight Control */}
-        <div className="space-y-2 pt-2 border-t">
+        <div className="space-y-2">
           <span className="text-sm font-medium">Weight Control</span>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-red-50 dark:bg-red-950/30 rounded p-2">
-              <div className="text-lg font-bold text-red-600 dark:text-red-400">{stats.shortPercent}%</div>
-              <div className="text-xs text-muted-foreground">Short</div>
-              <div className="text-xs text-muted-foreground">({stats.short})</div>
+            <div className="bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-xl p-3">
+              <div className="text-xl font-bold">{stats.shortPercent}%</div>
+              <div className="text-xs text-white/80">Short</div>
             </div>
-            <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
-              <div className="text-lg font-bold text-green-600 dark:text-green-400">{stats.goodWeightPercent}%</div>
-              <div className="text-xs text-muted-foreground">Good</div>
-              <div className="text-xs text-muted-foreground">({stats.goodWeight})</div>
+            <div className="bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-xl p-3">
+              <div className="text-xl font-bold">{stats.goodWeightPercent}%</div>
+              <div className="text-xs text-white/80">Good</div>
             </div>
-            <div className="bg-slate-100 dark:bg-slate-800 rounded p-2">
-              <div className="text-lg font-bold text-slate-600 dark:text-slate-400">{stats.heavyPercent}%</div>
-              <div className="text-xs text-muted-foreground">Heavy</div>
-              <div className="text-xs text-muted-foreground">({stats.heavy})</div>
+            <div className="bg-gradient-to-br from-slate-500 to-slate-700 text-white rounded-xl p-3">
+              <div className="text-xl font-bold">{stats.heavyPercent}%</div>
+              <div className="text-xs text-white/80">Heavy</div>
             </div>
           </div>
         </div>
 
         {/* Line Control */}
-        <div className="space-y-2 pt-2 border-t">
+        <div className="space-y-2">
           <span className="text-sm font-medium">Line Control</span>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-2">
-              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{stats.narrowPercent}%</div>
-              <div className="text-xs text-muted-foreground">Narrow</div>
-              <div className="text-xs text-muted-foreground">({stats.narrow})</div>
+            <div className="bg-gradient-to-br from-orange-500 to-amber-600 text-white rounded-xl p-3">
+              <div className="text-xl font-bold">{stats.narrowPercent}%</div>
+              <div className="text-xs text-white/80">Narrow</div>
             </div>
-            <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
-              <div className="text-lg font-bold text-green-600 dark:text-green-400">{stats.goodLinePercent}%</div>
-              <div className="text-xs text-muted-foreground">Good</div>
-              <div className="text-xs text-muted-foreground">({stats.goodLine})</div>
+            <div className="bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-xl p-3">
+              <div className="text-xl font-bold">{stats.goodLinePercent}%</div>
+              <div className="text-xs text-white/80">Good</div>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-2">
-              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats.widePercent}%</div>
-              <div className="text-xs text-muted-foreground">Wide</div>
-              <div className="text-xs text-muted-foreground">({stats.wide})</div>
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 text-white rounded-xl p-3">
+              <div className="text-xl font-bold">{stats.widePercent}%</div>
+              <div className="text-xs text-white/80">Wide</div>
             </div>
           </div>
         </div>
@@ -416,7 +415,11 @@ export default function Analysis() {
   }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat]);
 
   if (isLoading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (!allStats) {
@@ -439,13 +442,16 @@ export default function Analysis() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-primary">Performance Analysis</h1>
-        <div className="text-sm text-muted-foreground">
-          {totalGames} game{totalGames !== 1 ? 's' : ''} analyzed
-        </div>
+    <div className="space-y-6 animate-in fade-in duration-500 -mx-4 -mt-4">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-violet-600 to-purple-700 text-white px-6 py-6 rounded-b-3xl shadow-lg">
+        <h1 className="text-2xl font-bold mb-1">Performance Analysis</h1>
+        <p className="text-white/70 text-sm">
+          {totalGames} game{totalGames !== 1 ? 's' : ''} analyzed · {allStats?.total || 0} total bowls
+        </p>
       </div>
+      
+      <div className="px-4 space-y-6">
 
       {/* Single Game Banner */}
       {selectedGame && (
@@ -685,17 +691,20 @@ export default function Analysis() {
         <StatBlock 
           title="All Bowls" 
           icon={Target}
-          stats={allStats} 
+          stats={allStats}
+          color="from-primary to-emerald-600"
         />
         <StatBlock 
           title="Forehand" 
           icon={CircleDot}
-          stats={forehandStats!} 
+          stats={forehandStats!}
+          color="from-blue-500 to-cyan-600"
         />
         <StatBlock 
           title="Backhand" 
           icon={CircleDot}
-          stats={backhandStats!} 
+          stats={backhandStats!}
+          color="from-violet-500 to-purple-600"
         />
       </div>
 
@@ -729,6 +738,9 @@ export default function Analysis() {
           </div>
         </div>
       )}
+      
+      <div className="h-4" />
+      </div>
     </div>
   );
 }
