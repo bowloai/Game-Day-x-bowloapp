@@ -2,16 +2,15 @@ import { useGames, useDeleteGame } from "@/lib/hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useEffect } from "react";
-import { format, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil, Trophy, TrendingDown, Minus } from "lucide-react";
 import { ShareGameSummary } from "@/components/share-game-summary";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { DateRange } from "react-day-picker";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
 
@@ -23,7 +22,7 @@ export default function Games() {
   const [gamesWithDetails, setGamesWithDetails] = useState<GameWithDetails[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>();
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
 
   const datePresets = [
@@ -332,47 +331,67 @@ export default function Games() {
                 ))}
               </div>
               
-              {/* Calendar for custom range */}
+              {/* Custom date range inputs */}
               <div className="border-t pt-4">
-                <p className="text-sm text-muted-foreground mb-3 text-center">Or select a custom date range</p>
-                <div className="flex justify-center">
-                  <Calendar
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={(range) => {
-                      setDateRange(range);
-                      if (range?.from && range?.to) {
-                        setDateSheetOpen(false);
-                      }
-                    }}
-                    numberOfMonths={1}
-                    className="p-4 [--cell-size:2.75rem]"
-                  />
+                <p className="text-sm text-muted-foreground mb-4 text-center">Or select a custom date range</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="from-date" className="text-sm font-medium">From</Label>
+                    <input
+                      id="from-date"
+                      type="date"
+                      className="w-full h-12 px-3 rounded-lg border border-input bg-background text-base"
+                      value={dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => {
+                        const newFrom = e.target.value ? parseISO(e.target.value) : undefined;
+                        setDateRange(prev => ({
+                          from: newFrom,
+                          to: prev?.to
+                        }));
+                      }}
+                      data-testid="input-date-from"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="to-date" className="text-sm font-medium">To</Label>
+                    <input
+                      id="to-date"
+                      type="date"
+                      className="w-full h-12 px-3 rounded-lg border border-input bg-background text-base"
+                      value={dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => {
+                        const newTo = e.target.value ? parseISO(e.target.value) : undefined;
+                        setDateRange(prev => ({
+                          from: prev?.from,
+                          to: newTo
+                        }));
+                      }}
+                      data-testid="input-date-to"
+                    />
+                  </div>
                 </div>
               </div>
               
               {/* Actions */}
-              {dateRange && (
-                <div className="flex gap-2 mt-4 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => {
-                      clearDateFilter();
-                      setDateSheetOpen(false);
-                    }}
-                  >
-                    Clear Filter
-                  </Button>
-                  <Button 
-                    className="flex-1"
-                    onClick={() => setDateSheetOpen(false)}
-                  >
-                    Apply
-                  </Button>
-                </div>
-              )}
+              <div className="flex gap-2 mt-6 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12"
+                  onClick={() => {
+                    clearDateFilter();
+                    setDateSheetOpen(false);
+                  }}
+                >
+                  Clear Filter
+                </Button>
+                <Button 
+                  className="flex-1 h-12"
+                  onClick={() => setDateSheetOpen(false)}
+                  disabled={dateRange?.from && !dateRange?.to}
+                >
+                  Apply
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
           {dateRange && (

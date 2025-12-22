@@ -4,11 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
-import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote } from "lucide-react";
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon } from "lucide-react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 type Bowl = {
@@ -393,6 +394,32 @@ export default function Analysis() {
   const [filterVenue, setFilterVenue] = useState<string>("All");
   const [filterOpponent, setFilterOpponent] = useState<string>("All");
   const [filterFormat, setFilterFormat] = useState<string>("All");
+  
+  // Date range filter
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>();
+  const [dateSheetOpen, setDateSheetOpen] = useState(false);
+  
+  const datePresets = [
+    { label: "All time", value: null },
+    { label: "Last 7 days", value: { from: subDays(new Date(), 7), to: new Date() } },
+    { label: "Last 30 days", value: { from: subDays(new Date(), 30), to: new Date() } },
+    { label: "This month", value: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+    { label: "Last month", value: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
+    { label: "This year", value: { from: startOfYear(new Date()), to: new Date() } },
+  ];
+
+  const applyPreset = (preset: typeof datePresets[0]) => {
+    if (preset.value === null) {
+      setDateRange(undefined);
+    } else {
+      setDateRange(preset.value);
+    }
+    setDateSheetOpen(false);
+  };
+  
+  const clearDateFilter = () => {
+    setDateRange(undefined);
+  };
 
   // Get unique values for filters
   const uniqueVenues = useMemo(() => {
@@ -433,6 +460,16 @@ export default function Analysis() {
     }
     if (filterFormat !== "All") {
       filteredGames = filteredGames.filter(g => (g.gameFormat || 'fours') === filterFormat);
+    }
+    
+    // Apply date range filter
+    if (dateRange?.from) {
+      filteredGames = filteredGames.filter(game => {
+        const gameDate = new Date(game.createdAt);
+        const from = startOfDay(dateRange.from!);
+        const to = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from!);
+        return isWithinInterval(gameDate, { start: from, end: to });
+      });
     }
 
     if (filteredGames.length === 0) {
@@ -478,7 +515,7 @@ export default function Analysis() {
       backhandHeatmap,
       maxHeatmapCount,
     };
-  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat]);
+  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
 
   if (isLoading) {
     return (
@@ -498,7 +535,7 @@ export default function Analysis() {
   }
 
   const hasActiveFilters = filterType !== "All" || filterSurface !== "All" || 
-    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All";
+    filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All" || !!dateRange;
   
   // Get the selected game details for display
   const selectedGame = gameIdFromUrl ? gamesWithDetails.find(g => g.id === gameIdFromUrl) : null;
@@ -646,7 +683,130 @@ export default function Analysis() {
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 space-y-4">
+              {/* Date Range Filter */}
+              <div className="flex items-center gap-2">
+                <Sheet open={dateSheetOpen} onOpenChange={setDateSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex-1 justify-start text-left font-normal h-10"
+                      data-testid="button-date-filter"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "MMM d, yyyy")
+                        )
+                      ) : (
+                        "All time"
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
+                    <SheetHeader className="pb-4">
+                      <SheetTitle className="text-center">Filter by Date</SheetTitle>
+                    </SheetHeader>
+                    
+                    {/* Quick Presets */}
+                    <div className="grid grid-cols-2 gap-2 mb-6">
+                      {datePresets.map((preset) => (
+                        <Button
+                          key={preset.label}
+                          variant={
+                            (preset.value === null && !dateRange) ||
+                            (preset.value && dateRange?.from?.getTime() === preset.value.from.getTime())
+                              ? "default"
+                              : "outline"
+                          }
+                          className="h-12 text-sm"
+                          onClick={() => applyPreset(preset)}
+                          data-testid={`preset-${preset.label.toLowerCase().replace(/\s/g, '-')}`}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    {/* Custom date range inputs */}
+                    <div className="border-t pt-4">
+                      <p className="text-sm text-muted-foreground mb-4 text-center">Or select a custom date range</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="analysis-from-date" className="text-sm font-medium">From</Label>
+                          <input
+                            id="analysis-from-date"
+                            type="date"
+                            className="w-full h-12 px-3 rounded-lg border border-input bg-background text-base"
+                            value={dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const newFrom = e.target.value ? parseISO(e.target.value) : undefined;
+                              setDateRange(prev => ({
+                                from: newFrom,
+                                to: prev?.to
+                              }));
+                            }}
+                            data-testid="input-analysis-date-from"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="analysis-to-date" className="text-sm font-medium">To</Label>
+                          <input
+                            id="analysis-to-date"
+                            type="date"
+                            className="w-full h-12 px-3 rounded-lg border border-input bg-background text-base"
+                            value={dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const newTo = e.target.value ? parseISO(e.target.value) : undefined;
+                              setDateRange(prev => ({
+                                from: prev?.from,
+                                to: newTo
+                              }));
+                            }}
+                            data-testid="input-analysis-date-to"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex gap-2 mt-6 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 h-12"
+                        onClick={() => {
+                          clearDateFilter();
+                          setDateSheetOpen(false);
+                        }}
+                      >
+                        Clear Filter
+                      </Button>
+                      <Button 
+                        className="flex-1 h-12"
+                        onClick={() => setDateSheetOpen(false)}
+                        disabled={dateRange?.from && !dateRange?.to}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+                {dateRange && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={clearDateFilter} 
+                    data-testid="button-clear-date"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Game Type */}
                 <div className="space-y-1">
