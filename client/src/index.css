@@ -7,9 +7,11 @@
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Chakra Petch', sans-serif;
 
-  --radius-sm: 0.3rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
 
   /* Lawn Green & Sport Tech Theme */
   --color-background: hsl(210 40% 98%);
@@ -46,7 +48,11 @@
   --color-chart-4: hsl(0 84% 60%);
   --color-chart-5: hsl(210 20% 90%);
 
-  --radius: 0.5rem;
+  --radius: 0.75rem;
+}
+
+.shadow-soft {
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.1);
 }
 
 @layer base {

@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useEffect } from "react";
 import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil } from "lucide-react";
+import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil, Trophy, TrendingDown, Minus } from "lucide-react";
 import { ShareGameSummary } from "@/components/share-game-summary";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,6 @@ export default function Games() {
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  // Fetch full game details to get scores
   useEffect(() => {
     async function fetchDetails() {
       if (!games || games.length === 0) {
@@ -47,7 +46,6 @@ export default function Games() {
     fetchDetails();
   }, [games]);
 
-  // Calculate score from ends
   const getGameScore = (game: GameWithDetails) => {
     if (!game.ends || game.ends.length === 0) return { scoreFor: 0, scoreAgainst: 0 };
     
@@ -107,7 +105,6 @@ export default function Games() {
       return;
     }
 
-    // Create CSV content with all game, end, and bowl data
     const headers = [
       "Game Date",
       "Opponent",
@@ -139,7 +136,6 @@ export default function Games() {
       const result = totalFor > totalAgainst ? "Win" : totalFor < totalAgainst ? "Loss" : "Draw";
       
       if (!game.ends || game.ends.length === 0) {
-        // Game with no ends
         rows.push([
           format(new Date(game.createdAt), "yyyy-MM-dd"),
           game.opponent,
@@ -147,7 +143,7 @@ export default function Games() {
           game.surface,
           game.rink,
           game.type,
-          game.position,
+          game.position || "",
           String(game.totalEnds),
           game.status,
           String(totalFor),
@@ -158,7 +154,6 @@ export default function Games() {
       } else {
         game.ends.forEach(end => {
           if (!end.bowls || end.bowls.length === 0) {
-            // End with no bowls
             rows.push([
               format(new Date(game.createdAt), "yyyy-MM-dd"),
               game.opponent,
@@ -166,7 +161,7 @@ export default function Games() {
               game.surface,
               game.rink,
               game.type,
-              game.position,
+              game.position || "",
               String(game.totalEnds),
               game.status,
               String(totalFor),
@@ -189,7 +184,7 @@ export default function Games() {
                 game.surface,
                 game.rink,
                 game.type,
-                game.position,
+                game.position || "",
                 String(game.totalEnds),
                 game.status,
                 String(totalFor),
@@ -202,8 +197,8 @@ export default function Games() {
                 end.length || "",
                 end.isDead ? "Yes" : "No",
                 String(bowl.bowlNumber),
-                bowl.hand,
-                bowl.result
+                bowl.hand || "",
+                bowl.result || ""
               ]);
             });
           }
@@ -211,7 +206,6 @@ export default function Games() {
       }
     });
 
-    // Escape CSV values
     const escapeCSV = (value: string) => {
       if (value.includes(',') || value.includes('"') || value.includes('\n')) {
         return `"${value.replace(/"/g, '""')}"`;
@@ -224,12 +218,11 @@ export default function Games() {
       ...rows.map(row => row.map(escapeCSV).join(','))
     ].join('\n');
 
-    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `pennantpro-export-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.setAttribute('download', `bowlo-export-${format(new Date(), 'yyyy-MM-dd')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -243,33 +236,41 @@ export default function Games() {
   };
 
   if (isLoading || loadingDetails) {
-    return <div className="text-center py-12">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-primary">My Games</h1>
-        
-        {/* Date Range Filter and Download */}
-        <div className="flex items-center gap-2">
+    <div className="space-y-6 animate-in fade-in duration-500 -mx-4 -mt-4">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-slate-700 to-slate-900 text-white px-6 py-6 rounded-b-3xl shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">My Games</h1>
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             onClick={downloadCSV}
             disabled={!gamesWithDetails || gamesWithDetails.length === 0}
             data-testid="button-download-csv"
             title="Download all data as CSV"
+            className="text-white hover:bg-white/10"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-5 w-5" />
           </Button>
+        </div>
+        
+        {/* Date Filter */}
+        <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className={cn(
-                  "justify-start text-left font-normal",
-                  !dateRange && "text-muted-foreground"
+                  "flex-1 justify-start text-left font-normal bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white",
+                  !dateRange && "text-white/70"
                 )}
                 data-testid="button-date-filter"
               >
@@ -287,7 +288,7 @@ export default function Games() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 initialFocus
                 mode="range"
@@ -299,93 +300,174 @@ export default function Games() {
             </PopoverContent>
           </Popover>
           {dateRange && (
-            <Button variant="ghost" size="icon" onClick={clearDateFilter} data-testid="button-clear-date">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={clearDateFilter} 
+              data-testid="button-clear-date"
+              className="text-white hover:bg-white/10"
+            >
               <X className="h-4 w-4" />
             </Button>
           )}
         </div>
+        
+        <p className="text-white/60 text-sm mt-3">
+          {filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''} 
+          {dateRange ? ' in selected range' : ' total'}
+        </p>
       </div>
 
-      {filteredGames.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              {games?.length === 0 
-                ? "No games recorded yet. Start a new game to begin tracking your performance."
-                : "No games found for the selected date range."}
-            </p>
-            {games?.length === 0 && (
-              <Button 
-                className="mt-4" 
-                onClick={() => setLocation("/new-game")}
-                data-testid="button-start-first-game"
-              >
-                Start Your First Game
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filteredGames.map(game => {
+      {/* Games List */}
+      <div className="px-4 space-y-3">
+        {filteredGames.length === 0 ? (
+          <Card className="border-0 shadow-md">
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                {games?.length === 0 
+                  ? "No games recorded yet. Start a new game to begin tracking your performance."
+                  : "No games found for the selected date range."}
+              </p>
+              {games?.length === 0 && (
+                <Button 
+                  className="mt-4 rounded-xl" 
+                  onClick={() => setLocation("/new-game")}
+                  data-testid="button-start-first-game"
+                >
+                  Start Your First Game
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredGames.map(game => {
             const isCompleted = game.status === 'COMPLETED';
             const isInProgress = game.status === 'IN_PROGRESS';
             const { scoreFor, scoreAgainst } = getGameScore(game);
             const completedEnds = game.ends?.filter(e => e.isCompleted).length || 0;
+            const isWin = scoreFor > scoreAgainst;
+            const isLoss = scoreFor < scoreAgainst;
             
             return (
-              <Card key={game.id} className="hover:bg-muted/50 transition-colors">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {/* Top row: Game info and delete button */}
-                    <div className="flex items-start justify-between gap-4">
+              <Card 
+                key={game.id} 
+                className="border-0 shadow-md overflow-hidden"
+                data-testid={`card-game-${game.id}`}
+              >
+                <CardContent className="p-0">
+                  {/* Result indicator strip */}
+                  <div className={cn(
+                    "h-1",
+                    isCompleted && isWin ? "bg-gradient-to-r from-green-500 to-emerald-500" :
+                    isCompleted && isLoss ? "bg-gradient-to-r from-red-500 to-rose-500" :
+                    isCompleted ? "bg-gradient-to-r from-gray-400 to-gray-500" :
+                    "bg-gradient-to-r from-amber-400 to-yellow-500"
+                  )} />
+                  
+                  <div className="p-4 space-y-3">
+                    {/* Top row: Game info */}
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="font-semibold text-lg truncate" data-testid={`text-opponent-${game.id}`}>
+                          <h3 className="font-semibold text-lg" data-testid={`text-opponent-${game.id}`}>
                             vs {game.opponent}
                           </h3>
-                          {/* Score Display */}
-                          <div className="flex items-center gap-1 font-mono text-lg">
+                          
+                          {/* Result badge */}
+                          {isCompleted && (
                             <span className={cn(
-                              "font-bold",
-                              scoreFor > scoreAgainst ? "text-green-600 dark:text-green-400" : 
-                              scoreFor < scoreAgainst ? "text-red-600 dark:text-red-400" : ""
-                            )} data-testid={`text-score-for-${game.id}`}>
-                              {scoreFor}
+                              "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
+                              isWin ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                              isLoss ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                              "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                            )}>
+                              {isWin ? <Trophy className="w-3 h-3" /> : isLoss ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                              {isWin ? "Win" : isLoss ? "Loss" : "Draw"}
                             </span>
-                            <span className="text-muted-foreground">-</span>
-                            <span className={cn(
-                              "font-bold",
-                              scoreAgainst > scoreFor ? "text-green-600 dark:text-green-400" : 
-                              scoreAgainst < scoreFor ? "text-red-600 dark:text-red-400" : ""
-                            )} data-testid={`text-score-against-${game.id}`}>
-                              {scoreAgainst}
+                          )}
+                          
+                          {isInProgress && (
+                            <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              End {completedEnds + 1}
                             </span>
-                          </div>
-                          <span className={cn(
-                            "text-xs px-2 py-0.5 rounded-full",
-                            isCompleted ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                            isInProgress ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                          )}>
-                            {isInProgress ? `End ${completedEnds + 1}` : game.status.replace('_', ' ')}
-                          </span>
+                          )}
                         </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-                          <span>{format(new Date(game.createdAt), "MMM d, yyyy")}</span>
-                          <span>{game.venue}</span>
-                          <span>{game.type}</span>
-                          <span>{game.surface}</span>
-                          <span>{game.position}</span>
-                        </div>
+                        
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {format(new Date(game.createdAt), "MMM d, yyyy")} · {game.venue} · {game.position}
+                        </p>
                       </div>
+                      
+                      {/* Score Display */}
+                      <div className="flex items-center gap-1 bg-muted/50 rounded-xl px-4 py-2">
+                        <span className={cn(
+                          "text-2xl font-bold tabular-nums",
+                          isWin ? "text-green-600 dark:text-green-400" : ""
+                        )} data-testid={`text-score-for-${game.id}`}>
+                          {scoreFor}
+                        </span>
+                        <span className="text-muted-foreground mx-1">-</span>
+                        <span className={cn(
+                          "text-2xl font-bold tabular-nums",
+                          isLoss ? "text-green-600 dark:text-green-400" : ""
+                        )} data-testid={`text-score-against-${game.id}`}>
+                          {scoreAgainst}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      {isInProgress && (
+                        <Button
+                          size="sm"
+                          onClick={() => setLocation(`/play/${game.id}`)}
+                          data-testid={`button-continue-${game.id}`}
+                          className="rounded-xl"
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Continue
+                        </Button>
+                      )}
+                      {isCompleted && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/analysis?game=${game.id}`)}
+                            data-testid={`button-analyze-${game.id}`}
+                            className="rounded-xl"
+                          >
+                            <BarChart3 className="h-4 w-4 mr-1" />
+                            Analyze
+                          </Button>
+                          <ShareGameSummary 
+                            game={game} 
+                            scoreFor={scoreFor} 
+                            scoreAgainst={scoreAgainst} 
+                          />
+                        </>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/games/${game.id}/edit`)}
+                        data-testid={`button-edit-${game.id}`}
+                        className="rounded-xl"
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      
+                      <div className="flex-1" />
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             data-testid={`button-delete-${game.id}`}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -413,60 +495,15 @@ export default function Games() {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                    
-                    {/* Bottom row: Action buttons */}
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      {isInProgress && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => setLocation(`/play/${game.id}`)}
-                          data-testid={`button-continue-${game.id}`}
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          Continue
-                        </Button>
-                      )}
-                      {isCompleted && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setLocation(`/analysis?game=${game.id}`)}
-                            data-testid={`button-analyze-${game.id}`}
-                          >
-                            <BarChart3 className="h-4 w-4 mr-1" />
-                            Analyze
-                          </Button>
-                          <ShareGameSummary 
-                            game={game} 
-                            scoreFor={scoreFor} 
-                            scoreAgainst={scoreAgainst} 
-                          />
-                        </>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setLocation(`/games/${game.id}/edit`)}
-                        data-testid={`button-edit-${game.id}`}
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
             );
-          })}
-        </div>
-      )}
-      
-      <div className="text-center text-sm text-muted-foreground">
-        {filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''} 
-        {dateRange ? ' in selected range' : ' total'}
+          })
+        )}
       </div>
+      
+      <div className="h-4" />
     </div>
   );
 }
