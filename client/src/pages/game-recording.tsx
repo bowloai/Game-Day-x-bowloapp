@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatResult, formatResultShort, formatHandShort, isEffective, isShort, isHeavy, isNarrow, isWide } from "@/lib/bowlResults";
+import { formatResult, formatResultShort, formatHandShort, isEffective, isShort, isHeavy, isNarrow, isWide, getResultColorClass } from "@/lib/bowlResults";
 
 // Database format for bowl results: weight_line
 type BowlResult = 
@@ -382,14 +382,14 @@ export default function GameRecording() {
     const zoneRow = Math.floor(row / 3); // 0=Short, 1=Good, 2=Heavy
     const zoneCol = Math.floor(col / 3); // 0=Left, 1=Center, 2=Right
     
-    // Map left/right to wide/narrow based on hand
-    const leftLabel = hand === 'Forehand' ? 'Wide' : 'Narrow';
-    const rightLabel = hand === 'Forehand' ? 'Narrow' : 'Wide';
+    // Map left/right to wide/narrow based on hand - use single letters
+    const leftLabel = hand === 'Forehand' ? 'W' : 'N';
+    const rightLabel = hand === 'Forehand' ? 'N' : 'W';
     
-    if (zoneRow === 0 && zoneCol === 1) return "Short";
-    if (zoneRow === 2 && zoneCol === 1) return "Heavy";
+    if (zoneRow === 0 && zoneCol === 1) return "S";
+    if (zoneRow === 2 && zoneCol === 1) return "H";
     if (zoneRow === 1 && zoneCol === 0) return leftLabel;
-    if (zoneRow === 1 && zoneCol === 1) return "Effective";
+    if (zoneRow === 1 && zoneCol === 1) return "✓";
     if (zoneRow === 1 && zoneCol === 2) return rightLabel;
     
     return "";
@@ -431,13 +431,14 @@ export default function GameRecording() {
     const zoneRow = Math.floor(row / 3);
     const zoneCol = Math.floor(col / 3);
     
-    const leftLabel = editHand === 'Forehand' ? 'Wide' : 'Narrow';
-    const rightLabel = editHand === 'Forehand' ? 'Narrow' : 'Wide';
+    // Use single letters for labels
+    const leftLabel = editHand === 'Forehand' ? 'W' : 'N';
+    const rightLabel = editHand === 'Forehand' ? 'N' : 'W';
     
-    if (zoneRow === 0 && zoneCol === 1) return "Short";
-    if (zoneRow === 2 && zoneCol === 1) return "Heavy";
+    if (zoneRow === 0 && zoneCol === 1) return "S";
+    if (zoneRow === 2 && zoneCol === 1) return "H";
     if (zoneRow === 1 && zoneCol === 0) return leftLabel;
-    if (zoneRow === 1 && zoneCol === 1) return "Effective";
+    if (zoneRow === 1 && zoneCol === 1) return "✓";
     if (zoneRow === 1 && zoneCol === 2) return rightLabel;
     
     return "";
@@ -643,11 +644,11 @@ export default function GameRecording() {
                     >
                       <Pencil className="h-3 w-3" />
                     </Button>
-                    <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
+                    <span className="block font-medium text-foreground">Bowl {bowl.bowlNumber}</span>
                     <span className="text-xs text-muted-foreground">{formatHandShort(bowl.hand)}</span>
                     <span className={cn(
-                      "block text-xs",
-                      isEffective(bowl.result) ? "text-primary font-medium" : ""
+                      "block text-lg font-bold",
+                      getResultColorClass(bowl.result)
                     )}>{formatResultShort(bowl.result)}</span>
                   </div>
                 ))}
@@ -1009,11 +1010,9 @@ export default function GameRecording() {
                         <TableCell className="text-xs px-1">{end.length?.slice(0,3)}</TableCell>
                         <TableCell className="text-xs px-1">
                           {end.bowls?.[0] ? (
-                            <span className={cn(
-                              isEffective(end.bowls[0].result) ? "text-primary font-medium" : ""
-                            )}>
+                            <span className={cn("font-bold", getResultColorClass(end.bowls[0].result))}>
                               {shortenResult(end.bowls[0].result)}
-                              <span className="text-muted-foreground text-[10px] ml-0.5">
+                              <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
                                 {end.bowls[0].hand === 'Forehand' ? 'F' : 'B'}
                               </span>
                             </span>
@@ -1021,11 +1020,9 @@ export default function GameRecording() {
                         </TableCell>
                         <TableCell className="text-xs px-1">
                           {end.bowls?.[1] ? (
-                            <span className={cn(
-                              isEffective(end.bowls[1].result) ? "text-primary font-medium" : ""
-                            )}>
+                            <span className={cn("font-bold", getResultColorClass(end.bowls[1].result))}>
                               {shortenResult(end.bowls[1].result)}
-                              <span className="text-muted-foreground text-[10px] ml-0.5">
+                              <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
                                 {end.bowls[1].hand === 'Forehand' ? 'F' : 'B'}
                               </span>
                             </span>

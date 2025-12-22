@@ -155,14 +155,15 @@ export default function GameEdit() {
     const zoneRow = Math.floor(row / 3);
     const zoneCol = Math.floor(col / 3);
     
+    // Use single letters for labels
     const isForward = editHand === 'FOREHAND' || editHand === 'Forehand';
-    const leftLabel = isForward ? 'Wide' : 'Narrow';
-    const rightLabel = isForward ? 'Narrow' : 'Wide';
+    const leftLabel = isForward ? 'W' : 'N';
+    const rightLabel = isForward ? 'N' : 'W';
     
-    if (zoneRow === 0 && zoneCol === 1) return "Short";
-    if (zoneRow === 2 && zoneCol === 1) return "Heavy";
+    if (zoneRow === 0 && zoneCol === 1) return "S";
+    if (zoneRow === 2 && zoneCol === 1) return "H";
     if (zoneRow === 1 && zoneCol === 0) return leftLabel;
-    if (zoneRow === 1 && zoneCol === 1) return "Effective";
+    if (zoneRow === 1 && zoneCol === 1) return "✓";
     if (zoneRow === 1 && zoneCol === 2) return rightLabel;
     
     return "";

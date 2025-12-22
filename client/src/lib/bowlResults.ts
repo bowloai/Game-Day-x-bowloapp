@@ -31,26 +31,62 @@ const RESULT_LABELS: Record<string, string> = {
   'Heavy & Wide': 'Heavy & Wide',
 };
 
-// Short display labels for compact views
+// Short display labels for compact views - single letters with checkmark for effective
 const SHORT_LABELS: Record<string, string> = {
-  'effective_online': 'Eff',
-  'effective_narrow': 'Eff/N',
-  'effective_wide': 'Eff/W',
-  'short_online': 'Shrt',
-  'short_narrow': 'S/N',
-  'short_wide': 'S/W',
-  'heavy_online': 'Hvy',
-  'heavy_narrow': 'H/N',
-  'heavy_wide': 'H/W',
+  'effective_online': '✓',
+  'effective_narrow': '✓N',
+  'effective_wide': '✓W',
+  'short_online': 'S',
+  'short_narrow': 'SN',
+  'short_wide': 'SW',
+  'heavy_online': 'H',
+  'heavy_narrow': 'HN',
+  'heavy_wide': 'HW',
   // Legacy
-  'Effective': 'Eff',
-  'Short': 'Shrt',
-  'Heavy': 'Hvy',
-  'Short & Narrow': 'S/N',
-  'Short & Wide': 'S/W',
-  'Heavy & Narrow': 'H/N',
-  'Heavy & Wide': 'H/W',
+  'Effective': '✓',
+  'Short': 'S',
+  'Heavy': 'H',
+  'Short & Narrow': 'SN',
+  'Short & Wide': 'SW',
+  'Heavy & Narrow': 'HN',
+  'Heavy & Wide': 'HW',
+  'Narrow': 'N',
+  'Wide': 'W',
 };
+
+// Get CSS classes for result styling based on zone
+export function getResultColorClass(result: string): string {
+  const r = result.toLowerCase();
+  
+  // Effective (center zone) - green
+  if (r === 'effective_online' || result === 'Effective') {
+    return 'text-green-700 dark:text-green-400';
+  }
+  
+  // Short zones - rose/red tones
+  if (r.startsWith('short')) {
+    if (r.includes('narrow')) return 'text-rose-700 dark:text-rose-400';
+    if (r.includes('wide')) return 'text-rose-600 dark:text-rose-400';
+    return 'text-rose-600 dark:text-rose-400';
+  }
+  
+  // Heavy zones - slate/gray tones  
+  if (r.startsWith('heavy')) {
+    if (r.includes('narrow')) return 'text-slate-700 dark:text-slate-400';
+    if (r.includes('wide')) return 'text-slate-600 dark:text-slate-400';
+    return 'text-slate-600 dark:text-slate-400';
+  }
+  
+  // Good weight but off-line
+  if (r.includes('narrow') || result === 'Narrow') {
+    return 'text-blue-700 dark:text-blue-400';
+  }
+  if (r.includes('wide') || result === 'Wide') {
+    return 'text-orange-700 dark:text-orange-400';
+  }
+  
+  return 'text-foreground';
+}
 
 // Format result for display
 export function formatResult(result: string): string {
