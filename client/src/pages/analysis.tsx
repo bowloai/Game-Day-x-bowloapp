@@ -252,17 +252,18 @@ function calculateStats(bowls: Bowl[]) {
     };
   }
 
-  const effective = bowls.filter(b => b.result === 'Effective').length;
+  // Results are in format: weight_line (e.g., "effective_online", "short_wide")
+  const effective = bowls.filter(b => b.result.startsWith('effective_') && b.result.endsWith('_online')).length;
   const firstBowls = bowls.filter(b => b.bowlNumber === 1);
-  const firstBowlEffective = firstBowls.filter(b => b.result === 'Effective').length;
+  const firstBowlEffective = firstBowls.filter(b => b.result.startsWith('effective_') && b.result.endsWith('_online')).length;
 
-  const short = bowls.filter(b => b.result.includes('Short')).length;
-  const heavy = bowls.filter(b => b.result.includes('Heavy')).length;
-  const goodWeight = total - short - heavy;
+  const short = bowls.filter(b => b.result.startsWith('short')).length;
+  const heavy = bowls.filter(b => b.result.startsWith('heavy')).length;
+  const goodWeight = bowls.filter(b => b.result.startsWith('effective')).length;
 
-  const narrow = bowls.filter(b => b.result.includes('Narrow')).length;
-  const wide = bowls.filter(b => b.result.includes('Wide')).length;
-  const goodLine = total - narrow - wide;
+  const narrow = bowls.filter(b => b.result.includes('narrow')).length;
+  const wide = bowls.filter(b => b.result.includes('wide')).length;
+  const goodLine = bowls.filter(b => b.result.includes('online')).length;
 
   return {
     total,
