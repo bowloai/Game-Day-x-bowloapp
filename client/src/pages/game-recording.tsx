@@ -21,13 +21,23 @@ function formatResult(result: string): string {
     'effective_narrow': 'Eff/Nar',
     'effective_wide': 'Eff/Wide',
     'short_online': 'Short',
-    'short_narrow': 'Shrt/Nar',
-    'short_wide': 'Shrt/Wide',
+    'short_narrow': 'Short/Nar',
+    'short_wide': 'Short/Wide',
     'heavy_online': 'Heavy',
-    'heavy_narrow': 'Hvy/Nar',
-    'heavy_wide': 'Hvy/Wide',
+    'heavy_narrow': 'Heavy/Nar',
+    'heavy_wide': 'Heavy/Wide',
   };
-  return map[result] || result;
+  if (map[result]) return map[result];
+  // Fallback: convert snake_case to Title Case
+  return result.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+}
+
+function formatHand(hand: string): string {
+  if (hand.toLowerCase() === 'forehand') return 'Fore';
+  if (hand.toLowerCase() === 'backhand') return 'Back';
+  return hand.charAt(0).toUpperCase() + hand.slice(1, 4);
 }
 
 type BowlResult = 
@@ -675,9 +685,9 @@ export default function GameRecording() {
                       <Pencil className="h-3 w-3" />
                     </Button>
                     <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
-                    <span className="text-xs">{bowl.hand.slice(0, 4)}</span>
+                    <span className="text-xs text-muted-foreground">{formatHand(bowl.hand)}</span>
                     <span className={cn(
-                      "block text-xs truncate",
+                      "block text-xs",
                       bowl.result === 'effective_online' ? "text-primary font-medium" : ""
                     )}>{formatResult(bowl.result)}</span>
                   </div>
