@@ -288,7 +288,7 @@ export default function Games() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0" align="center">
               <Calendar
                 initialFocus
                 mode="range"
@@ -296,6 +296,7 @@ export default function Games() {
                 selected={dateRange}
                 onSelect={setDateRange}
                 numberOfMonths={1}
+                className="p-4 [--cell-size:2.5rem]"
               />
             </PopoverContent>
           </Popover>
