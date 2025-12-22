@@ -16,16 +16,17 @@ import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { formatResult, formatResultShort, formatHandShort, isEffective, isShort, isHeavy, isNarrow, isWide } from "@/lib/bowlResults";
 
+// Database format for bowl results: weight_line
 type BowlResult = 
-  | 'Short' 
-  | 'Heavy' 
-  | 'Narrow' 
-  | 'Wide' 
-  | 'Short & Narrow' 
-  | 'Short & Wide' 
-  | 'Heavy & Narrow' 
-  | 'Heavy & Wide' 
-  | 'Effective';
+  | 'effective_online'
+  | 'effective_narrow'
+  | 'effective_wide'
+  | 'short_online'
+  | 'short_narrow'
+  | 'short_wide'
+  | 'heavy_online'
+  | 'heavy_narrow'
+  | 'heavy_wide';
 
 type ViewState = 'end-setup' | 'bowling' | 'score-entry' | 'end-summary';
 
@@ -88,37 +89,28 @@ export default function GameRecording() {
   };
 
   const calculateEditResult = (): BowlResult => {
-    if (!editGridSelection) return 'Effective';
+    if (!editGridSelection) return 'effective_online';
     const { row, col } = editGridSelection;
     
-    const isShort = row <= 2;
-    const isHeavy = row >= 6;
+    const isShortRow = row <= 2;
+    const isHeavyRow = row >= 6;
     const isLeft = col <= 2;
     const isRight = col >= 6;
-    const isCenterLength = row >= 3 && row <= 5;
-    const isCenterLine = col >= 3 && col <= 5;
 
-    let lengthStr = '';
-    if (isShort) lengthStr = 'Short';
-    if (isHeavy) lengthStr = 'Heavy';
+    // Determine weight component
+    let weight = 'effective';
+    if (isShortRow) weight = 'short';
+    else if (isHeavyRow) weight = 'heavy';
 
-    let lineStr = '';
+    // Determine line component based on hand
+    let line = 'online';
     if (isLeft) {
-       lineStr = editHand === 'Forehand' ? 'Wide' : 'Narrow';
+       line = editHand === 'Forehand' ? 'wide' : 'narrow';
     } else if (isRight) {
-       lineStr = editHand === 'Forehand' ? 'Narrow' : 'Wide';
+       line = editHand === 'Forehand' ? 'narrow' : 'wide';
     }
 
-    if (isCenterLength && isCenterLine) {
-      return 'Effective';
-    } else if (lengthStr && lineStr) {
-      return `${lengthStr} & ${lineStr}` as BowlResult;
-    } else if (lengthStr) {
-      return lengthStr as BowlResult;
-    } else if (lineStr) {
-      return lineStr as BowlResult;
-    }
-    return 'Effective';
+    return `${weight}_${line}` as BowlResult;
   };
 
   const saveEditedBowl = () => {
@@ -192,40 +184,31 @@ export default function GameRecording() {
   if (!game) return <div className="text-center py-12">Game not found</div>;
 
   const calculateResult = (): BowlResult => {
-    if (!gridSelection) return 'Effective';
+    if (!gridSelection) return 'effective_online';
     const { row, col } = gridSelection;
     
-    // Map 9x9 grid to 3x3 zones
-    // Rows 0-2: Short, Rows 3-5: Good weight, Rows 6-8: Heavy
-    // Cols 0-2: Left side, Cols 3-5: Center line, Cols 6-8: Right side
-    const isShort = row <= 2;
-    const isHeavy = row >= 6;
+    // Map 9x9 grid to zones
+    // Rows 0-2: Short, Rows 3-5: Effective weight, Rows 6-8: Heavy
+    // Cols 0-2: Left side, Cols 3-5: Online, Cols 6-8: Right side
+    const isShortRow = row <= 2;
+    const isHeavyRow = row >= 6;
     const isLeft = col <= 2;
     const isRight = col >= 6;
-    const isCenterLength = row >= 3 && row <= 5;
-    const isCenterLine = col >= 3 && col <= 5;
 
-    let lengthStr = '';
-    if (isShort) lengthStr = 'Short';
-    if (isHeavy) lengthStr = 'Heavy';
+    // Determine weight component
+    let weight = 'effective';
+    if (isShortRow) weight = 'short';
+    else if (isHeavyRow) weight = 'heavy';
 
-    let lineStr = '';
+    // Determine line component based on hand
+    let line = 'online';
     if (isLeft) {
-       lineStr = hand === 'Forehand' ? 'Wide' : 'Narrow';
+       line = hand === 'Forehand' ? 'wide' : 'narrow';
     } else if (isRight) {
-       lineStr = hand === 'Forehand' ? 'Narrow' : 'Wide';
+       line = hand === 'Forehand' ? 'narrow' : 'wide';
     }
 
-    if (isCenterLength && isCenterLine) {
-      return 'Effective';
-    } else if (lengthStr && lineStr) {
-      return `${lengthStr} & ${lineStr}` as BowlResult;
-    } else if (lengthStr) {
-      return lengthStr as BowlResult;
-    } else if (lineStr) {
-      return lineStr as BowlResult;
-    }
-    return 'Effective';
+    return `${weight}_${line}` as BowlResult;
   };
 
   const endLengthOptions = ["Minimum", "Short", "Medium", "Long", "Maximum"];
