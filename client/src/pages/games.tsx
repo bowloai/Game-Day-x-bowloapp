@@ -1,11 +1,11 @@
 import { useGames, useDeleteGame } from "@/lib/hooks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useEffect } from "react";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil, Trophy, TrendingDown, Minus } from "lucide-react";
 import { ShareGameSummary } from "@/components/share-game-summary";
 import { useLocation } from "wouter";
@@ -24,6 +24,25 @@ export default function Games() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateSheetOpen, setDateSheetOpen] = useState(false);
+
+  const datePresets = [
+    { label: "All games", value: null },
+    { label: "Last 7 days", value: { from: subDays(new Date(), 7), to: new Date() } },
+    { label: "Last 30 days", value: { from: subDays(new Date(), 30), to: new Date() } },
+    { label: "This month", value: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } },
+    { label: "Last month", value: { from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) } },
+    { label: "This year", value: { from: startOfYear(new Date()), to: new Date() } },
+  ];
+
+  const applyPreset = (preset: typeof datePresets[0]) => {
+    if (preset.value === null) {
+      setDateRange(undefined);
+    } else {
+      setDateRange(preset.value);
+    }
+    setDateSheetOpen(false);
+  };
 
   useEffect(() => {
     async function fetchDetails() {
@@ -264,8 +283,8 @@ export default function Games() {
         
         {/* Date Filter */}
         <div className="flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
+          <Sheet open={dateSheetOpen} onOpenChange={setDateSheetOpen}>
+            <SheetTrigger asChild>
               <Button
                 variant="outline"
                 className={cn(
@@ -287,19 +306,75 @@ export default function Games() {
                   "Filter by date"
                 )}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={1}
-                className="p-4 [--cell-size:2.5rem]"
-              />
-            </PopoverContent>
-          </Popover>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
+              <SheetHeader className="pb-4">
+                <SheetTitle className="text-center">Filter by Date</SheetTitle>
+              </SheetHeader>
+              
+              {/* Quick Presets */}
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {datePresets.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    variant={
+                      (preset.value === null && !dateRange) ||
+                      (preset.value && dateRange?.from?.getTime() === preset.value.from.getTime())
+                        ? "default"
+                        : "outline"
+                    }
+                    className="h-12 text-sm"
+                    onClick={() => applyPreset(preset)}
+                    data-testid={`preset-${preset.label.toLowerCase().replace(/\s/g, '-')}`}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Calendar for custom range */}
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground mb-3 text-center">Or select a custom date range</p>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={(range) => {
+                      setDateRange(range);
+                      if (range?.from && range?.to) {
+                        setDateSheetOpen(false);
+                      }
+                    }}
+                    numberOfMonths={1}
+                    className="p-4 [--cell-size:2.75rem]"
+                  />
+                </div>
+              </div>
+              
+              {/* Actions */}
+              {dateRange && (
+                <div className="flex gap-2 mt-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      clearDateFilter();
+                      setDateSheetOpen(false);
+                    }}
+                  >
+                    Clear Filter
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => setDateSheetOpen(false)}
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
+            </SheetContent>
+          </Sheet>
           {dateRange && (
             <Button 
               variant="ghost" 
