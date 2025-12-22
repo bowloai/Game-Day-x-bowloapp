@@ -743,12 +743,16 @@ export default function Analysis() {
                             type="date"
                             className="w-full h-12 px-3 rounded-lg border border-input bg-background text-base"
                             value={dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : ''}
+                            max={dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined}
                             onChange={(e) => {
                               const newFrom = e.target.value ? parseISO(e.target.value) : undefined;
-                              setDateRange(prev => ({
-                                from: newFrom,
-                                to: prev?.to
-                              }));
+                              setDateRange(prev => {
+                                // Auto-swap if from > to
+                                if (newFrom && prev?.to && newFrom > prev.to) {
+                                  return { from: prev.to, to: newFrom };
+                                }
+                                return { from: newFrom, to: prev?.to };
+                              });
                             }}
                             data-testid="input-analysis-date-from"
                           />
@@ -760,17 +764,24 @@ export default function Analysis() {
                             type="date"
                             className="w-full h-12 px-3 rounded-lg border border-input bg-background text-base"
                             value={dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : ''}
+                            min={dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined}
                             onChange={(e) => {
                               const newTo = e.target.value ? parseISO(e.target.value) : undefined;
-                              setDateRange(prev => ({
-                                from: prev?.from,
-                                to: newTo
-                              }));
+                              setDateRange(prev => {
+                                // Auto-swap if to < from
+                                if (newTo && prev?.from && newTo < prev.from) {
+                                  return { from: newTo, to: prev.from };
+                                }
+                                return { from: prev?.from, to: newTo };
+                              });
                             }}
                             data-testid="input-analysis-date-to"
                           />
                         </div>
                       </div>
+                      {dateRange?.from && dateRange?.to && dateRange.from > dateRange.to && (
+                        <p className="text-sm text-amber-600 mt-2 text-center">Dates will be auto-swapped</p>
+                      )}
                     </div>
                     
                     {/* Actions */}
@@ -788,7 +799,7 @@ export default function Analysis() {
                       <Button 
                         className="flex-1 h-12"
                         onClick={() => setDateSheetOpen(false)}
-                        disabled={dateRange?.from && !dateRange?.to}
+                        disabled={!!(dateRange?.from && !dateRange?.to)}
                       >
                         Apply
                       </Button>
