@@ -15,6 +15,21 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+function formatResult(result: string): string {
+  const map: Record<string, string> = {
+    'effective_online': 'Effective',
+    'effective_narrow': 'Eff/Nar',
+    'effective_wide': 'Eff/Wide',
+    'short_online': 'Short',
+    'short_narrow': 'Shrt/Nar',
+    'short_wide': 'Shrt/Wide',
+    'heavy_online': 'Heavy',
+    'heavy_narrow': 'Hvy/Nar',
+    'heavy_wide': 'Hvy/Wide',
+  };
+  return map[result] || result;
+}
+
 type BowlResult = 
   | 'Short' 
   | 'Heavy' 
@@ -660,7 +675,11 @@ export default function GameRecording() {
                       <Pencil className="h-3 w-3" />
                     </Button>
                     <span className="block font-semibold text-foreground">Bowl {bowl.bowlNumber}</span>
-                    {bowl.hand} - {bowl.result}
+                    <span className="text-xs">{bowl.hand.slice(0, 4)}</span>
+                    <span className={cn(
+                      "block text-xs truncate",
+                      bowl.result === 'effective_online' ? "text-primary font-medium" : ""
+                    )}>{formatResult(bowl.result)}</span>
                   </div>
                 ))}
               </div>
@@ -742,7 +761,7 @@ export default function GameRecording() {
         const allEndsIncludingCurrent = [...completedEnds.filter(e => e.id !== currentEnd.id), currentEnd];
         const allBowls = allEndsIncludingCurrent.flatMap(e => e.bowls || []);
         const totalBowls = allBowls.length;
-        const effectiveBowls = allBowls.filter(b => b.result === 'Effective').length;
+        const effectiveBowls = allBowls.filter(b => b.result === 'effective_online').length;
         const effectivePercent = totalBowls > 0 ? Math.round((effectiveBowls / totalBowls) * 100) : 0;
         
         // Calculate running totals - exclude current end from completedEnds since we add it separately
@@ -757,53 +776,44 @@ export default function GameRecording() {
         const evenBowls = evenEnds.flatMap(e => e.bowls || []);
         
         // Effective percentages
-        const oddEffective = oddBowls.filter(b => b.result === 'Effective').length;
+        const oddEffective = oddBowls.filter(b => b.result === 'effective_online').length;
         const oddEffectivePercent = oddBowls.length > 0 ? Math.round((oddEffective / oddBowls.length) * 100) : 0;
-        const evenEffective = evenBowls.filter(b => b.result === 'Effective').length;
+        const evenEffective = evenBowls.filter(b => b.result === 'effective_online').length;
         const evenEffectivePercent = evenBowls.length > 0 ? Math.round((evenEffective / evenBowls.length) * 100) : 0;
         
         // Specific weight breakdown - Heavy vs Short
-        const oddHeavy = oddBowls.filter(b => b.result.includes('Heavy')).length;
+        const oddHeavy = oddBowls.filter(b => b.result.startsWith('heavy')).length;
         const oddHeavyPercent = oddBowls.length > 0 ? Math.round((oddHeavy / oddBowls.length) * 100) : 0;
-        const oddShort = oddBowls.filter(b => b.result.includes('Short')).length;
+        const oddShort = oddBowls.filter(b => b.result.startsWith('short')).length;
         const oddShortPercent = oddBowls.length > 0 ? Math.round((oddShort / oddBowls.length) * 100) : 0;
-        const evenHeavy = evenBowls.filter(b => b.result.includes('Heavy')).length;
+        const evenHeavy = evenBowls.filter(b => b.result.startsWith('heavy')).length;
         const evenHeavyPercent = evenBowls.length > 0 ? Math.round((evenHeavy / evenBowls.length) * 100) : 0;
-        const evenShort = evenBowls.filter(b => b.result.includes('Short')).length;
+        const evenShort = evenBowls.filter(b => b.result.startsWith('short')).length;
         const evenShortPercent = evenBowls.length > 0 ? Math.round((evenShort / evenBowls.length) * 100) : 0;
         
         // Specific line breakdown - Narrow vs Wide
-        const oddNarrow = oddBowls.filter(b => b.result.includes('Narrow')).length;
+        const oddNarrow = oddBowls.filter(b => b.result.includes('narrow')).length;
         const oddNarrowPercent = oddBowls.length > 0 ? Math.round((oddNarrow / oddBowls.length) * 100) : 0;
-        const oddWide = oddBowls.filter(b => b.result.includes('Wide')).length;
+        const oddWide = oddBowls.filter(b => b.result.includes('wide')).length;
         const oddWidePercent = oddBowls.length > 0 ? Math.round((oddWide / oddBowls.length) * 100) : 0;
-        const evenNarrow = evenBowls.filter(b => b.result.includes('Narrow')).length;
+        const evenNarrow = evenBowls.filter(b => b.result.includes('narrow')).length;
         const evenNarrowPercent = evenBowls.length > 0 ? Math.round((evenNarrow / evenBowls.length) * 100) : 0;
-        const evenWide = evenBowls.filter(b => b.result.includes('Wide')).length;
+        const evenWide = evenBowls.filter(b => b.result.includes('wide')).length;
         const evenWidePercent = evenBowls.length > 0 ? Math.round((evenWide / evenBowls.length) * 100) : 0;
         
         // All bowls combined stats
-        const allHeavy = allBowls.filter(b => b.result.includes('Heavy')).length;
+        const allHeavy = allBowls.filter(b => b.result.startsWith('heavy')).length;
         const allHeavyPercent = totalBowls > 0 ? Math.round((allHeavy / totalBowls) * 100) : 0;
-        const allShort = allBowls.filter(b => b.result.includes('Short')).length;
+        const allShort = allBowls.filter(b => b.result.startsWith('short')).length;
         const allShortPercent = totalBowls > 0 ? Math.round((allShort / totalBowls) * 100) : 0;
-        const allNarrow = allBowls.filter(b => b.result.includes('Narrow')).length;
+        const allNarrow = allBowls.filter(b => b.result.includes('narrow')).length;
         const allNarrowPercent = totalBowls > 0 ? Math.round((allNarrow / totalBowls) * 100) : 0;
-        const allWide = allBowls.filter(b => b.result.includes('Wide')).length;
+        const allWide = allBowls.filter(b => b.result.includes('wide')).length;
         const allWidePercent = totalBowls > 0 ? Math.round((allWide / totalBowls) * 100) : 0;
         
         // Helper to shorten result text for display
         const shortenResult = (result: string) => {
-          return result
-            .replace('Short & Narrow', 'S+N')
-            .replace('Short & Wide', 'S+W')
-            .replace('Heavy & Narrow', 'H+N')
-            .replace('Heavy & Wide', 'H+W')
-            .replace('Effective', 'Eff')
-            .replace('Short', 'Shrt')
-            .replace('Heavy', 'Hvy')
-            .replace('Narrow', 'Nar')
-            .replace('Wide', 'Wide');
+          return formatResult(result);
         };
 
         return (
@@ -1031,7 +1041,7 @@ export default function GameRecording() {
                         <TableCell className="text-xs px-1">
                           {end.bowls?.[0] ? (
                             <span className={cn(
-                              end.bowls[0].result === 'Effective' ? "text-primary font-medium" : ""
+                              end.bowls[0].result === 'effective_online' ? "text-primary font-medium" : ""
                             )}>
                               {shortenResult(end.bowls[0].result)}
                               <span className="text-muted-foreground text-[10px] ml-0.5">
@@ -1043,7 +1053,7 @@ export default function GameRecording() {
                         <TableCell className="text-xs px-1">
                           {end.bowls?.[1] ? (
                             <span className={cn(
-                              end.bowls[1].result === 'Effective' ? "text-primary font-medium" : ""
+                              end.bowls[1].result === 'effective_online' ? "text-primary font-medium" : ""
                             )}>
                               {shortenResult(end.bowls[1].result)}
                               <span className="text-muted-foreground text-[10px] ml-0.5">
