@@ -4,9 +4,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import Layout from "@/components/layout";
 import Landing from "@/pages/landing";
+import { SplashScreen } from "@/components/splash-screen";
 
 const Home = lazy(() => import("@/pages/home"));
 const GameSetup = lazy(() => import("@/pages/game-setup"));
@@ -66,9 +67,21 @@ function Router() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash on initial load, not on hot reloads
+    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+    return !hasSeenSplash;
+  });
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('hasSeenSplash', 'true');
+    setShowSplash(false);
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
         <Router />
         <Toaster />
       </TooltipProvider>
