@@ -9,7 +9,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler } from "lucide-react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 type Bowl = {
@@ -432,9 +432,9 @@ export default function Analysis() {
     return Array.from(new Set(gamesWithDetails.map(g => g.opponent))).sort();
   }, [gamesWithDetails]);
 
-  const { allStats, forehandStats, backhandStats, totalGames, allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount } = useMemo(() => {
+  const { allStats, forehandStats, backhandStats, totalGames, allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount, lengthStats } = useMemo(() => {
     if (!gamesWithDetails || gamesWithDetails.length === 0) {
-      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0 };
+      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0, lengthStats: null };
     }
     
     let filteredGames = [...gamesWithDetails];
@@ -473,13 +473,27 @@ export default function Analysis() {
     }
 
     if (filteredGames.length === 0) {
-      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0 };
+      return { 
+        allStats: null, forehandStats: null, backhandStats: null, 
+        totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0,
+        lengthStats: null
+      };
     }
 
-    // Get all bowls from filtered games
-    const allBowls: Bowl[] = filteredGames.flatMap(g => 
-      g.ends?.flatMap(e => e.bowls || []) || []
+    // Get all bowls from filtered games with end length info
+    // Normalize legacy length values: minimum → short, maximum → long
+    const normalizeLength = (length: string | null | undefined): string => {
+      const l = (length || 'medium').toLowerCase();
+      if (l === 'minimum') return 'short';
+      if (l === 'maximum') return 'long';
+      return l;
+    };
+    type BowlWithLength = Bowl & { endLength: string };
+    const allBowlsWithLength: BowlWithLength[] = filteredGames.flatMap(g => 
+      g.ends?.flatMap(e => (e.bowls || []).map(b => ({ ...b, endLength: normalizeLength(e.length) }))) || []
     );
+    
+    const allBowls: Bowl[] = allBowlsWithLength;
 
     // Use case-insensitive matching to handle any data inconsistencies
     const forehandBowls = allBowls.filter(b => b.hand?.toLowerCase() === 'forehand');
@@ -505,6 +519,36 @@ export default function Analysis() {
       ...backhandHeatmap.flat()
     );
 
+    // Calculate stats by jack length
+    const calcLengthEffectiveness = (bowls: BowlWithLength[], length: string) => {
+      const filtered = bowls.filter(b => b.endLength === length);
+      const total = filtered.length;
+      if (total === 0) return { total: 0, effective: 0, percent: 0 };
+      const effective = filtered.filter(b => isEffective(b.result)).length;
+      return { total, effective, percent: Math.round((effective / total) * 100) };
+    };
+
+    const forehandWithLength = allBowlsWithLength.filter(b => b.hand?.toLowerCase() === 'forehand');
+    const backhandWithLength = allBowlsWithLength.filter(b => b.hand?.toLowerCase() === 'backhand');
+
+    const lengthStats = {
+      short: {
+        all: calcLengthEffectiveness(allBowlsWithLength, 'short'),
+        forehand: calcLengthEffectiveness(forehandWithLength, 'short'),
+        backhand: calcLengthEffectiveness(backhandWithLength, 'short'),
+      },
+      medium: {
+        all: calcLengthEffectiveness(allBowlsWithLength, 'medium'),
+        forehand: calcLengthEffectiveness(forehandWithLength, 'medium'),
+        backhand: calcLengthEffectiveness(backhandWithLength, 'medium'),
+      },
+      long: {
+        all: calcLengthEffectiveness(allBowlsWithLength, 'long'),
+        forehand: calcLengthEffectiveness(forehandWithLength, 'long'),
+        backhand: calcLengthEffectiveness(backhandWithLength, 'long'),
+      },
+    };
+
     return {
       allStats: calculateStats(allBowls),
       forehandStats: calculateStats(forehandBowls),
@@ -514,6 +558,7 @@ export default function Analysis() {
       forehandHeatmap,
       backhandHeatmap,
       maxHeatmapCount,
+      lengthStats,
     };
   }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
 
@@ -944,6 +989,63 @@ export default function Analysis() {
           accentColor="text-violet-600 dark:text-violet-400"
         />
       </div>
+
+      {/* Effectiveness by Jack Length */}
+      {lengthStats && (
+        <Card className="shadow-soft">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Ruler className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Effectiveness by Jack Length</CardTitle>
+                <p className="text-xs text-muted-foreground">How you perform at different distances</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {(['short', 'medium', 'long'] as const).map((length) => {
+                const stats = lengthStats[length];
+                const hasData = stats.all.total > 0;
+                return (
+                  <div key={length} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium capitalize">{length} Jack</span>
+                      <span className="text-sm text-muted-foreground">
+                        {stats.all.total} bowls
+                      </span>
+                    </div>
+                    {hasData ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-primary/5 rounded-lg p-3 text-center">
+                          <span className="text-2xl font-bold text-primary">{stats.all.percent}%</span>
+                          <p className="text-xs text-muted-foreground mt-1">Overall</p>
+                        </div>
+                        <div className="bg-sky-500/5 rounded-lg p-3 text-center">
+                          <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">
+                            {stats.forehand.total > 0 ? stats.forehand.percent : '-'}%
+                          </span>
+                          <p className="text-xs text-muted-foreground mt-1">Forehand</p>
+                        </div>
+                        <div className="bg-violet-500/5 rounded-lg p-3 text-center">
+                          <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">
+                            {stats.backhand.total > 0 ? stats.backhand.percent : '-'}%
+                          </span>
+                          <p className="text-xs text-muted-foreground mt-1">Backhand</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-2">No data for this length</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Heatmap Section */}
       {allHeatmap && (

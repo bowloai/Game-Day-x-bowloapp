@@ -987,6 +987,93 @@ export default function GameRecording() {
               </CardContent>
             </Card>
 
+            {/* Jack Length Analysis */}
+            {(() => {
+              // Normalize legacy length values: minimum → short, maximum → long
+              const normalizeLength = (len: string | null | undefined): string => {
+                const l = (len || 'medium').toLowerCase();
+                if (l === 'minimum') return 'short';
+                if (l === 'maximum') return 'long';
+                return l;
+              };
+              const calcLengthStats = (length: string) => {
+                const endsAtLength = allEndsIncludingCurrent.filter(e => normalizeLength(e.length) === length);
+                const bowlsAtLength = endsAtLength.flatMap(e => e.bowls || []);
+                const total = bowlsAtLength.length;
+                if (total === 0) return { total: 0, percent: 0, forehandPercent: 0, backhandPercent: 0, forehandTotal: 0, backhandTotal: 0 };
+                const effective = bowlsAtLength.filter(b => isEffective(b.result)).length;
+                const forehandBowls = bowlsAtLength.filter(b => b.hand?.toLowerCase() === 'forehand');
+                const backhandBowls = bowlsAtLength.filter(b => b.hand?.toLowerCase() === 'backhand');
+                const forehandEffective = forehandBowls.filter(b => isEffective(b.result)).length;
+                const backhandEffective = backhandBowls.filter(b => isEffective(b.result)).length;
+                return {
+                  total,
+                  percent: Math.round((effective / total) * 100),
+                  forehandTotal: forehandBowls.length,
+                  forehandPercent: forehandBowls.length > 0 ? Math.round((forehandEffective / forehandBowls.length) * 100) : 0,
+                  backhandTotal: backhandBowls.length,
+                  backhandPercent: backhandBowls.length > 0 ? Math.round((backhandEffective / backhandBowls.length) * 100) : 0,
+                };
+              };
+              const shortStats = calcLengthStats('short');
+              const mediumStats = calcLengthStats('medium');
+              const longStats = calcLengthStats('long');
+              const hasLengthData = shortStats.total > 0 || mediumStats.total > 0 || longStats.total > 0;
+              
+              return hasLengthData ? (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Jack Length Analysis</CardTitle>
+                    <p className="text-xs text-muted-foreground">Effectiveness by jack distance</p>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Length</TableHead>
+                          <TableHead className="text-center text-xs">All</TableHead>
+                          <TableHead className="text-center text-xs">FH</TableHead>
+                          <TableHead className="text-center text-xs">BH</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[
+                          { label: 'Short', stats: shortStats },
+                          { label: 'Medium', stats: mediumStats },
+                          { label: 'Long', stats: longStats },
+                        ].map(({ label, stats }) => (
+                          <TableRow key={label}>
+                            <TableCell className="font-medium text-xs">{label}</TableCell>
+                            <TableCell className="text-center">
+                              {stats.total > 0 ? (
+                                <span className={cn("font-bold", stats.percent >= 50 ? "text-primary" : "")}>
+                                  {stats.percent}%
+                                </span>
+                              ) : <span className="text-muted-foreground">-</span>}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {stats.forehandTotal > 0 ? (
+                                <span className={cn("font-bold", stats.forehandPercent >= 50 ? "text-primary" : "")}>
+                                  {stats.forehandPercent}%
+                                </span>
+                              ) : <span className="text-muted-foreground">-</span>}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {stats.backhandTotal > 0 ? (
+                                <span className={cn("font-bold", stats.backhandPercent >= 50 ? "text-primary" : "")}>
+                                  {stats.backhandPercent}%
+                                </span>
+                              ) : <span className="text-muted-foreground">-</span>}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              ) : null;
+            })()}
+
             {/* Ends Summary Table */}
             <Card>
               <CardHeader className="pb-2">
