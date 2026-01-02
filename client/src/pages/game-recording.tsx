@@ -211,7 +211,7 @@ export default function GameRecording() {
     return `${weight}_${line}` as BowlResult;
   };
 
-  const endLengthOptions = ["Minimum", "Short", "Medium", "Long", "Maximum"];
+  const endLengthOptions = ["Short", "Medium", "Long"];
 
   const handleStartEnd = async () => {
     createEnd.mutate(
