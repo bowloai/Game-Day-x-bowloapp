@@ -9,23 +9,32 @@ import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
 
 function generateInsights(allStats: ReturnType<typeof calculateStats>, forehandStats: ReturnType<typeof calculateStats>, backhandStats: ReturnType<typeof calculateStats>): string[] {
-  if (allStats.total < 10) return ["Need more data"];
+  if (allStats.total < 10) return ["Play more games to see insights"];
   const insights: string[] = [];
 
   const maxW = Math.max(allStats.shortPercent, allStats.goodWeightPercent, allStats.heavyPercent);
-  if (maxW === allStats.shortPercent && allStats.shortPercent >= 35) insights.push(`${allStats.shortPercent}% short`);
-  else if (maxW === allStats.heavyPercent && allStats.heavyPercent >= 35) insights.push(`${allStats.heavyPercent}% heavy`);
-  else insights.push(`${allStats.goodWeightPercent}% good weight`);
+  if (maxW === allStats.shortPercent && allStats.shortPercent >= 35) {
+    insights.push("Most bowls are finishing short");
+  } else if (maxW === allStats.heavyPercent && allStats.heavyPercent >= 35) {
+    insights.push("Most bowls are running through");
+  } else {
+    insights.push("Weight control is solid");
+  }
 
   const maxL = Math.max(allStats.narrowPercent, allStats.goodLinePercent, allStats.widePercent);
-  if (maxL === allStats.narrowPercent && allStats.narrowPercent >= 35) insights.push(`${allStats.narrowPercent}% narrow`);
-  else if (maxL === allStats.widePercent && allStats.widePercent >= 35) insights.push(`${allStats.widePercent}% wide`);
-  else insights.push(`${allStats.goodLinePercent}% on line`);
+  if (maxL === allStats.narrowPercent && allStats.narrowPercent >= 35) {
+    insights.push("Bowls tend to finish narrow");
+  } else if (maxL === allStats.widePercent && allStats.widePercent >= 35) {
+    insights.push("Bowls tend to finish wide");
+  } else {
+    insights.push("Line is consistent");
+  }
 
   if (forehandStats.total >= 5 && backhandStats.total >= 5) {
     const diff = forehandStats.effectivePercent - backhandStats.effectivePercent;
-    if (Math.abs(diff) >= 10) insights.push(`${diff > 0 ? 'FH' : 'BH'} +${Math.abs(diff)}%`);
-    else insights.push(`Hands ±${Math.abs(diff)}%`);
+    if (diff >= 10) insights.push("Forehand is your stronger hand");
+    else if (diff <= -10) insights.push("Backhand is your stronger hand");
+    else insights.push("Both hands perform similarly");
   }
 
   return insights.slice(0, 3);

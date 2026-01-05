@@ -8,7 +8,7 @@ import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
 
 function generateHeatmapInsights(allHeatmap: number[][], forehandHeatmap: number[][], backhandHeatmap: number[][], allCount: number, forehandCount: number, backhandCount: number): string[] {
-  if (allCount < 10) return ["Need more data"];
+  if (allCount < 10) return ["Play more games to see insights"];
   const insights: string[] = [];
 
   const z = {
@@ -23,25 +23,29 @@ function generateHeatmapInsights(allHeatmap: number[][], forehandHeatmap: number
     hw: allHeatmap.slice(6, 9).reduce((s, r) => s + r.slice(6, 9).reduce((a, b) => a + b, 0), 0),
   };
 
-  insights.push(`${Math.round((z.eff / allCount) * 100)}% effective`);
+  const effPct = Math.round((z.eff / allCount) * 100);
+  if (effPct >= 50) insights.push("Great accuracy - most bowls land near the jack");
+  else if (effPct >= 30) insights.push("Good accuracy with room to improve");
+  else insights.push("Accuracy needs work");
 
   const miss = [
-    { n: 'short+narrow', c: z.sn }, { n: 'short', c: z.so }, { n: 'short+wide', c: z.sw },
+    { n: 'short and narrow', c: z.sn }, { n: 'short', c: z.so }, { n: 'short and wide', c: z.sw },
     { n: 'narrow', c: z.gn }, { n: 'wide', c: z.gw },
-    { n: 'heavy+narrow', c: z.hn }, { n: 'heavy', c: z.ho }, { n: 'heavy+wide', c: z.hw },
+    { n: 'heavy and narrow', c: z.hn }, { n: 'heavy', c: z.ho }, { n: 'heavy and wide', c: z.hw },
   ].filter(m => m.c > 0);
   if (miss.length) {
     const top = miss.reduce((a, b) => a.c > b.c ? a : b);
     const pct = Math.round((top.c / allCount) * 100);
-    if (pct >= 10) insights.push(`${pct}% ${top.n}`);
+    if (pct >= 15) insights.push(`Misses tend to be ${top.n}`);
   }
 
   if (forehandCount >= 5 && backhandCount >= 5) {
     const fh = forehandHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0);
     const bh = backhandHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0);
     const diff = Math.round((fh / forehandCount) * 100) - Math.round((bh / backhandCount) * 100);
-    if (Math.abs(diff) >= 10) insights.push(`${diff > 0 ? 'FH' : 'BH'} +${Math.abs(diff)}%`);
-    else insights.push(`Hands ±${Math.abs(diff)}%`);
+    if (diff >= 10) insights.push("Forehand is more accurate");
+    else if (diff <= -10) insights.push("Backhand is more accurate");
+    else insights.push("Both hands land similarly");
   }
 
   return insights.slice(0, 3);

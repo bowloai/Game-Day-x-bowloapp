@@ -15,7 +15,7 @@ type LengthStatsSet = {
 };
 
 function generateLengthInsights(allStats: LengthStatsSet, forehandStats: LengthStatsSet, backhandStats: LengthStatsSet, totalBowls: number): string[] {
-  if (totalBowls < 10) return ["Need more data"];
+  if (totalBowls < 10) return ["Play more games to see insights"];
   const insights: string[] = [];
   const lens = ['short', 'medium', 'long'] as const;
   const valid = lens.filter(l => allStats[l].total >= 5);
@@ -24,28 +24,28 @@ function generateLengthInsights(allStats: LengthStatsSet, forehandStats: LengthS
     const best = valid.reduce((a, b) => allStats[a].effectivePercent > allStats[b].effectivePercent ? a : b);
     const worst = valid.reduce((a, b) => allStats[a].effectivePercent < allStats[b].effectivePercent ? a : b);
     if (allStats[best].effectivePercent - allStats[worst].effectivePercent >= 10)
-      insights.push(`Best: ${best} ${allStats[best].effectivePercent}%`);
-    else insights.push(`Consistent <10% diff`);
+      insights.push(`You perform best on ${best} jacks`);
+    else insights.push("Consistent across all jack lengths");
   }
 
   for (const l of valid) {
     const s = allStats[l];
-    if (s.shortPercent >= 40) { insights.push(`${l}: ${s.shortPercent}% short`); break; }
-    if (s.heavyPercent >= 40) { insights.push(`${l}: ${s.heavyPercent}% heavy`); break; }
-    if (s.narrowPercent >= 40) { insights.push(`${l}: ${s.narrowPercent}% narrow`); break; }
-    if (s.widePercent >= 40) { insights.push(`${l}: ${s.widePercent}% wide`); break; }
+    if (s.shortPercent >= 40) { insights.push(`On ${l} jacks, bowls often finish short`); break; }
+    if (s.heavyPercent >= 40) { insights.push(`On ${l} jacks, bowls often run through`); break; }
+    if (s.narrowPercent >= 40) { insights.push(`On ${l} jacks, bowls tend to be narrow`); break; }
+    if (s.widePercent >= 40) { insights.push(`On ${l} jacks, bowls tend to be wide`); break; }
   }
 
   for (const l of valid) {
     if (forehandStats[l].total >= 3 && backhandStats[l].total >= 3) {
       const d = forehandStats[l].effectivePercent - backhandStats[l].effectivePercent;
-      if (Math.abs(d) >= 15) { insights.push(`${l}: ${d > 0 ? 'FH' : 'BH'} +${Math.abs(d)}%`); break; }
+      if (d >= 15) { insights.push(`Forehand works better on ${l} jacks`); break; }
+      if (d <= -15) { insights.push(`Backhand works better on ${l} jacks`); break; }
     }
   }
 
   if (insights.length === 1) {
-    const avg = valid.reduce((s, l) => s + allStats[l].effectivePercent, 0) / valid.length;
-    insights.push(`Avg: ${Math.round(avg)}%`);
+    insights.push("Good consistency across lengths");
   }
 
   return insights.slice(0, 3);

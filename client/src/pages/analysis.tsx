@@ -9,7 +9,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler, Lightbulb } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler, Lightbulb, BookOpen } from "lucide-react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 type Bowl = {
@@ -1148,6 +1148,27 @@ export default function Analysis() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Plain English Summary Link */}
+      {allStats && allStats.total >= 10 && (
+        <div 
+          className="cursor-pointer" 
+          onClick={() => setLocation(`/analysis/insights${buildFilterQuery()}`)}
+          data-testid="link-insights"
+        >
+          <Card className="shadow-soft hover:border-primary/50 transition-colors bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm font-medium text-amber-900 dark:text-amber-100">Read your performance summary</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Stats - Simplified to All Bowls only, clickable for hand breakdown */}
