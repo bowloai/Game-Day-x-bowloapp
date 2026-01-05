@@ -1150,26 +1150,6 @@ export default function Analysis() {
         </Card>
       )}
 
-      {/* Coaching Suggestions */}
-      {allStats && allStats.total > 0 && (
-        <Card className="shadow-soft border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div className="space-y-1 min-w-0">
-                {generateSuggestions({ allStats, forehandStats: forehandStats || calculateStats([]), backhandStats: backhandStats || calculateStats([]), lengthStats }).map((suggestion, i) => (
-                  <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">
-                    {suggestion}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Stats - Simplified to All Bowls only, clickable for hand breakdown */}
       {allStats && allStats.total > 0 && (
         <div 

@@ -1,12 +1,54 @@
 import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Target, CircleDot } from "lucide-react";
+import { ArrowLeft, Target, CircleDot, Lightbulb } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMemo } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
+
+function generateInsights(allStats: ReturnType<typeof calculateStats>, forehandStats: ReturnType<typeof calculateStats>, backhandStats: ReturnType<typeof calculateStats>): string[] {
+  const insights: string[] = [];
+  
+  if (allStats.total < 10) {
+    return ["Not enough data yet for detailed insights."];
+  }
+
+  // Determine main weight tendency
+  const maxWeight = Math.max(allStats.shortPercent, allStats.goodWeightPercent, allStats.heavyPercent);
+  if (maxWeight === allStats.shortPercent && allStats.shortPercent >= 35) {
+    insights.push(`Weight tendency: Short (${allStats.shortPercent}% of bowls finish short).`);
+  } else if (maxWeight === allStats.heavyPercent && allStats.heavyPercent >= 35) {
+    insights.push(`Weight tendency: Heavy (${allStats.heavyPercent}% of bowls finish heavy).`);
+  } else {
+    insights.push(`Weight control: ${allStats.goodWeightPercent}% of bowls have good weight.`);
+  }
+
+  // Determine main line tendency
+  const maxLine = Math.max(allStats.narrowPercent, allStats.goodLinePercent, allStats.widePercent);
+  if (maxLine === allStats.narrowPercent && allStats.narrowPercent >= 35) {
+    insights.push(`Line tendency: Narrow (${allStats.narrowPercent}% of bowls finish narrow).`);
+  } else if (maxLine === allStats.widePercent && allStats.widePercent >= 35) {
+    insights.push(`Line tendency: Wide (${allStats.widePercent}% of bowls finish wide).`);
+  } else {
+    insights.push(`Line control: ${allStats.goodLinePercent}% of bowls are on line.`);
+  }
+
+  // Hand comparison
+  if (forehandStats.total >= 5 && backhandStats.total >= 5) {
+    const diff = forehandStats.effectivePercent - backhandStats.effectivePercent;
+    if (Math.abs(diff) >= 10) {
+      const stronger = diff > 0 ? 'Forehand' : 'Backhand';
+      const weaker = diff > 0 ? 'backhand' : 'forehand';
+      insights.push(`${stronger} is ${Math.abs(diff)}% more effective than ${weaker}.`);
+    } else {
+      insights.push(`Both hands perform similarly (within ${Math.abs(diff)}% difference).`);
+    }
+  }
+
+  return insights.slice(0, 3);
+}
 
 function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
   const filterType = searchParams.get("type") || "All";
@@ -260,6 +302,24 @@ export default function AnalysisEffectiveness() {
         </Card>
       ) : (
         <div className="space-y-4">
+          {/* Data Insights */}
+          <Card className="shadow-soft border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                  <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="space-y-1 min-w-0">
+                  {generateInsights(allStats, forehandStats, backhandStats).map((insight, i) => (
+                    <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">
+                      {insight}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <StatCard 
             title="All Bowls" 
             icon={Target}

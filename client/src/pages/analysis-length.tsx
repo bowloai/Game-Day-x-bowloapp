@@ -1,12 +1,81 @@
 import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Ruler, Target, CircleDot } from "lucide-react";
+import { ArrowLeft, Ruler, Target, CircleDot, Lightbulb } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMemo } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
+
+type LengthStatsSet = {
+  short: ReturnType<typeof calcLengthStats>;
+  medium: ReturnType<typeof calcLengthStats>;
+  long: ReturnType<typeof calcLengthStats>;
+};
+
+function generateLengthInsights(allStats: LengthStatsSet, forehandStats: LengthStatsSet, backhandStats: LengthStatsSet, totalBowls: number): string[] {
+  const insights: string[] = [];
+  
+  if (totalBowls < 10) {
+    return ["Not enough data yet for detailed insights."];
+  }
+
+  const lengths = ['short', 'medium', 'long'] as const;
+  const validLengths = lengths.filter(l => allStats[l].total >= 5);
+  
+  if (validLengths.length >= 2) {
+    const best = validLengths.reduce((a, b) => allStats[a].effectivePercent > allStats[b].effectivePercent ? a : b);
+    const worst = validLengths.reduce((a, b) => allStats[a].effectivePercent < allStats[b].effectivePercent ? a : b);
+    
+    if (allStats[best].effectivePercent - allStats[worst].effectivePercent >= 10) {
+      insights.push(`Best at ${best} jacks (${allStats[best].effectivePercent}%), lowest at ${worst} jacks (${allStats[worst].effectivePercent}%).`);
+    } else {
+      insights.push(`Consistent across jack lengths (within 10% difference).`);
+    }
+  }
+
+  // Find most common issue by length
+  for (const length of validLengths) {
+    const stats = allStats[length];
+    if (stats.shortPercent >= 40) {
+      insights.push(`On ${length} jacks, ${stats.shortPercent}% of bowls are short.`);
+      break;
+    } else if (stats.heavyPercent >= 40) {
+      insights.push(`On ${length} jacks, ${stats.heavyPercent}% of bowls are heavy.`);
+      break;
+    } else if (stats.narrowPercent >= 40) {
+      insights.push(`On ${length} jacks, ${stats.narrowPercent}% of bowls are narrow.`);
+      break;
+    } else if (stats.widePercent >= 40) {
+      insights.push(`On ${length} jacks, ${stats.widePercent}% of bowls are wide.`);
+      break;
+    }
+  }
+
+  // Hand comparison by length
+  for (const length of validLengths) {
+    if (forehandStats[length].total >= 3 && backhandStats[length].total >= 3) {
+      const diff = forehandStats[length].effectivePercent - backhandStats[length].effectivePercent;
+      if (Math.abs(diff) >= 15) {
+        const better = diff > 0 ? 'forehand' : 'backhand';
+        insights.push(`On ${length} jacks, ${better} is ${Math.abs(diff)}% more effective.`);
+        break;
+      }
+    }
+  }
+
+  while (insights.length < 3 && insights.length > 0) {
+    const avgEffective = validLengths.reduce((sum, l) => sum + allStats[l].effectivePercent, 0) / validLengths.length;
+    if (insights.length === 1) {
+      insights.push(`Average effectiveness across all jack lengths: ${Math.round(avgEffective)}%.`);
+    } else {
+      insights.push(`Data from ${totalBowls} bowls across ${validLengths.length} jack length categories.`);
+    }
+  }
+
+  return insights.slice(0, 3);
+}
 
 function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
   const filterType = searchParams.get("type") || "All";
@@ -76,12 +145,6 @@ function calcLengthStats(bowls: BowlWithLength[], length: string) {
     goodLine, goodLinePercent: Math.round((goodLine / total) * 100),
   };
 }
-
-type LengthStatsSet = {
-  short: ReturnType<typeof calcLengthStats>;
-  medium: ReturnType<typeof calcLengthStats>;
-  long: ReturnType<typeof calcLengthStats>;
-};
 
 function LengthCard({ 
   title, 
@@ -257,6 +320,24 @@ export default function AnalysisLength() {
         </Card>
       ) : (
         <div className="space-y-4">
+          {/* Data Insights */}
+          <Card className="shadow-soft border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                  <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="space-y-1 min-w-0">
+                  {generateLengthInsights(allStats, forehandStats, backhandStats, totalBowls).map((insight, i) => (
+                    <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">
+                      {insight}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <LengthCard 
             title="All Bowls"
             icon={Ruler}
