@@ -519,13 +519,33 @@ export default function Analysis() {
       ...backhandHeatmap.flat()
     );
 
-    // Calculate stats by jack length
-    const calcLengthEffectiveness = (bowls: BowlWithLength[], length: string) => {
+    // Calculate detailed stats by jack length (weight and line breakdown)
+    const calcLengthStats = (bowls: BowlWithLength[], length: string) => {
       const filtered = bowls.filter(b => b.endLength === length);
       const total = filtered.length;
-      if (total === 0) return { total: 0, effective: 0, percent: 0 };
+      if (total === 0) return { 
+        total: 0, effective: 0, effectivePercent: 0,
+        short: 0, shortPercent: 0, heavy: 0, heavyPercent: 0, goodWeight: 0, goodWeightPercent: 0,
+        narrow: 0, narrowPercent: 0, wide: 0, widePercent: 0, goodLine: 0, goodLinePercent: 0
+      };
       const effective = filtered.filter(b => isEffective(b.result)).length;
-      return { total, effective, percent: Math.round((effective / total) * 100) };
+      const short = filtered.filter(b => isShort(b.result)).length;
+      const heavy = filtered.filter(b => isHeavy(b.result)).length;
+      const goodWeight = filtered.filter(b => hasGoodWeight(b.result)).length;
+      const narrow = filtered.filter(b => isNarrow(b.result)).length;
+      const wide = filtered.filter(b => isWide(b.result)).length;
+      const goodLine = filtered.filter(b => isOnLine(b.result)).length;
+      return { 
+        total, 
+        effective, 
+        effectivePercent: Math.round((effective / total) * 100),
+        short, shortPercent: Math.round((short / total) * 100),
+        heavy, heavyPercent: Math.round((heavy / total) * 100),
+        goodWeight, goodWeightPercent: Math.round((goodWeight / total) * 100),
+        narrow, narrowPercent: Math.round((narrow / total) * 100),
+        wide, widePercent: Math.round((wide / total) * 100),
+        goodLine, goodLinePercent: Math.round((goodLine / total) * 100),
+      };
     };
 
     const forehandWithLength = allBowlsWithLength.filter(b => b.hand?.toLowerCase() === 'forehand');
@@ -533,19 +553,19 @@ export default function Analysis() {
 
     const lengthStats = {
       short: {
-        all: calcLengthEffectiveness(allBowlsWithLength, 'short'),
-        forehand: calcLengthEffectiveness(forehandWithLength, 'short'),
-        backhand: calcLengthEffectiveness(backhandWithLength, 'short'),
+        all: calcLengthStats(allBowlsWithLength, 'short'),
+        forehand: calcLengthStats(forehandWithLength, 'short'),
+        backhand: calcLengthStats(backhandWithLength, 'short'),
       },
       medium: {
-        all: calcLengthEffectiveness(allBowlsWithLength, 'medium'),
-        forehand: calcLengthEffectiveness(forehandWithLength, 'medium'),
-        backhand: calcLengthEffectiveness(backhandWithLength, 'medium'),
+        all: calcLengthStats(allBowlsWithLength, 'medium'),
+        forehand: calcLengthStats(forehandWithLength, 'medium'),
+        backhand: calcLengthStats(backhandWithLength, 'medium'),
       },
       long: {
-        all: calcLengthEffectiveness(allBowlsWithLength, 'long'),
-        forehand: calcLengthEffectiveness(forehandWithLength, 'long'),
-        backhand: calcLengthEffectiveness(backhandWithLength, 'long'),
+        all: calcLengthStats(allBowlsWithLength, 'long'),
+        forehand: calcLengthStats(forehandWithLength, 'long'),
+        backhand: calcLengthStats(backhandWithLength, 'long'),
       },
     };
 
@@ -570,17 +590,18 @@ export default function Analysis() {
     );
   }
 
-  if (!allStats) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-muted-foreground">No data available yet</h2>
-        <p>Play and finish some games to see analysis.</p>
-      </div>
-    );
-  }
-
   const hasActiveFilters = filterType !== "All" || filterSurface !== "All" || 
     filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All" || !!dateRange;
+  
+  const clearAllFilters = () => {
+    setFilterType("All");
+    setFilterSurface("All");
+    setFilterPosition("All");
+    setFilterVenue("All");
+    setFilterOpponent("All");
+    setFilterFormat("All");
+    setDateRange(undefined);
+  };
   
   // Get the selected game details for display
   const selectedGame = gameIdFromUrl ? gamesWithDetails.find(g => g.id === gameIdFromUrl) : null;
@@ -863,6 +884,20 @@ export default function Analysis() {
                 )}
               </div>
               
+              {/* Clear All Filters button */}
+              {hasActiveFilters && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="w-fit mb-2"
+                  data-testid="button-clear-all-filters"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear All Filters
+                </Button>
+              )}
+              
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Game Type */}
                 <div className="space-y-1">
@@ -968,76 +1003,144 @@ export default function Analysis() {
       </Collapsible>
       )}
 
-      {/* Stats Breakdown - Three Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatBlock 
-          title="All Bowls" 
-          icon={Target}
-          stats={allStats}
-          accentColor="text-primary"
-        />
-        <StatBlock 
-          title="Forehand" 
-          icon={CircleDot}
-          stats={forehandStats!}
-          accentColor="text-sky-600 dark:text-sky-400"
-        />
-        <StatBlock 
-          title="Backhand" 
-          icon={CircleDot}
-          stats={backhandStats!}
-          accentColor="text-violet-600 dark:text-violet-400"
-        />
-      </div>
+      {/* No Data State */}
+      {!allStats && (
+        <Card className="py-12">
+          <CardContent className="text-center">
+            <h2 className="text-xl font-semibold text-muted-foreground mb-2">No data available</h2>
+            <p className="text-muted-foreground">
+              {hasActiveFilters 
+                ? "No games match your current filters. Try adjusting or clearing filters."
+                : "Play and finish some games to see analysis."
+              }
+            </p>
+            {hasActiveFilters && (
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={clearAllFilters}
+                data-testid="button-clear-filters-empty"
+              >
+                Clear All Filters
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Effectiveness by Jack Length */}
-      {lengthStats && (
-        <Card className="shadow-soft">
+      {/* Stats - Simplified to All Bowls only, clickable for hand breakdown */}
+      {allStats && (
+        <div 
+          className="cursor-pointer" 
+          onClick={() => setLocation('/analysis/effectiveness')}
+          data-testid="card-effectiveness"
+        >
+          <Card className="shadow-soft hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Overall Performance</CardTitle>
+                  <p className="text-xs text-muted-foreground">{allStats.total} bowls (tap for hand breakdown)</p>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              {/* Bowl Effectiveness - Hero stat */}
+              <div className="text-center py-3 bg-primary/5 rounded-xl border border-primary/10">
+                <span className="text-4xl font-bold text-primary" data-testid="text-effectiveness-all">
+                  {allStats.effectivePercent}%
+                </span>
+                <p className="text-sm text-muted-foreground mt-1">Bowl Effectiveness</p>
+                <p className="text-xs text-muted-foreground">{allStats.effective} of {allStats.total} bowls</p>
+              </div>
+
+              {/* Weight & Line Summary */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <span className="text-xl font-bold">{allStats.goodWeightPercent}%</span>
+                  <p className="text-xs text-muted-foreground">Good Weight</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <span className="text-xl font-bold">{allStats.goodLinePercent}%</span>
+                  <p className="text-xs text-muted-foreground">On Line</p>
+                </div>
+              </div>
+
+              {/* First Bowl */}
+              {allStats.firstBowlTotal > 0 && (
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <span className="text-xl font-bold">{allStats.firstBowlPercent}%</span>
+                  <p className="text-xs text-muted-foreground">First Bowl Effectiveness ({allStats.firstBowlEffective}/{allStats.firstBowlTotal})</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Effectiveness by Jack Length - Redesigned with weight/line breakdown */}
+      {lengthStats && allStats && (
+        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation('/analysis/length')} data-testid="card-jack-length">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <Ruler className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Effectiveness by Jack Length</CardTitle>
-                <p className="text-xs text-muted-foreground">How you perform at different distances</p>
+                <CardTitle className="text-base">Performance by Jack Length</CardTitle>
+                <p className="text-xs text-muted-foreground">Weight & line breakdown by distance (tap for details)</p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {(['short', 'medium', 'long'] as const).map((length) => {
-                const stats = lengthStats[length];
-                const hasData = stats.all.total > 0;
+                const stats = lengthStats[length].all;
+                const hasData = stats.total > 0;
                 return (
                   <div key={length} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-medium capitalize">{length} Jack</span>
-                      <span className="text-sm text-muted-foreground">
-                        {stats.all.total} bowls
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-lg font-bold ${stats.effectivePercent >= 50 ? 'text-primary' : ''}`}>
+                          {hasData ? `${stats.effectivePercent}%` : '-'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({stats.total} bowls)
+                        </span>
+                      </div>
                     </div>
-                    {hasData ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-primary/5 rounded-lg p-3 text-center">
-                          <span className="text-2xl font-bold text-primary">{stats.all.percent}%</span>
-                          <p className="text-xs text-muted-foreground mt-1">Overall</p>
+                    {hasData && (
+                      <div className="grid grid-cols-6 gap-1 text-center text-xs">
+                        <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-1.5">
+                          <span className="font-semibold text-rose-600 dark:text-rose-400">{stats.shortPercent}%</span>
+                          <p className="text-muted-foreground text-[10px]">Short</p>
                         </div>
-                        <div className="bg-sky-500/5 rounded-lg p-3 text-center">
-                          <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">
-                            {stats.forehand.total > 0 ? stats.forehand.percent : '-'}%
-                          </span>
-                          <p className="text-xs text-muted-foreground mt-1">Forehand</p>
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                          <span className="font-semibold text-green-600 dark:text-green-400">{stats.goodWeightPercent}%</span>
+                          <p className="text-muted-foreground text-[10px]">Good Wt</p>
                         </div>
-                        <div className="bg-violet-500/5 rounded-lg p-3 text-center">
-                          <span className="text-2xl font-bold text-violet-600 dark:text-violet-400">
-                            {stats.backhand.total > 0 ? stats.backhand.percent : '-'}%
-                          </span>
-                          <p className="text-xs text-muted-foreground mt-1">Backhand</p>
+                        <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-1.5">
+                          <span className="font-semibold text-slate-600 dark:text-slate-400">{stats.heavyPercent}%</span>
+                          <p className="text-muted-foreground text-[10px]">Heavy</p>
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-1.5">
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.narrowPercent}%</span>
+                          <p className="text-muted-foreground text-[10px]">Narrow</p>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                          <span className="font-semibold text-green-600 dark:text-green-400">{stats.goodLinePercent}%</span>
+                          <p className="text-muted-foreground text-[10px]">On Line</p>
+                        </div>
+                        <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-1.5">
+                          <span className="font-semibold text-orange-600 dark:text-orange-400">{stats.widePercent}%</span>
+                          <p className="text-muted-foreground text-[10px]">Wide</p>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-2">No data for this length</p>
                     )}
                   </div>
                 );
@@ -1047,34 +1150,46 @@ export default function Analysis() {
         </Card>
       )}
 
-      {/* Heatmap Section */}
+      {/* Heatmap Section - Simplified to overall only, clickable for details */}
       {allHeatmap && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold">Bowl Landing Heatmap</h2>
-          <p className="text-sm text-muted-foreground">
-            Shows where your bowls landed on a 9x9 grid (1 foot per cell). Center is the jack position.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <HeatmapGrid 
-              heatmap={allHeatmap} 
-              maxCount={maxHeatmapCount} 
-              title="All Bowls" 
-            />
-            {forehandHeatmap && (
-              <HeatmapGrid 
-                heatmap={forehandHeatmap} 
-                maxCount={maxHeatmapCount} 
-                title="Forehand" 
-              />
-            )}
-            {backhandHeatmap && (
-              <HeatmapGrid 
-                heatmap={backhandHeatmap} 
-                maxCount={maxHeatmapCount} 
-                title="Backhand" 
-              />
-            )}
-          </div>
+        <div 
+          className="cursor-pointer" 
+          onClick={() => setLocation('/analysis/heatmap')}
+          data-testid="card-heatmap"
+        >
+          <Card className="shadow-soft overflow-hidden hover:border-primary/50 transition-colors">
+            <CardHeader className="pb-2 bg-gradient-to-r from-primary/5 to-transparent">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                Bowl Landing Heatmap
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Tap to view forehand & backhand breakdown</p>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <HeatmapCanvas heatmap={allHeatmap} maxCount={maxHeatmapCount} />
+              
+              {/* Legend */}
+              <div className="mt-4 space-y-2 max-w-[280px] mx-auto">
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Short</span>
+                  <span>Heavy</span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{
+                  background: 'linear-gradient(to right, rgb(0, 100, 200), rgb(0, 200, 150), rgb(100, 200, 50), rgb(255, 200, 0), rgb(255, 120, 0), rgb(255, 40, 40))'
+                }} />
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Low</span>
+                  <span>High</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
+                <span>N=Narrow</span>
+                <span>&#9711; Jack</span>
+                <span>W=Wide</span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
       
