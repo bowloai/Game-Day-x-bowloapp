@@ -2,9 +2,44 @@ import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Ruler } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useMemo } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
+import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import type { GameWithDetails } from "@/lib/api";
+
+function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
+  const filterType = searchParams.get("type") || "All";
+  const filterSurface = searchParams.get("surface") || "All";
+  const filterPosition = searchParams.get("position") || "All";
+  const filterVenue = searchParams.get("venue") || "All";
+  const filterOpponent = searchParams.get("opponent") || "All";
+  const filterFormat = searchParams.get("format") || "All";
+  const fromDate = searchParams.get("from");
+  const toDate = searchParams.get("to");
+  // Parse yyyy-MM-dd format dates (local time, not UTC)
+  const parseDateString = (str: string) => {
+    const [year, month, day] = str.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  const dateRange = fromDate ? { from: parseDateString(fromDate), to: toDate ? parseDateString(toDate) : undefined } : undefined;
+
+  return games.filter(g => g.status === 'COMPLETED').filter(g => {
+    if (filterType !== "All" && g.type !== filterType) return false;
+    if (filterSurface !== "All" && g.surface !== filterSurface) return false;
+    if (filterPosition !== "All" && g.position !== filterPosition) return false;
+    if (filterVenue !== "All" && g.venue !== filterVenue) return false;
+    if (filterOpponent !== "All" && g.opponent !== filterOpponent) return false;
+    if (filterFormat !== "All" && (g.gameFormat || 'fours') !== filterFormat) return false;
+    if (dateRange?.from) {
+      const gameDate = new Date(g.createdAt);
+      const start = startOfDay(dateRange.from);
+      const end = endOfDay(dateRange.to || dateRange.from);
+      if (!isWithinInterval(gameDate, { start, end })) return false;
+    }
+    return true;
+  });
+}
 
 type Bowl = {
   id: string;
@@ -137,10 +172,13 @@ function LengthStatsCard({
 
 export default function AnalysisLength() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { data: gamesWithDetails = [], isLoading } = useGamesFull();
 
-  const lengthStats = useMemo(() => {
-    const completedGames = gamesWithDetails.filter(g => g.status === 'COMPLETED');
+  const { lengthStats, hasFilters } = useMemo(() => {
+    const searchParams = new URLSearchParams(search);
+    const filteredGames = applyFilters(gamesWithDetails, searchParams);
+    const hasFilters = searchParams.toString().length > 0;
     
     const normalizeLength = (length: string | null | undefined): string => {
       const l = (length || 'medium').toLowerCase();
@@ -149,7 +187,7 @@ export default function AnalysisLength() {
       return l;
     };
     
-    const allBowlsWithLength: BowlWithLength[] = completedGames.flatMap(g => 
+    const allBowlsWithLength: BowlWithLength[] = filteredGames.flatMap(g => 
       g.ends?.flatMap(e => (e.bowls || []).map(b => ({ ...b, endLength: normalizeLength(e.length) }))) || []
     );
     
@@ -157,24 +195,27 @@ export default function AnalysisLength() {
     const backhandWithLength = allBowlsWithLength.filter(b => b.hand?.toLowerCase() === 'backhand');
 
     return {
-      short: {
-        all: calcLengthStats(allBowlsWithLength, 'short'),
-        forehand: calcLengthStats(forehandWithLength, 'short'),
-        backhand: calcLengthStats(backhandWithLength, 'short'),
+      lengthStats: {
+        short: {
+          all: calcLengthStats(allBowlsWithLength, 'short'),
+          forehand: calcLengthStats(forehandWithLength, 'short'),
+          backhand: calcLengthStats(backhandWithLength, 'short'),
+        },
+        medium: {
+          all: calcLengthStats(allBowlsWithLength, 'medium'),
+          forehand: calcLengthStats(forehandWithLength, 'medium'),
+          backhand: calcLengthStats(backhandWithLength, 'medium'),
+        },
+        long: {
+          all: calcLengthStats(allBowlsWithLength, 'long'),
+          forehand: calcLengthStats(forehandWithLength, 'long'),
+          backhand: calcLengthStats(backhandWithLength, 'long'),
+        },
+        totalBowls: allBowlsWithLength.length,
       },
-      medium: {
-        all: calcLengthStats(allBowlsWithLength, 'medium'),
-        forehand: calcLengthStats(forehandWithLength, 'medium'),
-        backhand: calcLengthStats(backhandWithLength, 'medium'),
-      },
-      long: {
-        all: calcLengthStats(allBowlsWithLength, 'long'),
-        forehand: calcLengthStats(forehandWithLength, 'long'),
-        backhand: calcLengthStats(backhandWithLength, 'long'),
-      },
-      totalBowls: allBowlsWithLength.length,
+      hasFilters,
     };
-  }, [gamesWithDetails]);
+  }, [gamesWithDetails, search]);
 
   if (isLoading) {
     return (
@@ -197,7 +238,9 @@ export default function AnalysisLength() {
         </Button>
         <div>
           <h1 className="text-xl font-semibold">Performance by Jack Length</h1>
-          <p className="text-muted-foreground text-sm">Detailed stats by distance</p>
+          <p className="text-muted-foreground text-sm">
+            Detailed stats by distance{hasFilters && " (filtered)"}
+          </p>
         </div>
       </div>
 

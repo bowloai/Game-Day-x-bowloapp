@@ -603,6 +603,22 @@ export default function Analysis() {
     setDateRange(undefined);
   };
   
+  // Build query string for passing filters to detail pages
+  // Use yyyy-MM-dd format for dates to avoid timezone issues
+  const buildFilterQuery = () => {
+    const params = new URLSearchParams();
+    if (filterType !== "All") params.set("type", filterType);
+    if (filterSurface !== "All") params.set("surface", filterSurface);
+    if (filterPosition !== "All") params.set("position", filterPosition);
+    if (filterVenue !== "All") params.set("venue", filterVenue);
+    if (filterOpponent !== "All") params.set("opponent", filterOpponent);
+    if (filterFormat !== "All") params.set("format", filterFormat);
+    if (dateRange?.from) params.set("from", format(dateRange.from, "yyyy-MM-dd"));
+    if (dateRange?.to) params.set("to", format(dateRange.to, "yyyy-MM-dd"));
+    const query = params.toString();
+    return query ? `?${query}` : "";
+  };
+  
   // Get the selected game details for display
   const selectedGame = gameIdFromUrl ? gamesWithDetails.find(g => g.id === gameIdFromUrl) : null;
   
@@ -1004,7 +1020,7 @@ export default function Analysis() {
       )}
 
       {/* No Data State */}
-      {!allStats && (
+      {(!allStats || allStats.total === 0) && (
         <Card className="py-12">
           <CardContent className="text-center">
             <h2 className="text-xl font-semibold text-muted-foreground mb-2">No data available</h2>
@@ -1029,10 +1045,10 @@ export default function Analysis() {
       )}
 
       {/* Stats - Simplified to All Bowls only, clickable for hand breakdown */}
-      {allStats && (
+      {allStats && allStats.total > 0 && (
         <div 
           className="cursor-pointer" 
-          onClick={() => setLocation('/analysis/effectiveness')}
+          onClick={() => setLocation(`/analysis/effectiveness${buildFilterQuery()}`)}
           data-testid="card-effectiveness"
         >
           <Card className="shadow-soft hover:border-primary/50 transition-colors">
@@ -1083,8 +1099,8 @@ export default function Analysis() {
       )}
 
       {/* Effectiveness by Jack Length - Redesigned with weight/line breakdown */}
-      {lengthStats && allStats && (
-        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation('/analysis/length')} data-testid="card-jack-length">
+      {lengthStats && allStats && allStats.total > 0 && (
+        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation(`/analysis/length${buildFilterQuery()}`)} data-testid="card-jack-length">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1151,10 +1167,10 @@ export default function Analysis() {
       )}
 
       {/* Heatmap Section - Simplified to overall only, clickable for details */}
-      {allHeatmap && (
+      {allHeatmap && allStats && allStats.total > 0 && (
         <div 
           className="cursor-pointer" 
-          onClick={() => setLocation('/analysis/heatmap')}
+          onClick={() => setLocation(`/analysis/heatmap${buildFilterQuery()}`)}
           data-testid="card-heatmap"
         >
           <Card className="shadow-soft overflow-hidden hover:border-primary/50 transition-colors">

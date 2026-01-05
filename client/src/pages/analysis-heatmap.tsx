@@ -2,8 +2,43 @@ import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Target, CircleDot } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useMemo, useRef, useEffect } from "react";
+import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import type { GameWithDetails } from "@/lib/api";
+
+function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
+  const filterType = searchParams.get("type") || "All";
+  const filterSurface = searchParams.get("surface") || "All";
+  const filterPosition = searchParams.get("position") || "All";
+  const filterVenue = searchParams.get("venue") || "All";
+  const filterOpponent = searchParams.get("opponent") || "All";
+  const filterFormat = searchParams.get("format") || "All";
+  const fromDate = searchParams.get("from");
+  const toDate = searchParams.get("to");
+  // Parse yyyy-MM-dd format dates (local time, not UTC)
+  const parseDateString = (str: string) => {
+    const [year, month, day] = str.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  const dateRange = fromDate ? { from: parseDateString(fromDate), to: toDate ? parseDateString(toDate) : undefined } : undefined;
+
+  return games.filter(g => g.status === 'COMPLETED').filter(g => {
+    if (filterType !== "All" && g.type !== filterType) return false;
+    if (filterSurface !== "All" && g.surface !== filterSurface) return false;
+    if (filterPosition !== "All" && g.position !== filterPosition) return false;
+    if (filterVenue !== "All" && g.venue !== filterVenue) return false;
+    if (filterOpponent !== "All" && g.opponent !== filterOpponent) return false;
+    if (filterFormat !== "All" && (g.gameFormat || 'fours') !== filterFormat) return false;
+    if (dateRange?.from) {
+      const gameDate = new Date(g.createdAt);
+      const start = startOfDay(dateRange.from);
+      const end = endOfDay(dateRange.to || dateRange.from);
+      if (!isWithinInterval(gameDate, { start, end })) return false;
+    }
+    return true;
+  });
+}
 
 type Bowl = {
   id: string;
@@ -208,11 +243,15 @@ function HeatmapCard({
 
 export default function AnalysisHeatmap() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { data: gamesWithDetails = [], isLoading } = useGamesFull();
 
-  const { allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount, allCount, forehandCount, backhandCount } = useMemo(() => {
-    const completedGames = gamesWithDetails.filter(g => g.status === 'COMPLETED');
-    const allBowls: Bowl[] = completedGames.flatMap(g => 
+  const { allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount, allCount, forehandCount, backhandCount, hasFilters } = useMemo(() => {
+    const searchParams = new URLSearchParams(search);
+    const filteredGames = applyFilters(gamesWithDetails, searchParams);
+    const hasFilters = searchParams.toString().length > 0;
+    
+    const allBowls: Bowl[] = filteredGames.flatMap(g => 
       g.ends?.flatMap(e => e.bowls || []) || []
     );
     
@@ -237,8 +276,9 @@ export default function AnalysisHeatmap() {
       allCount: allBowls.length,
       forehandCount: forehandBowls.length,
       backhandCount: backhandBowls.length,
+      hasFilters,
     };
-  }, [gamesWithDetails]);
+  }, [gamesWithDetails, search]);
 
   if (isLoading) {
     return (
@@ -261,7 +301,9 @@ export default function AnalysisHeatmap() {
         </Button>
         <div>
           <h1 className="text-xl font-semibold">Bowl Landing Heatmaps</h1>
-          <p className="text-muted-foreground text-sm">Where your bowls finish on the green</p>
+          <p className="text-muted-foreground text-sm">
+            Where your bowls finish on the green{hasFilters && " (filtered)"}
+          </p>
         </div>
       </div>
 
