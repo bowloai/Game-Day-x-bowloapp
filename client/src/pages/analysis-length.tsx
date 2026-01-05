@@ -1,7 +1,7 @@
 import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Ruler } from "lucide-react";
+import { ArrowLeft, Ruler, Target, CircleDot } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMemo } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
@@ -17,7 +17,6 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
   const filterFormat = searchParams.get("format") || "All";
   const fromDate = searchParams.get("from");
   const toDate = searchParams.get("to");
-  // Parse yyyy-MM-dd format dates (local time, not UTC)
   const parseDateString = (str: string) => {
     const [year, month, day] = str.split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -78,92 +77,97 @@ function calcLengthStats(bowls: BowlWithLength[], length: string) {
   };
 }
 
-function LengthStatsCard({ 
-  length, 
-  allStats, 
-  forehandStats, 
-  backhandStats 
+type LengthStatsSet = {
+  short: ReturnType<typeof calcLengthStats>;
+  medium: ReturnType<typeof calcLengthStats>;
+  long: ReturnType<typeof calcLengthStats>;
+};
+
+function LengthCard({ 
+  title, 
+  icon: Icon,
+  accentColor,
+  stats,
+  totalBowls
 }: { 
-  length: string;
-  allStats: ReturnType<typeof calcLengthStats>;
-  forehandStats: ReturnType<typeof calcLengthStats>;
-  backhandStats: ReturnType<typeof calcLengthStats>;
+  title: string;
+  icon: React.ElementType;
+  accentColor: string;
+  stats: LengthStatsSet;
+  totalBowls: number;
 }) {
-  const hasData = allStats.total > 0;
-  
   return (
     <Card className="shadow-soft">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base capitalize">{length} Jack</CardTitle>
-          <span className="text-sm text-muted-foreground">{allStats.total} bowls</span>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <Icon className={`h-4 w-4 ${accentColor}`} />
+          </div>
+          <div>
+            <CardTitle className="text-base">{title}</CardTitle>
+            <p className="text-xs text-muted-foreground">{totalBowls} bowls</p>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!hasData ? (
-          <p className="text-center text-muted-foreground py-4">No data for this length</p>
+        {totalBowls === 0 ? (
+          <p className="text-center text-muted-foreground py-4">No data available</p>
         ) : (
-          <>
-            {/* Overall Effectiveness */}
-            <div className="text-center py-3 bg-primary/5 rounded-xl border border-primary/10">
-              <span className="text-3xl font-bold text-primary">{allStats.effectivePercent}%</span>
-              <p className="text-sm text-muted-foreground mt-1">Overall Effectiveness</p>
-            </div>
-
-            {/* Forehand / Backhand comparison */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-sky-50 dark:bg-sky-950/30 rounded-lg p-3 text-center">
-                <span className="text-xl font-bold text-sky-600 dark:text-sky-400">
-                  {forehandStats.total > 0 ? `${forehandStats.effectivePercent}%` : '-'}
-                </span>
-                <p className="text-xs text-muted-foreground">Forehand ({forehandStats.total})</p>
-              </div>
-              <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-3 text-center">
-                <span className="text-xl font-bold text-violet-600 dark:text-violet-400">
-                  {backhandStats.total > 0 ? `${backhandStats.effectivePercent}%` : '-'}
-                </span>
-                <p className="text-xs text-muted-foreground">Backhand ({backhandStats.total})</p>
-              </div>
-            </div>
-
-            {/* Weight breakdown */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Weight</p>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-2">
-                  <span className="font-semibold text-rose-600 dark:text-rose-400">{allStats.shortPercent}%</span>
-                  <p className="text-muted-foreground">Short</p>
+          <div className="space-y-4">
+            {(['short', 'medium', 'long'] as const).map((length) => {
+              const lengthStats = stats[length];
+              const hasData = lengthStats.total > 0;
+              return (
+                <div key={length} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium capitalize">{length} Jack</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg font-bold ${lengthStats.effectivePercent >= 50 ? 'text-primary' : ''}`}>
+                        {hasData ? `${lengthStats.effectivePercent}%` : '-'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({lengthStats.total} bowls)
+                      </span>
+                    </div>
+                  </div>
+                  {hasData && (
+                    <div className="space-y-1">
+                      {/* Weight row */}
+                      <div className="grid grid-cols-3 gap-1 text-center text-xs">
+                        <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-1.5">
+                          <span className="font-semibold text-rose-600 dark:text-rose-400">{lengthStats.shortPercent}%</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">Short</span>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                          <span className="font-semibold text-green-600 dark:text-green-400">{lengthStats.goodWeightPercent}%</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">Good Wt</span>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-1.5">
+                          <span className="font-semibold text-slate-600 dark:text-slate-400">{lengthStats.heavyPercent}%</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">Heavy</span>
+                        </div>
+                      </div>
+                      {/* Line row */}
+                      <div className="grid grid-cols-3 gap-1 text-center text-xs">
+                        <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-1.5">
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">{lengthStats.narrowPercent}%</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">Narrow</span>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                          <span className="font-semibold text-green-600 dark:text-green-400">{lengthStats.goodLinePercent}%</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">On Line</span>
+                        </div>
+                        <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-1.5">
+                          <span className="font-semibold text-orange-600 dark:text-orange-400">{lengthStats.widePercent}%</span>
+                          <span className="text-muted-foreground text-[10px] ml-1">Wide</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
-                  <span className="font-semibold text-green-600 dark:text-green-400">{allStats.goodWeightPercent}%</span>
-                  <p className="text-muted-foreground">Good</p>
-                </div>
-                <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-2">
-                  <span className="font-semibold text-slate-600 dark:text-slate-400">{allStats.heavyPercent}%</span>
-                  <p className="text-muted-foreground">Heavy</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Line breakdown */}
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Line</p>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-2">
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">{allStats.narrowPercent}%</span>
-                  <p className="text-muted-foreground">Narrow</p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
-                  <span className="font-semibold text-green-600 dark:text-green-400">{allStats.goodLinePercent}%</span>
-                  <p className="text-muted-foreground">On Line</p>
-                </div>
-                <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-2">
-                  <span className="font-semibold text-orange-600 dark:text-orange-400">{allStats.widePercent}%</span>
-                  <p className="text-muted-foreground">Wide</p>
-                </div>
-              </div>
-            </div>
-          </>
+              );
+            })}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -175,7 +179,7 @@ export default function AnalysisLength() {
   const search = useSearch();
   const { data: gamesWithDetails = [], isLoading } = useGamesFull();
 
-  const { lengthStats, hasFilters } = useMemo(() => {
+  const { allStats, forehandStats, backhandStats, totalBowls, forehandTotal, backhandTotal, hasFilters } = useMemo(() => {
     const searchParams = new URLSearchParams(search);
     const filteredGames = applyFilters(gamesWithDetails, searchParams);
     const hasFilters = searchParams.toString().length > 0;
@@ -195,24 +199,24 @@ export default function AnalysisLength() {
     const backhandWithLength = allBowlsWithLength.filter(b => b.hand?.toLowerCase() === 'backhand');
 
     return {
-      lengthStats: {
-        short: {
-          all: calcLengthStats(allBowlsWithLength, 'short'),
-          forehand: calcLengthStats(forehandWithLength, 'short'),
-          backhand: calcLengthStats(backhandWithLength, 'short'),
-        },
-        medium: {
-          all: calcLengthStats(allBowlsWithLength, 'medium'),
-          forehand: calcLengthStats(forehandWithLength, 'medium'),
-          backhand: calcLengthStats(backhandWithLength, 'medium'),
-        },
-        long: {
-          all: calcLengthStats(allBowlsWithLength, 'long'),
-          forehand: calcLengthStats(forehandWithLength, 'long'),
-          backhand: calcLengthStats(backhandWithLength, 'long'),
-        },
-        totalBowls: allBowlsWithLength.length,
+      allStats: {
+        short: calcLengthStats(allBowlsWithLength, 'short'),
+        medium: calcLengthStats(allBowlsWithLength, 'medium'),
+        long: calcLengthStats(allBowlsWithLength, 'long'),
       },
+      forehandStats: {
+        short: calcLengthStats(forehandWithLength, 'short'),
+        medium: calcLengthStats(forehandWithLength, 'medium'),
+        long: calcLengthStats(forehandWithLength, 'long'),
+      },
+      backhandStats: {
+        short: calcLengthStats(backhandWithLength, 'short'),
+        medium: calcLengthStats(backhandWithLength, 'medium'),
+        long: calcLengthStats(backhandWithLength, 'long'),
+      },
+      totalBowls: allBowlsWithLength.length,
+      forehandTotal: forehandWithLength.length,
+      backhandTotal: backhandWithLength.length,
       hasFilters,
     };
   }, [gamesWithDetails, search]);
@@ -244,7 +248,7 @@ export default function AnalysisLength() {
         </div>
       </div>
 
-      {lengthStats.totalBowls === 0 ? (
+      {totalBowls === 0 ? (
         <Card className="py-12">
           <CardContent className="text-center">
             <h2 className="text-xl font-semibold text-muted-foreground mb-2">No data available</h2>
@@ -253,23 +257,26 @@ export default function AnalysisLength() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <LengthStatsCard 
-            length="short"
-            allStats={lengthStats.short.all}
-            forehandStats={lengthStats.short.forehand}
-            backhandStats={lengthStats.short.backhand}
+          <LengthCard 
+            title="All Bowls"
+            icon={Ruler}
+            accentColor="text-primary"
+            stats={allStats}
+            totalBowls={totalBowls}
           />
-          <LengthStatsCard 
-            length="medium"
-            allStats={lengthStats.medium.all}
-            forehandStats={lengthStats.medium.forehand}
-            backhandStats={lengthStats.medium.backhand}
+          <LengthCard 
+            title="Forehand"
+            icon={Target}
+            accentColor="text-sky-600"
+            stats={forehandStats}
+            totalBowls={forehandTotal}
           />
-          <LengthStatsCard 
-            length="long"
-            allStats={lengthStats.long.all}
-            forehandStats={lengthStats.long.forehand}
-            backhandStats={lengthStats.long.backhand}
+          <LengthCard 
+            title="Backhand"
+            icon={CircleDot}
+            accentColor="text-violet-600"
+            stats={backhandStats}
+            totalBowls={backhandTotal}
           />
         </div>
       )}
