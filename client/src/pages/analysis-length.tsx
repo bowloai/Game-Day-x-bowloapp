@@ -131,35 +131,35 @@ function LengthCard({
                     </div>
                   </div>
                   {hasData && (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {/* Weight row */}
-                      <div className="grid grid-cols-3 gap-1 text-center text-xs">
-                        <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-1.5">
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-2">
                           <span className="font-semibold text-rose-600 dark:text-rose-400">{lengthStats.shortPercent}%</span>
-                          <span className="text-muted-foreground text-[10px] ml-1">Short</span>
+                          <p className="text-muted-foreground">Short</p>
                         </div>
-                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
                           <span className="font-semibold text-green-600 dark:text-green-400">{lengthStats.goodWeightPercent}%</span>
-                          <span className="text-muted-foreground text-[10px] ml-1">Good Wt</span>
+                          <p className="text-muted-foreground">Good</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-1.5">
+                        <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-2">
                           <span className="font-semibold text-slate-600 dark:text-slate-400">{lengthStats.heavyPercent}%</span>
-                          <span className="text-muted-foreground text-[10px] ml-1">Heavy</span>
+                          <p className="text-muted-foreground">Heavy</p>
                         </div>
                       </div>
                       {/* Line row */}
-                      <div className="grid grid-cols-3 gap-1 text-center text-xs">
-                        <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-1.5">
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-2">
                           <span className="font-semibold text-blue-600 dark:text-blue-400">{lengthStats.narrowPercent}%</span>
-                          <span className="text-muted-foreground text-[10px] ml-1">Narrow</span>
+                          <p className="text-muted-foreground">Narrow</p>
                         </div>
-                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
                           <span className="font-semibold text-green-600 dark:text-green-400">{lengthStats.goodLinePercent}%</span>
-                          <span className="text-muted-foreground text-[10px] ml-1">On Line</span>
+                          <p className="text-muted-foreground">On Line</p>
                         </div>
-                        <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-1.5">
+                        <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-2">
                           <span className="font-semibold text-orange-600 dark:text-orange-400">{lengthStats.widePercent}%</span>
-                          <span className="text-muted-foreground text-[10px] ml-1">Wide</span>
+                          <p className="text-muted-foreground">Wide</p>
                         </div>
                       </div>
                     </div>
