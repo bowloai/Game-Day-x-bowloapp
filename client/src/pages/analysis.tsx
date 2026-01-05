@@ -1074,18 +1074,6 @@ export default function Analysis() {
                 <p className="text-xs text-muted-foreground">{allStats.effective} of {allStats.total} bowls</p>
               </div>
 
-              {/* Weight & Line Summary */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <span className="text-xl font-bold">{allStats.goodWeightPercent}%</span>
-                  <p className="text-xs text-muted-foreground">Good Weight</p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <span className="text-xl font-bold">{allStats.goodLinePercent}%</span>
-                  <p className="text-xs text-muted-foreground">On Line</p>
-                </div>
-              </div>
-
               {/* First Bowl */}
               {allStats.firstBowlTotal > 0 && (
                 <div className="bg-muted/30 rounded-lg p-3 text-center">
@@ -1093,6 +1081,44 @@ export default function Analysis() {
                   <p className="text-xs text-muted-foreground">First Bowl Effectiveness ({allStats.firstBowlEffective}/{allStats.firstBowlTotal})</p>
                 </div>
               )}
+
+              {/* Weight Control */}
+              <div className="space-y-2 pt-2 border-t">
+                <span className="text-sm font-medium">Weight Control</span>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-rose-50 dark:bg-rose-950/30 rounded-lg p-2">
+                    <div className="text-lg font-bold text-rose-600 dark:text-rose-400">{allStats.shortPercent}%</div>
+                    <div className="text-xs text-muted-foreground">Short</div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-2">
+                    <div className="text-lg font-bold text-green-600 dark:text-green-400">{allStats.goodWeightPercent}%</div>
+                    <div className="text-xs text-muted-foreground">Good</div>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-950/30 rounded-lg p-2">
+                    <div className="text-lg font-bold text-slate-600 dark:text-slate-400">{allStats.heavyPercent}%</div>
+                    <div className="text-xs text-muted-foreground">Heavy</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Control */}
+              <div className="space-y-2 pt-2 border-t">
+                <span className="text-sm font-medium">Line Control</span>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-2">
+                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{allStats.narrowPercent}%</div>
+                    <div className="text-xs text-muted-foreground">Narrow</div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-2">
+                    <div className="text-lg font-bold text-green-600 dark:text-green-400">{allStats.goodLinePercent}%</div>
+                    <div className="text-xs text-muted-foreground">On Line</div>
+                  </div>
+                  <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-2">
+                    <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{allStats.widePercent}%</div>
+                    <div className="text-xs text-muted-foreground">Wide</div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1131,30 +1157,36 @@ export default function Analysis() {
                       </div>
                     </div>
                     {hasData && (
-                      <div className="grid grid-cols-6 gap-1 text-center text-xs">
-                        <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-1.5">
-                          <span className="font-semibold text-rose-600 dark:text-rose-400">{stats.shortPercent}%</span>
-                          <p className="text-muted-foreground text-[10px]">Short</p>
+                      <div className="space-y-1">
+                        {/* Weight row */}
+                        <div className="grid grid-cols-3 gap-1 text-center text-xs">
+                          <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-1.5">
+                            <span className="font-semibold text-rose-600 dark:text-rose-400">{stats.shortPercent}%</span>
+                            <span className="text-muted-foreground text-[10px] ml-1">Short</span>
+                          </div>
+                          <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                            <span className="font-semibold text-green-600 dark:text-green-400">{stats.goodWeightPercent}%</span>
+                            <span className="text-muted-foreground text-[10px] ml-1">Good Wt</span>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-1.5">
+                            <span className="font-semibold text-slate-600 dark:text-slate-400">{stats.heavyPercent}%</span>
+                            <span className="text-muted-foreground text-[10px] ml-1">Heavy</span>
+                          </div>
                         </div>
-                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
-                          <span className="font-semibold text-green-600 dark:text-green-400">{stats.goodWeightPercent}%</span>
-                          <p className="text-muted-foreground text-[10px]">Good Wt</p>
-                        </div>
-                        <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-1.5">
-                          <span className="font-semibold text-slate-600 dark:text-slate-400">{stats.heavyPercent}%</span>
-                          <p className="text-muted-foreground text-[10px]">Heavy</p>
-                        </div>
-                        <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-1.5">
-                          <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.narrowPercent}%</span>
-                          <p className="text-muted-foreground text-[10px]">Narrow</p>
-                        </div>
-                        <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
-                          <span className="font-semibold text-green-600 dark:text-green-400">{stats.goodLinePercent}%</span>
-                          <p className="text-muted-foreground text-[10px]">On Line</p>
-                        </div>
-                        <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-1.5">
-                          <span className="font-semibold text-orange-600 dark:text-orange-400">{stats.widePercent}%</span>
-                          <p className="text-muted-foreground text-[10px]">Wide</p>
+                        {/* Line row */}
+                        <div className="grid grid-cols-3 gap-1 text-center text-xs">
+                          <div className="bg-blue-50 dark:bg-blue-950/30 rounded p-1.5">
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">{stats.narrowPercent}%</span>
+                            <span className="text-muted-foreground text-[10px] ml-1">Narrow</span>
+                          </div>
+                          <div className="bg-green-50 dark:bg-green-950/30 rounded p-1.5">
+                            <span className="font-semibold text-green-600 dark:text-green-400">{stats.goodLinePercent}%</span>
+                            <span className="text-muted-foreground text-[10px] ml-1">On Line</span>
+                          </div>
+                          <div className="bg-orange-50 dark:bg-orange-950/30 rounded p-1.5">
+                            <span className="font-semibold text-orange-600 dark:text-orange-400">{stats.widePercent}%</span>
+                            <span className="text-muted-foreground text-[10px] ml-1">Wide</span>
+                          </div>
                         </div>
                       </div>
                     )}
