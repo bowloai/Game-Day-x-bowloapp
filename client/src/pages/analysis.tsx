@@ -9,7 +9,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
-import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler } from "lucide-react";
+import { ChevronDown, ChevronUp, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler, Lightbulb } from "lucide-react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 type Bowl = {
@@ -276,6 +276,112 @@ function calculateStats(bowls: Bowl[]) {
     goodLine,
     goodLinePercent: Math.round((goodLine / total) * 100),
   };
+}
+
+type LengthStatItem = {
+  total: number;
+  effectivePercent: number;
+};
+
+type SuggestionContext = {
+  allStats: ReturnType<typeof calculateStats>;
+  forehandStats: ReturnType<typeof calculateStats>;
+  backhandStats: ReturnType<typeof calculateStats>;
+  lengthStats?: {
+    short: { all: LengthStatItem };
+    medium: { all: LengthStatItem };
+    long: { all: LengthStatItem };
+  } | null;
+};
+
+function generateSuggestions(ctx: SuggestionContext): string[] {
+  const suggestions: { text: string; priority: number }[] = [];
+  const { allStats, forehandStats, backhandStats, lengthStats } = ctx;
+  
+  if (allStats.total < 10) {
+    return ["Keep playing to build up your performance data for personalized insights."];
+  }
+
+  // Weight control issues
+  if (allStats.shortPercent >= 40) {
+    suggestions.push({ text: `You're short ${allStats.shortPercent}% of the time - focus on committing to weight through the shot.`, priority: allStats.shortPercent });
+  } else if (allStats.shortPercent >= 30) {
+    suggestions.push({ text: `Short bowls at ${allStats.shortPercent}% - work on building confidence in your delivery weight.`, priority: allStats.shortPercent - 5 });
+  }
+  
+  if (allStats.heavyPercent >= 40) {
+    suggestions.push({ text: `Heavy bowls at ${allStats.heavyPercent}% - try softening your grip and slowing your backswing.`, priority: allStats.heavyPercent });
+  } else if (allStats.heavyPercent >= 30) {
+    suggestions.push({ text: `${allStats.heavyPercent}% of bowls are heavy - consider a more controlled step onto the mat.`, priority: allStats.heavyPercent - 5 });
+  }
+
+  // Line control issues
+  if (allStats.narrowPercent >= 40) {
+    suggestions.push({ text: `Narrow ${allStats.narrowPercent}% - ensure you take enough grass on your aiming point.`, priority: allStats.narrowPercent });
+  } else if (allStats.narrowPercent >= 30) {
+    suggestions.push({ text: `${allStats.narrowPercent}% narrow - try picking a wider aiming mark on the bank.`, priority: allStats.narrowPercent - 5 });
+  }
+  
+  if (allStats.widePercent >= 40) {
+    suggestions.push({ text: `Wide ${allStats.widePercent}% - tighten your line by selecting a closer aiming point.`, priority: allStats.widePercent });
+  } else if (allStats.widePercent >= 30) {
+    suggestions.push({ text: `${allStats.widePercent}% wide - focus on a consistent release point in your delivery.`, priority: allStats.widePercent - 5 });
+  }
+
+  // Hand comparison
+  const handDiff = Math.abs(forehandStats.effectivePercent - backhandStats.effectivePercent);
+  if (handDiff >= 15 && forehandStats.total >= 5 && backhandStats.total >= 5) {
+    const weakerHand = forehandStats.effectivePercent < backhandStats.effectivePercent ? 'forehand' : 'backhand';
+    const weakerPercent = weakerHand === 'forehand' ? forehandStats.effectivePercent : backhandStats.effectivePercent;
+    suggestions.push({ text: `Your ${weakerHand} is ${handDiff}% less effective - practice this hand more in roll-ups.`, priority: handDiff + 10 });
+  }
+
+  // First bowl
+  if (allStats.firstBowlTotal >= 5 && allStats.firstBowlPercent < allStats.effectivePercent - 10) {
+    suggestions.push({ text: `First bowl effectiveness is ${allStats.firstBowlPercent}% vs ${allStats.effectivePercent}% overall - focus on your pre-shot routine.`, priority: 25 });
+  }
+
+  // Jack length analysis
+  if (lengthStats) {
+    const lengths = ['short', 'medium', 'long'] as const;
+    const lengthData = lengths.map(l => ({ name: l, ...lengthStats[l].all })).filter(l => l.total >= 5);
+    
+    if (lengthData.length >= 2) {
+      const best = lengthData.reduce((a, b) => a.effectivePercent > b.effectivePercent ? a : b);
+      const worst = lengthData.reduce((a, b) => a.effectivePercent < b.effectivePercent ? a : b);
+      const diff = best.effectivePercent - worst.effectivePercent;
+      
+      if (diff >= 15) {
+        suggestions.push({ text: `You're ${diff}% more effective on ${best.name} jacks - work on ${worst.name} jack weight control.`, priority: diff });
+      }
+    }
+  }
+
+  // Positive reinforcement if doing well
+  if (allStats.effectivePercent >= 60) {
+    suggestions.push({ text: `Great work! ${allStats.effectivePercent}% effectiveness - keep up your consistent form.`, priority: 5 });
+  }
+  
+  if (allStats.goodWeightPercent >= 60 && allStats.goodLinePercent >= 60) {
+    suggestions.push({ text: `Excellent control with ${allStats.goodWeightPercent}% good weight and ${allStats.goodLinePercent}% on line.`, priority: 4 });
+  }
+
+  // Sort by priority and take top 3
+  suggestions.sort((a, b) => b.priority - a.priority);
+  const topSuggestions = suggestions.slice(0, 3).map(s => s.text);
+  
+  // Ensure we always have 3 suggestions
+  while (topSuggestions.length < 3) {
+    if (topSuggestions.length === 0) {
+      topSuggestions.push("Continue building your data set for more specific insights.");
+    } else if (topSuggestions.length === 1) {
+      topSuggestions.push("Focus on consistency in your pre-shot routine for better results.");
+    } else {
+      topSuggestions.push("Keep practicing to maintain and improve your current form.");
+    }
+  }
+  
+  return topSuggestions;
 }
 
 function StatBlock({ title, icon: Icon, stats, accentColor }: { 
@@ -1040,6 +1146,26 @@ export default function Analysis() {
                 Clear All Filters
               </Button>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Coaching Suggestions */}
+      {allStats && allStats.total > 0 && (
+        <Card className="shadow-soft border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="space-y-1 min-w-0">
+                {generateSuggestions({ allStats, forehandStats: forehandStats || calculateStats([]), backhandStats: backhandStats || calculateStats([]), lengthStats }).map((suggestion, i) => (
+                  <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">
+                    {suggestion}
+                  </p>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
