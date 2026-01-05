@@ -15,61 +15,37 @@ type LengthStatsSet = {
 };
 
 function generateLengthInsights(allStats: LengthStatsSet, forehandStats: LengthStatsSet, backhandStats: LengthStatsSet, totalBowls: number): string[] {
+  if (totalBowls < 10) return ["Need more data"];
   const insights: string[] = [];
+  const lens = ['short', 'medium', 'long'] as const;
+  const valid = lens.filter(l => allStats[l].total >= 5);
   
-  if (totalBowls < 10) {
-    return ["Not enough data for insights."];
+  if (valid.length >= 2) {
+    const best = valid.reduce((a, b) => allStats[a].effectivePercent > allStats[b].effectivePercent ? a : b);
+    const worst = valid.reduce((a, b) => allStats[a].effectivePercent < allStats[b].effectivePercent ? a : b);
+    if (allStats[best].effectivePercent - allStats[worst].effectivePercent >= 10)
+      insights.push(`Best: ${best} ${allStats[best].effectivePercent}%`);
+    else insights.push(`Consistent <10% diff`);
   }
 
-  const lengths = ['short', 'medium', 'long'] as const;
-  const validLengths = lengths.filter(l => allStats[l].total >= 5);
-  
-  if (validLengths.length >= 2) {
-    const best = validLengths.reduce((a, b) => allStats[a].effectivePercent > allStats[b].effectivePercent ? a : b);
-    const worst = validLengths.reduce((a, b) => allStats[a].effectivePercent < allStats[b].effectivePercent ? a : b);
-    
-    if (allStats[best].effectivePercent - allStats[worst].effectivePercent >= 10) {
-      insights.push(`Best: ${best} (${allStats[best].effectivePercent}%), worst: ${worst} (${allStats[worst].effectivePercent}%)`);
-    } else {
-      insights.push(`Consistent across lengths (<10% diff)`);
+  for (const l of valid) {
+    const s = allStats[l];
+    if (s.shortPercent >= 40) { insights.push(`${l}: ${s.shortPercent}% short`); break; }
+    if (s.heavyPercent >= 40) { insights.push(`${l}: ${s.heavyPercent}% heavy`); break; }
+    if (s.narrowPercent >= 40) { insights.push(`${l}: ${s.narrowPercent}% narrow`); break; }
+    if (s.widePercent >= 40) { insights.push(`${l}: ${s.widePercent}% wide`); break; }
+  }
+
+  for (const l of valid) {
+    if (forehandStats[l].total >= 3 && backhandStats[l].total >= 3) {
+      const d = forehandStats[l].effectivePercent - backhandStats[l].effectivePercent;
+      if (Math.abs(d) >= 15) { insights.push(`${l}: ${d > 0 ? 'FH' : 'BH'} +${Math.abs(d)}%`); break; }
     }
   }
 
-  for (const length of validLengths) {
-    const stats = allStats[length];
-    if (stats.shortPercent >= 40) {
-      insights.push(`${length}: ${stats.shortPercent}% short`);
-      break;
-    } else if (stats.heavyPercent >= 40) {
-      insights.push(`${length}: ${stats.heavyPercent}% heavy`);
-      break;
-    } else if (stats.narrowPercent >= 40) {
-      insights.push(`${length}: ${stats.narrowPercent}% narrow`);
-      break;
-    } else if (stats.widePercent >= 40) {
-      insights.push(`${length}: ${stats.widePercent}% wide`);
-      break;
-    }
-  }
-
-  for (const length of validLengths) {
-    if (forehandStats[length].total >= 3 && backhandStats[length].total >= 3) {
-      const diff = forehandStats[length].effectivePercent - backhandStats[length].effectivePercent;
-      if (Math.abs(diff) >= 15) {
-        const better = diff > 0 ? 'FH' : 'BH';
-        insights.push(`${length}: ${better} +${Math.abs(diff)}%`);
-        break;
-      }
-    }
-  }
-
-  while (insights.length < 3 && insights.length > 0) {
-    const avgEffective = validLengths.reduce((sum, l) => sum + allStats[l].effectivePercent, 0) / validLengths.length;
-    if (insights.length === 1) {
-      insights.push(`Avg effectiveness: ${Math.round(avgEffective)}%`);
-    } else {
-      insights.push(`${totalBowls} bowls analyzed`);
-    }
+  if (insights.length === 1) {
+    const avg = valid.reduce((s, l) => s + allStats[l].effectivePercent, 0) / valid.length;
+    insights.push(`Avg: ${Math.round(avg)}%`);
   }
 
   return insights.slice(0, 3);

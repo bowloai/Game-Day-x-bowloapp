@@ -8,58 +8,40 @@ import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
 
 function generateHeatmapInsights(allHeatmap: number[][], forehandHeatmap: number[][], backhandHeatmap: number[][], allCount: number, forehandCount: number, backhandCount: number): string[] {
+  if (allCount < 10) return ["Need more data"];
   const insights: string[] = [];
-  
-  if (allCount < 10) {
-    return ["Not enough data for insights."];
-  }
 
-  const zones = {
-    shortNarrow: allHeatmap.slice(0, 3).reduce((sum, row) => sum + row.slice(0, 3).reduce((a, b) => a + b, 0), 0),
-    shortOnline: allHeatmap.slice(0, 3).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0),
-    shortWide: allHeatmap.slice(0, 3).reduce((sum, row) => sum + row.slice(6, 9).reduce((a, b) => a + b, 0), 0),
-    goodNarrow: allHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(0, 3).reduce((a, b) => a + b, 0), 0),
-    effective: allHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0),
-    goodWide: allHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(6, 9).reduce((a, b) => a + b, 0), 0),
-    heavyNarrow: allHeatmap.slice(6, 9).reduce((sum, row) => sum + row.slice(0, 3).reduce((a, b) => a + b, 0), 0),
-    heavyOnline: allHeatmap.slice(6, 9).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0),
-    heavyWide: allHeatmap.slice(6, 9).reduce((sum, row) => sum + row.slice(6, 9).reduce((a, b) => a + b, 0), 0),
+  const z = {
+    sn: allHeatmap.slice(0, 3).reduce((s, r) => s + r.slice(0, 3).reduce((a, b) => a + b, 0), 0),
+    so: allHeatmap.slice(0, 3).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0),
+    sw: allHeatmap.slice(0, 3).reduce((s, r) => s + r.slice(6, 9).reduce((a, b) => a + b, 0), 0),
+    gn: allHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(0, 3).reduce((a, b) => a + b, 0), 0),
+    eff: allHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0),
+    gw: allHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(6, 9).reduce((a, b) => a + b, 0), 0),
+    hn: allHeatmap.slice(6, 9).reduce((s, r) => s + r.slice(0, 3).reduce((a, b) => a + b, 0), 0),
+    ho: allHeatmap.slice(6, 9).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0),
+    hw: allHeatmap.slice(6, 9).reduce((s, r) => s + r.slice(6, 9).reduce((a, b) => a + b, 0), 0),
   };
 
-  const effectivePercent = Math.round((zones.effective / allCount) * 100);
-  insights.push(`${effectivePercent}% in effective zone`);
+  insights.push(`${Math.round((z.eff / allCount) * 100)}% effective`);
 
-  const missZones = [
-    { name: 'short+narrow', count: zones.shortNarrow },
-    { name: 'short', count: zones.shortOnline },
-    { name: 'short+wide', count: zones.shortWide },
-    { name: 'narrow', count: zones.goodNarrow },
-    { name: 'wide', count: zones.goodWide },
-    { name: 'heavy+narrow', count: zones.heavyNarrow },
-    { name: 'heavy', count: zones.heavyOnline },
-    { name: 'heavy+wide', count: zones.heavyWide },
-  ].filter(z => z.count > 0);
-
-  if (missZones.length > 0) {
-    const topMiss = missZones.reduce((a, b) => a.count > b.count ? a : b);
-    const missPercent = Math.round((topMiss.count / allCount) * 100);
-    if (missPercent >= 10) {
-      insights.push(`Top miss: ${topMiss.name} (${missPercent}%)`);
-    }
+  const miss = [
+    { n: 'short+narrow', c: z.sn }, { n: 'short', c: z.so }, { n: 'short+wide', c: z.sw },
+    { n: 'narrow', c: z.gn }, { n: 'wide', c: z.gw },
+    { n: 'heavy+narrow', c: z.hn }, { n: 'heavy', c: z.ho }, { n: 'heavy+wide', c: z.hw },
+  ].filter(m => m.c > 0);
+  if (miss.length) {
+    const top = miss.reduce((a, b) => a.c > b.c ? a : b);
+    const pct = Math.round((top.c / allCount) * 100);
+    if (pct >= 10) insights.push(`${pct}% ${top.n}`);
   }
 
   if (forehandCount >= 5 && backhandCount >= 5) {
-    const fhEffective = forehandHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0);
-    const bhEffective = backhandHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0);
-    const fhPercent = Math.round((fhEffective / forehandCount) * 100);
-    const bhPercent = Math.round((bhEffective / backhandCount) * 100);
-    
-    if (Math.abs(fhPercent - bhPercent) >= 10) {
-      const better = fhPercent > bhPercent ? 'FH' : 'BH';
-      insights.push(`${better} more accurate`);
-    } else {
-      insights.push(`Hands similar`);
-    }
+    const fh = forehandHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0);
+    const bh = backhandHeatmap.slice(3, 6).reduce((s, r) => s + r.slice(3, 6).reduce((a, b) => a + b, 0), 0);
+    const diff = Math.round((fh / forehandCount) * 100) - Math.round((bh / backhandCount) * 100);
+    if (Math.abs(diff) >= 10) insights.push(`${diff > 0 ? 'FH' : 'BH'} +${Math.abs(diff)}%`);
+    else insights.push(`Hands ±${Math.abs(diff)}%`);
   }
 
   return insights.slice(0, 3);

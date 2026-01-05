@@ -9,41 +9,23 @@ import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
 
 function generateInsights(allStats: ReturnType<typeof calculateStats>, forehandStats: ReturnType<typeof calculateStats>, backhandStats: ReturnType<typeof calculateStats>): string[] {
+  if (allStats.total < 10) return ["Need more data"];
   const insights: string[] = [];
-  
-  if (allStats.total < 10) {
-    return ["Not enough data for insights."];
-  }
 
-  // Weight tendency
-  const maxWeight = Math.max(allStats.shortPercent, allStats.goodWeightPercent, allStats.heavyPercent);
-  if (maxWeight === allStats.shortPercent && allStats.shortPercent >= 35) {
-    insights.push(`Weight: ${allStats.shortPercent}% short`);
-  } else if (maxWeight === allStats.heavyPercent && allStats.heavyPercent >= 35) {
-    insights.push(`Weight: ${allStats.heavyPercent}% heavy`);
-  } else {
-    insights.push(`Weight: ${allStats.goodWeightPercent}% good`);
-  }
+  const maxW = Math.max(allStats.shortPercent, allStats.goodWeightPercent, allStats.heavyPercent);
+  if (maxW === allStats.shortPercent && allStats.shortPercent >= 35) insights.push(`${allStats.shortPercent}% short`);
+  else if (maxW === allStats.heavyPercent && allStats.heavyPercent >= 35) insights.push(`${allStats.heavyPercent}% heavy`);
+  else insights.push(`${allStats.goodWeightPercent}% good weight`);
 
-  // Line tendency
-  const maxLine = Math.max(allStats.narrowPercent, allStats.goodLinePercent, allStats.widePercent);
-  if (maxLine === allStats.narrowPercent && allStats.narrowPercent >= 35) {
-    insights.push(`Line: ${allStats.narrowPercent}% narrow`);
-  } else if (maxLine === allStats.widePercent && allStats.widePercent >= 35) {
-    insights.push(`Line: ${allStats.widePercent}% wide`);
-  } else {
-    insights.push(`Line: ${allStats.goodLinePercent}% on line`);
-  }
+  const maxL = Math.max(allStats.narrowPercent, allStats.goodLinePercent, allStats.widePercent);
+  if (maxL === allStats.narrowPercent && allStats.narrowPercent >= 35) insights.push(`${allStats.narrowPercent}% narrow`);
+  else if (maxL === allStats.widePercent && allStats.widePercent >= 35) insights.push(`${allStats.widePercent}% wide`);
+  else insights.push(`${allStats.goodLinePercent}% on line`);
 
-  // Hand comparison
   if (forehandStats.total >= 5 && backhandStats.total >= 5) {
     const diff = forehandStats.effectivePercent - backhandStats.effectivePercent;
-    if (Math.abs(diff) >= 10) {
-      const stronger = diff > 0 ? 'FH' : 'BH';
-      insights.push(`${stronger} +${Math.abs(diff)}% effective`);
-    } else {
-      insights.push(`Hands similar (${Math.abs(diff)}% diff)`);
-    }
+    if (Math.abs(diff) >= 10) insights.push(`${diff > 0 ? 'FH' : 'BH'} +${Math.abs(diff)}%`);
+    else insights.push(`Hands ±${Math.abs(diff)}%`);
   }
 
   return insights.slice(0, 3);
