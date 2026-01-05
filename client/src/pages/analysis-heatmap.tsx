@@ -11,10 +11,9 @@ function generateHeatmapInsights(allHeatmap: number[][], forehandHeatmap: number
   const insights: string[] = [];
   
   if (allCount < 10) {
-    return ["Not enough data yet for detailed insights."];
+    return ["Not enough data for insights."];
   }
 
-  // Analyze where most bowls land
   const zones = {
     shortNarrow: allHeatmap.slice(0, 3).reduce((sum, row) => sum + row.slice(0, 3).reduce((a, b) => a + b, 0), 0),
     shortOnline: allHeatmap.slice(0, 3).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0),
@@ -28,29 +27,27 @@ function generateHeatmapInsights(allHeatmap: number[][], forehandHeatmap: number
   };
 
   const effectivePercent = Math.round((zones.effective / allCount) * 100);
-  insights.push(`${effectivePercent}% of bowls land in the effective zone (center of heatmap).`);
+  insights.push(`${effectivePercent}% in effective zone`);
 
-  // Find most common miss zone
   const missZones = [
-    { name: 'short & narrow', count: zones.shortNarrow },
-    { name: 'short & on line', count: zones.shortOnline },
-    { name: 'short & wide', count: zones.shortWide },
-    { name: 'good weight but narrow', count: zones.goodNarrow },
-    { name: 'good weight but wide', count: zones.goodWide },
-    { name: 'heavy & narrow', count: zones.heavyNarrow },
-    { name: 'heavy & on line', count: zones.heavyOnline },
-    { name: 'heavy & wide', count: zones.heavyWide },
+    { name: 'short+narrow', count: zones.shortNarrow },
+    { name: 'short', count: zones.shortOnline },
+    { name: 'short+wide', count: zones.shortWide },
+    { name: 'narrow', count: zones.goodNarrow },
+    { name: 'wide', count: zones.goodWide },
+    { name: 'heavy+narrow', count: zones.heavyNarrow },
+    { name: 'heavy', count: zones.heavyOnline },
+    { name: 'heavy+wide', count: zones.heavyWide },
   ].filter(z => z.count > 0);
 
   if (missZones.length > 0) {
     const topMiss = missZones.reduce((a, b) => a.count > b.count ? a : b);
     const missPercent = Math.round((topMiss.count / allCount) * 100);
     if (missPercent >= 10) {
-      insights.push(`Most common miss: ${topMiss.name} (${missPercent}% of bowls).`);
+      insights.push(`Top miss: ${topMiss.name} (${missPercent}%)`);
     }
   }
 
-  // Hand comparison
   if (forehandCount >= 5 && backhandCount >= 5) {
     const fhEffective = forehandHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0);
     const bhEffective = backhandHeatmap.slice(3, 6).reduce((sum, row) => sum + row.slice(3, 6).reduce((a, b) => a + b, 0), 0);
@@ -58,10 +55,10 @@ function generateHeatmapInsights(allHeatmap: number[][], forehandHeatmap: number
     const bhPercent = Math.round((bhEffective / backhandCount) * 100);
     
     if (Math.abs(fhPercent - bhPercent) >= 10) {
-      const better = fhPercent > bhPercent ? 'Forehand' : 'Backhand';
-      insights.push(`${better} lands in the effective zone more often.`);
+      const better = fhPercent > bhPercent ? 'FH' : 'BH';
+      insights.push(`${better} more accurate`);
     } else {
-      insights.push(`Both hands have similar landing patterns.`);
+      insights.push(`Hands similar`);
     }
   }
 
@@ -379,14 +376,14 @@ export default function AnalysisHeatmap() {
         <div className="space-y-4">
           {/* Data Insights */}
           <Card className="shadow-soft border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                  <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Lightbulb className="h-3 w-3 text-amber-600 dark:text-amber-400" />
                 </div>
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-0.5 min-w-0">
                   {generateHeatmapInsights(allHeatmap, forehandHeatmap, backhandHeatmap, allCount, forehandCount, backhandCount).map((insight, i) => (
-                    <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">
+                    <p key={i} className="text-xs text-amber-900 dark:text-amber-100 leading-tight">
                       {insight}
                     </p>
                   ))}

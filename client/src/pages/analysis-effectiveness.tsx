@@ -12,38 +12,37 @@ function generateInsights(allStats: ReturnType<typeof calculateStats>, forehandS
   const insights: string[] = [];
   
   if (allStats.total < 10) {
-    return ["Not enough data yet for detailed insights."];
+    return ["Not enough data for insights."];
   }
 
-  // Determine main weight tendency
+  // Weight tendency
   const maxWeight = Math.max(allStats.shortPercent, allStats.goodWeightPercent, allStats.heavyPercent);
   if (maxWeight === allStats.shortPercent && allStats.shortPercent >= 35) {
-    insights.push(`Weight tendency: Short (${allStats.shortPercent}% of bowls finish short).`);
+    insights.push(`Weight: ${allStats.shortPercent}% short`);
   } else if (maxWeight === allStats.heavyPercent && allStats.heavyPercent >= 35) {
-    insights.push(`Weight tendency: Heavy (${allStats.heavyPercent}% of bowls finish heavy).`);
+    insights.push(`Weight: ${allStats.heavyPercent}% heavy`);
   } else {
-    insights.push(`Weight control: ${allStats.goodWeightPercent}% of bowls have good weight.`);
+    insights.push(`Weight: ${allStats.goodWeightPercent}% good`);
   }
 
-  // Determine main line tendency
+  // Line tendency
   const maxLine = Math.max(allStats.narrowPercent, allStats.goodLinePercent, allStats.widePercent);
   if (maxLine === allStats.narrowPercent && allStats.narrowPercent >= 35) {
-    insights.push(`Line tendency: Narrow (${allStats.narrowPercent}% of bowls finish narrow).`);
+    insights.push(`Line: ${allStats.narrowPercent}% narrow`);
   } else if (maxLine === allStats.widePercent && allStats.widePercent >= 35) {
-    insights.push(`Line tendency: Wide (${allStats.widePercent}% of bowls finish wide).`);
+    insights.push(`Line: ${allStats.widePercent}% wide`);
   } else {
-    insights.push(`Line control: ${allStats.goodLinePercent}% of bowls are on line.`);
+    insights.push(`Line: ${allStats.goodLinePercent}% on line`);
   }
 
   // Hand comparison
   if (forehandStats.total >= 5 && backhandStats.total >= 5) {
     const diff = forehandStats.effectivePercent - backhandStats.effectivePercent;
     if (Math.abs(diff) >= 10) {
-      const stronger = diff > 0 ? 'Forehand' : 'Backhand';
-      const weaker = diff > 0 ? 'backhand' : 'forehand';
-      insights.push(`${stronger} is ${Math.abs(diff)}% more effective than ${weaker}.`);
+      const stronger = diff > 0 ? 'FH' : 'BH';
+      insights.push(`${stronger} +${Math.abs(diff)}% effective`);
     } else {
-      insights.push(`Both hands perform similarly (within ${Math.abs(diff)}% difference).`);
+      insights.push(`Hands similar (${Math.abs(diff)}% diff)`);
     }
   }
 
@@ -304,14 +303,14 @@ export default function AnalysisEffectiveness() {
         <div className="space-y-4">
           {/* Data Insights */}
           <Card className="shadow-soft border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                  <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <CardContent className="pt-3 pb-2 px-3">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Lightbulb className="h-3 w-3 text-amber-600 dark:text-amber-400" />
                 </div>
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-0.5 min-w-0">
                   {generateInsights(allStats, forehandStats, backhandStats).map((insight, i) => (
-                    <p key={i} className="text-sm text-amber-900 dark:text-amber-100 leading-snug">
+                    <p key={i} className="text-xs text-amber-900 dark:text-amber-100 leading-tight">
                       {insight}
                     </p>
                   ))}
