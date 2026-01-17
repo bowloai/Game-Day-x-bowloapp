@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
 import { toPng } from "html-to-image";
+import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 interface ShareGameSummaryProps {
   game: GameWithDetails;
@@ -23,17 +24,21 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
   const allBowls = game.ends?.flatMap(e => e.bowls || []) || [];
   const total = allBowls.length;
   
-  const effective = allBowls.filter(b => b.result === 'Effective').length;
+  const effective = allBowls.filter(b => isEffective(b.result)).length;
   const effectivePercent = total > 0 ? Math.round((effective / total) * 100) : 0;
   
-  const short = allBowls.filter(b => b.result.includes('Short')).length;
-  const heavy = allBowls.filter(b => b.result.includes('Heavy')).length;
-  const goodWeight = total - short - heavy;
+  const short = allBowls.filter(b => isShort(b.result)).length;
+  const heavy = allBowls.filter(b => isHeavy(b.result)).length;
+  const goodWeight = allBowls.filter(b => hasGoodWeight(b.result)).length;
+  const shortPercent = total > 0 ? Math.round((short / total) * 100) : 0;
+  const heavyPercent = total > 0 ? Math.round((heavy / total) * 100) : 0;
   const goodWeightPercent = total > 0 ? Math.round((goodWeight / total) * 100) : 0;
   
-  const narrow = allBowls.filter(b => b.result.includes('Narrow')).length;
-  const wide = allBowls.filter(b => b.result.includes('Wide')).length;
-  const goodLine = total - narrow - wide;
+  const narrow = allBowls.filter(b => isNarrow(b.result)).length;
+  const wide = allBowls.filter(b => isWide(b.result)).length;
+  const goodLine = allBowls.filter(b => isOnLine(b.result)).length;
+  const narrowPercent = total > 0 ? Math.round((narrow / total) * 100) : 0;
+  const widePercent = total > 0 ? Math.round((wide / total) * 100) : 0;
   const goodLinePercent = total > 0 ? Math.round((goodLine / total) * 100) : 0;
 
   const handleShareImage = async () => {
@@ -190,7 +195,7 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
               <div style={{ fontSize: '13px', color: '#333', marginBottom: '8px' }}>Weight Control</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1, background: '#fef2f2', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#dc2626' }}>{Math.round((short / total) * 100) || 0}%</div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#dc2626' }}>{shortPercent}%</div>
                   <div style={{ fontSize: '10px', color: '#666' }}>Short</div>
                 </div>
                 <div style={{ flex: 1, background: '#f0fdf4', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
@@ -198,7 +203,7 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
                   <div style={{ fontSize: '10px', color: '#666' }}>Good</div>
                 </div>
                 <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#475569' }}>{Math.round((heavy / total) * 100) || 0}%</div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#475569' }}>{heavyPercent}%</div>
                   <div style={{ fontSize: '10px', color: '#666' }}>Heavy</div>
                 </div>
               </div>
@@ -209,7 +214,7 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
               <div style={{ fontSize: '13px', color: '#333', marginBottom: '8px' }}>Line Control</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ flex: 1, background: '#fff7ed', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ea580c' }}>{Math.round((narrow / total) * 100) || 0}%</div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ea580c' }}>{narrowPercent}%</div>
                   <div style={{ fontSize: '10px', color: '#666' }}>Narrow</div>
                 </div>
                 <div style={{ flex: 1, background: '#f0fdf4', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
@@ -217,7 +222,7 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
                   <div style={{ fontSize: '10px', color: '#666' }}>Good</div>
                 </div>
                 <div style={{ flex: 1, background: '#eff6ff', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#2563eb' }}>{Math.round((wide / total) * 100) || 0}%</div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#2563eb' }}>{widePercent}%</div>
                   <div style={{ fontSize: '10px', color: '#666' }}>Wide</div>
                 </div>
               </div>
