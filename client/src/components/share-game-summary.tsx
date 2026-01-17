@@ -6,6 +6,16 @@ import type { GameWithDetails } from "@/lib/api";
 import { format } from "date-fns";
 import { toPng } from "html-to-image";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ShareGameSummaryProps {
   game: GameWithDetails;
@@ -15,6 +25,8 @@ interface ShareGameSummaryProps {
 
 export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSummaryProps) {
   const [isSharing, setIsSharing] = useState(false);
+  const [showScoreDialog, setShowScoreDialog] = useState(false);
+  const [includeScore, setIncludeScore] = useState(true);
   const cardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -41,7 +53,16 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
   const widePercent = total > 0 ? Math.round((wide / total) * 100) : 0;
   const goodLinePercent = total > 0 ? Math.round((goodLine / total) * 100) : 0;
 
-  const handleShareImage = async () => {
+  const handleShareClick = () => {
+    setShowScoreDialog(true);
+  };
+
+  const handleShareWithChoice = async (withScore: boolean) => {
+    setIncludeScore(withScore);
+    setShowScoreDialog(false);
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     if (!cardRef.current || typeof window === 'undefined') return;
     
     setIsSharing(true);
@@ -58,7 +79,7 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
       
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: `Lawn Bowls ${result} vs ${game.opponent}`,
+          title: `Lawn Bowls vs ${game.opponent}`,
           files: [file],
         });
         toast({
@@ -94,7 +115,7 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
       <Button
         variant="outline"
         size="sm"
-        onClick={handleShareImage}
+        onClick={handleShareClick}
         disabled={isSharing}
         data-testid={`button-share-${game.id}`}
       >
@@ -105,6 +126,31 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
         )}
         Share
       </Button>
+
+      <AlertDialog open={showScoreDialog} onOpenChange={setShowScoreDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Include the score?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose what to include in your shared image.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <AlertDialogCancel onClick={() => setShowScoreDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleShareWithChoice(false)}
+              className="bg-muted text-foreground hover:bg-muted/80"
+            >
+              Stats Only
+            </AlertDialogAction>
+            <AlertDialogAction onClick={() => handleShareWithChoice(true)}>
+              Include Score
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Hidden card for image capture */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
@@ -133,27 +179,29 @@ export function ShareGameSummary({ game, scoreFor, scoreAgainst }: ShareGameSumm
                 vs {game.opponent}
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ 
-                fontSize: '28px', 
-                fontWeight: 'bold', 
-                color: 'white',
-                fontFamily: 'monospace'
-              }}>
-                {scoreFor} - {scoreAgainst}
+            {includeScore && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ 
+                  fontSize: '28px', 
+                  fontWeight: 'bold', 
+                  color: 'white',
+                  fontFamily: 'monospace'
+                }}>
+                  {scoreFor} - {scoreAgainst}
+                </div>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '2px 12px',
+                  background: result === 'WIN' ? '#fbbf24' : result === 'LOSS' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: result === 'WIN' ? '#000' : '#fff'
+                }}>
+                  {result}
+                </div>
               </div>
-              <div style={{
-                display: 'inline-block',
-                padding: '2px 12px',
-                background: result === 'WIN' ? '#fbbf24' : result === 'LOSS' ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
-                borderRadius: '12px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: result === 'WIN' ? '#000' : '#fff'
-              }}>
-                {result}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* All Bowls Stats */}
