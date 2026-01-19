@@ -783,6 +783,7 @@ export default function Analysis() {
   // Use yyyy-MM-dd format for dates to avoid timezone issues
   const buildFilterQuery = () => {
     const params = new URLSearchParams();
+    if (gameIdFromUrl) params.set("gameId", gameIdFromUrl);
     if (filterType !== "All") params.set("type", filterType);
     if (filterSurface !== "All") params.set("surface", filterSurface);
     if (filterPosition !== "All") params.set("position", filterPosition);
