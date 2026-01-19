@@ -9,7 +9,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import type { GameWithDetails } from "@/lib/api";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
-import { ChevronDown, ChevronUp, ChevronRight, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler, Lightbulb, BookOpen } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler, Lightbulb, BookOpen, Timer } from "lucide-react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 
 type Bowl = {
@@ -538,9 +538,9 @@ export default function Analysis() {
     return Array.from(new Set(gamesWithDetails.map(g => g.opponent))).sort();
   }, [gamesWithDetails]);
 
-  const { allStats, forehandStats, backhandStats, totalGames, allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount, lengthStats } = useMemo(() => {
+  const { allStats, forehandStats, backhandStats, totalGames, allHeatmap, forehandHeatmap, backhandHeatmap, maxHeatmapCount, lengthStats, stageStats } = useMemo(() => {
     if (!gamesWithDetails || gamesWithDetails.length === 0) {
-      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0, lengthStats: null };
+      return { allStats: null, forehandStats: null, backhandStats: null, totalGames: 0, allHeatmap: null, forehandHeatmap: null, backhandHeatmap: null, maxHeatmapCount: 0, lengthStats: null, stageStats: null };
     }
     
     let filteredGames = [...gamesWithDetails];
@@ -675,6 +675,76 @@ export default function Analysis() {
       },
     };
 
+    // Calculate stage stats (start/middle/finish of each end)
+    // Get bowls per end from games to classify stages properly
+    const classifyStage = (bowlNumber: number, bowlsPerEnd: number): 'start' | 'middle' | 'finish' => {
+      const totalBowlsInEnd = bowlsPerEnd;
+      const third = totalBowlsInEnd / 3;
+      if (bowlNumber <= Math.ceil(third)) return 'start';
+      if (bowlNumber <= Math.ceil(third * 2)) return 'middle';
+      return 'finish';
+    };
+
+    type BowlWithStage = Bowl & { stage: 'start' | 'middle' | 'finish' };
+    const allBowlsWithStage: BowlWithStage[] = filteredGames.flatMap(g => {
+      const bowlsPerEnd = g.bowlsPerEnd || 2;
+      return g.ends?.flatMap(e => 
+        (e.bowls || []).map(b => ({ 
+          ...b, 
+          stage: classifyStage(b.bowlNumber, bowlsPerEnd) 
+        }))
+      ) || [];
+    });
+
+    const calcStageStats = (bowls: BowlWithStage[], stage: 'start' | 'middle' | 'finish') => {
+      const filtered = bowls.filter(b => b.stage === stage);
+      const total = filtered.length;
+      if (total === 0) return { 
+        total: 0, effective: 0, effectivePercent: 0,
+        short: 0, shortPercent: 0, heavy: 0, heavyPercent: 0, goodWeight: 0, goodWeightPercent: 0,
+        narrow: 0, narrowPercent: 0, wide: 0, widePercent: 0, goodLine: 0, goodLinePercent: 0
+      };
+      const effective = filtered.filter(b => isEffective(b.result)).length;
+      const short = filtered.filter(b => isShort(b.result)).length;
+      const heavy = filtered.filter(b => isHeavy(b.result)).length;
+      const goodWeight = filtered.filter(b => hasGoodWeight(b.result)).length;
+      const narrow = filtered.filter(b => isNarrow(b.result)).length;
+      const wide = filtered.filter(b => isWide(b.result)).length;
+      const goodLine = filtered.filter(b => isOnLine(b.result)).length;
+      return { 
+        total, 
+        effective, 
+        effectivePercent: Math.round((effective / total) * 100),
+        short, shortPercent: Math.round((short / total) * 100),
+        heavy, heavyPercent: Math.round((heavy / total) * 100),
+        goodWeight, goodWeightPercent: Math.round((goodWeight / total) * 100),
+        narrow, narrowPercent: Math.round((narrow / total) * 100),
+        wide, widePercent: Math.round((wide / total) * 100),
+        goodLine, goodLinePercent: Math.round((goodLine / total) * 100),
+      };
+    };
+
+    const forehandWithStage = allBowlsWithStage.filter(b => b.hand?.toLowerCase() === 'forehand');
+    const backhandWithStage = allBowlsWithStage.filter(b => b.hand?.toLowerCase() === 'backhand');
+
+    const stageStats = {
+      start: {
+        all: calcStageStats(allBowlsWithStage, 'start'),
+        forehand: calcStageStats(forehandWithStage, 'start'),
+        backhand: calcStageStats(backhandWithStage, 'start'),
+      },
+      middle: {
+        all: calcStageStats(allBowlsWithStage, 'middle'),
+        forehand: calcStageStats(forehandWithStage, 'middle'),
+        backhand: calcStageStats(backhandWithStage, 'middle'),
+      },
+      finish: {
+        all: calcStageStats(allBowlsWithStage, 'finish'),
+        forehand: calcStageStats(forehandWithStage, 'finish'),
+        backhand: calcStageStats(backhandWithStage, 'finish'),
+      },
+    };
+
     return {
       allStats: calculateStats(allBowls),
       forehandStats: calculateStats(forehandBowls),
@@ -685,6 +755,7 @@ export default function Analysis() {
       backhandHeatmap,
       maxHeatmapCount,
       lengthStats,
+      stageStats,
     };
   }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
 
@@ -1315,6 +1386,43 @@ export default function Analysis() {
                         </div>
                       </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stage Breakdown - Start/Middle/Finish of End */}
+      {stageStats && allStats && allStats.total > 0 && (
+        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation(`/analysis/stage${buildFilterQuery()}`)} data-testid="card-stage">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Timer className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Performance by End Stage</CardTitle>
+                <p className="text-xs text-muted-foreground">Start, middle & finish of ends (tap for details)</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              {(['start', 'middle', 'finish'] as const).map((stage) => {
+                const stats = stageStats[stage].all;
+                const hasData = stats.total > 0;
+                const label = stage === 'start' ? 'Start' : stage === 'middle' ? 'Middle' : 'Finish';
+                return (
+                  <div key={stage} className="text-center p-3 bg-muted/30 rounded-lg">
+                    <div className={`text-2xl font-bold ${stats.effectivePercent >= 50 ? 'text-primary' : ''}`}>
+                      {hasData ? `${stats.effectivePercent}%` : '-'}
+                    </div>
+                    <div className="text-sm font-medium mt-1">{label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {stats.total} bowls
+                    </div>
                   </div>
                 );
               })}
