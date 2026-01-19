@@ -3,10 +3,10 @@ import { useGameFull } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Target, Activity, Hand } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { isEffective, formatResultShort } from "@/lib/bowlResults";
+import { isEffective, formatResultShort, isShort, isHeavy, hasGoodWeight, isNarrow, isWide, isOnLine } from "@/lib/bowlResults";
 import { useMemo, useState, useRef, useEffect } from "react";
 
 type Bowl = {
@@ -78,7 +78,7 @@ function getThermalColor(intensity: number): { r: number, g: number, b: number }
   }
 }
 
-function MiniHeatmap({ heatmap, maxCount, size = 100 }: { heatmap: number[][], maxCount: number, size?: number }) {
+function HeatmapCanvas({ heatmap, maxCount, size = 280 }: { heatmap: number[][], maxCount: number, size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cellSize = size / 9;
   
@@ -97,7 +97,20 @@ function MiniHeatmap({ heatmap, maxCount, size = 100 }: { heatmap: number[][], m
     ctx.fillStyle = 'rgb(248, 250, 245)';
     ctx.fillRect(0, 0, size, size);
     
-    ctx.filter = 'blur(10px)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 9; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * cellSize, 0);
+      ctx.lineTo(i * cellSize, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i * cellSize);
+      ctx.lineTo(size, i * cellSize);
+      ctx.stroke();
+    }
+    
+    ctx.filter = size >= 200 ? 'blur(14px)' : 'blur(10px)';
     
     for (let row = 0; row < 9; row++) {
       for (let col = 0; col < 9; col++) {
@@ -124,17 +137,15 @@ function MiniHeatmap({ heatmap, maxCount, size = 100 }: { heatmap: number[][], m
     
     ctx.filter = 'none';
     
-    // Draw jack marker
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.lineWidth = size >= 200 ? 2 : 1.5;
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, 4, 0, Math.PI * 2);
+    ctx.arc(size / 2, size / 2, size >= 200 ? 8 : 4, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Draw effective zone border
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.lineWidth = 1;
-    ctx.setLineDash([2, 2]);
+    ctx.setLineDash([4, 4]);
     const zoneStart = (3 / 9) * size;
     const zoneSize = (3 / 9) * size;
     ctx.strokeRect(zoneStart, zoneStart, zoneSize, zoneSize);
@@ -149,18 +160,104 @@ function MiniHeatmap({ heatmap, maxCount, size = 100 }: { heatmap: number[][], m
   );
 }
 
+function calculateStats(bowls: Bowl[]) {
+  const total = bowls.length;
+  if (total === 0) {
+    return {
+      total: 0,
+      effective: 0,
+      effectivePercent: 0,
+      firstBowlEffective: 0,
+      firstBowlTotal: 0,
+      firstBowlPercent: 0,
+      short: 0,
+      shortPercent: 0,
+      heavy: 0,
+      heavyPercent: 0,
+      goodWeight: 0,
+      goodWeightPercent: 0,
+      narrow: 0,
+      narrowPercent: 0,
+      wide: 0,
+      widePercent: 0,
+      goodLine: 0,
+      goodLinePercent: 0,
+    };
+  }
+
+  const effective = bowls.filter(b => isEffective(b.result)).length;
+  const firstBowls = bowls.filter(b => b.bowlNumber === 1);
+  const firstBowlEffective = firstBowls.filter(b => isEffective(b.result)).length;
+  const short = bowls.filter(b => isShort(b.result)).length;
+  const heavy = bowls.filter(b => isHeavy(b.result)).length;
+  const goodWeight = bowls.filter(b => hasGoodWeight(b.result)).length;
+  const narrow = bowls.filter(b => isNarrow(b.result)).length;
+  const wide = bowls.filter(b => isWide(b.result)).length;
+  const goodLine = bowls.filter(b => isOnLine(b.result)).length;
+
+  return {
+    total,
+    effective,
+    effectivePercent: Math.round((effective / total) * 100),
+    firstBowlEffective,
+    firstBowlTotal: firstBowls.length,
+    firstBowlPercent: firstBowls.length > 0 ? Math.round((firstBowlEffective / firstBowls.length) * 100) : 0,
+    short,
+    shortPercent: Math.round((short / total) * 100),
+    heavy,
+    heavyPercent: Math.round((heavy / total) * 100),
+    goodWeight,
+    goodWeightPercent: Math.round((goodWeight / total) * 100),
+    narrow,
+    narrowPercent: Math.round((narrow / total) * 100),
+    wide,
+    widePercent: Math.round((wide / total) * 100),
+    goodLine,
+    goodLinePercent: Math.round((goodLine / total) * 100),
+  };
+}
+
 export default function GameAnalysis() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { data: game, isLoading } = useGameFull(id);
   const [showEndByEnd, setShowEndByEnd] = useState(false);
 
-  const { sortedEnds, phases, totalScore, overallEffective, overallTotal, maxHeatmapCount } = useMemo(() => {
-    if (!game?.ends) return { sortedEnds: [], phases: [], totalScore: { for: 0, against: 0 }, overallEffective: 0, overallTotal: 0, maxHeatmapCount: 1 };
+  const { 
+    sortedEnds, 
+    phases, 
+    totalScore, 
+    allBowls,
+    allStats,
+    forehandStats,
+    backhandStats,
+    gameHeatmap,
+    maxHeatmapCount 
+  } = useMemo(() => {
+    if (!game?.ends) return { 
+      sortedEnds: [], 
+      phases: [], 
+      totalScore: { for: 0, against: 0 }, 
+      allBowls: [],
+      allStats: calculateStats([]),
+      forehandStats: calculateStats([]),
+      backhandStats: calculateStats([]),
+      gameHeatmap: Array.from({ length: 9 }, () => Array(9).fill(0)),
+      maxHeatmapCount: 1 
+    };
     
     const sorted = [...game.ends]
       .filter(e => e.isCompleted)
       .sort((a, b) => a.endNumber - b.endNumber);
+    
+    const allBowls = sorted.flatMap(e => e.bowls || []) as Bowl[];
+    const forehandBowls = allBowls.filter(b => b.hand === "FOREHAND" || b.hand === "Forehand");
+    const backhandBowls = allBowls.filter(b => b.hand === "BACKHAND" || b.hand === "Backhand");
+    
+    const allStats = calculateStats(allBowls);
+    const forehandStats = calculateStats(forehandBowls);
+    const backhandStats = calculateStats(backhandBowls);
+    const gameHeatmap = calculateHeatmap(allBowls);
     
     const totalEnds = sorted.length;
     const thirdSize = Math.ceil(totalEnds / 3);
@@ -170,17 +267,17 @@ export default function GameAnalysis() {
     const endEnds = sorted.slice(thirdSize * 2);
     
     const calcPhase = (ends: typeof sorted, name: string): PhaseStats => {
-      const allBowls = ends.flatMap(e => e.bowls || []) as Bowl[];
-      const effective = allBowls.filter(b => isEffective(b.result)).length;
-      const total = allBowls.length;
-      const heatmap = calculateHeatmap(allBowls);
+      const phaseBowls = ends.flatMap(e => e.bowls || []) as Bowl[];
+      const effective = phaseBowls.filter(b => isEffective(b.result)).length;
+      const total = phaseBowls.length;
+      const heatmap = calculateHeatmap(phaseBowls);
       return {
         name,
         ends: ends.map(e => e.endNumber),
         effectiveCount: effective,
         totalBowls: total,
         effectivePercent: total > 0 ? Math.round((effective / total) * 100) : 0,
-        bowls: allBowls,
+        bowls: phaseBowls,
         heatmap,
       };
     };
@@ -191,29 +288,25 @@ export default function GameAnalysis() {
       calcPhase(endEnds, "Finish"),
     ].filter(p => p.totalBowls > 0);
     
-    // Find max count across all phases for consistent coloring
     let maxCount = 1;
-    phases.forEach(p => {
-      p.heatmap.forEach(row => {
-        row.forEach(count => {
-          if (count > maxCount) maxCount = count;
-        });
+    gameHeatmap.forEach(row => {
+      row.forEach(count => {
+        if (count > maxCount) maxCount = count;
       });
     });
     
     const totalFor = sorted.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
     const totalAgainst = sorted.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0);
     
-    const allBowls = sorted.flatMap(e => e.bowls || []);
-    const overallEffective = allBowls.filter(b => isEffective(b.result)).length;
-    const overallTotal = allBowls.length;
-    
     return { 
       sortedEnds: sorted, 
       phases, 
       totalScore: { for: totalFor, against: totalAgainst },
-      overallEffective,
-      overallTotal,
+      allBowls,
+      allStats,
+      forehandStats,
+      backhandStats,
+      gameHeatmap,
       maxHeatmapCount: maxCount,
     };
   }, [game]);
@@ -238,13 +331,12 @@ export default function GameAnalysis() {
   }
 
   const result = totalScore.for > totalScore.against ? "WIN" : totalScore.for < totalScore.against ? "LOSS" : "DRAW";
-  const overallPercent = overallTotal > 0 ? Math.round((overallEffective / overallTotal) * 100) : 0;
-
   const bestPhase = phases.length > 0 ? phases.reduce((a, b) => a.effectivePercent > b.effectivePercent ? a : b) : null;
   const worstPhase = phases.length > 0 ? phases.reduce((a, b) => a.effectivePercent < b.effectivePercent ? a : b) : null;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Header */}
       <div className="flex items-center gap-3 pt-2">
         <Button variant="ghost" size="icon" onClick={() => setLocation("/games")} data-testid="button-back">
           <ArrowLeft className="h-5 w-5" />
@@ -266,18 +358,118 @@ export default function GameAnalysis() {
         </div>
       </div>
 
-      {/* Overall Effectiveness */}
+      {/* Overall Stats */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-primary">{overallPercent}%</div>
-            <p className="text-sm text-muted-foreground mt-1">Overall Effectiveness</p>
-            <p className="text-xs text-muted-foreground">{overallEffective} of {overallTotal} bowls</p>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Activity className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Overall Performance</CardTitle>
+              <p className="text-xs text-muted-foreground">{allStats.total} bowls</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-center py-3 bg-primary/5 rounded-xl border border-primary/10">
+            <span className="text-4xl font-bold text-primary">{allStats.effectivePercent}%</span>
+            <p className="text-sm text-muted-foreground mt-1">Bowl Effectiveness</p>
+            <p className="text-xs text-muted-foreground">{allStats.effective} of {allStats.total} effective</p>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+            <div>
+              <p className="text-sm font-medium">First Bowl</p>
+              <p className="text-xs text-muted-foreground">{allStats.firstBowlEffective} of {allStats.firstBowlTotal}</p>
+            </div>
+            <span className="text-xl font-bold">{allStats.firstBowlPercent}%</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-muted/30 rounded-lg text-center">
+              <p className="text-xs text-muted-foreground mb-1">Weight</p>
+              <div className="flex justify-center gap-2 text-xs">
+                <span className="text-blue-600">{allStats.shortPercent}% short</span>
+                <span className="text-muted-foreground">|</span>
+                <span className="text-orange-600">{allStats.heavyPercent}% heavy</span>
+              </div>
+              <p className="text-sm font-medium mt-1 text-green-600">{allStats.goodWeightPercent}% good</p>
+            </div>
+            <div className="p-3 bg-muted/30 rounded-lg text-center">
+              <p className="text-xs text-muted-foreground mb-1">Line</p>
+              <div className="flex justify-center gap-2 text-xs">
+                <span className="text-purple-600">{allStats.narrowPercent}% narrow</span>
+                <span className="text-muted-foreground">|</span>
+                <span className="text-amber-600">{allStats.widePercent}% wide</span>
+              </div>
+              <p className="text-sm font-medium mt-1 text-green-600">{allStats.goodLinePercent}% on line</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Phase Breakdown with Heatmaps */}
+      {/* Hand Comparison */}
+      {forehandStats.total > 0 && backhandStats.total > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Hand className="h-4 w-4 text-primary" />
+              </div>
+              <CardTitle className="text-base">By Hand</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-600 font-medium mb-1">Forehand</p>
+                <span className="text-2xl font-bold text-blue-600">{forehandStats.effectivePercent}%</span>
+                <p className="text-xs text-muted-foreground mt-1">{forehandStats.effective}/{forehandStats.total} bowls</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/30 rounded-xl border border-purple-200 dark:border-purple-800">
+                <p className="text-xs text-purple-600 font-medium mb-1">Backhand</p>
+                <span className="text-2xl font-bold text-purple-600">{backhandStats.effectivePercent}%</span>
+                <p className="text-xs text-muted-foreground mt-1">{backhandStats.effective}/{backhandStats.total} bowls</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Heatmap */}
+      {allBowls.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Target className="h-4 w-4 text-primary" />
+              </div>
+              <CardTitle className="text-base">Bowl Distribution</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex justify-center">
+              <HeatmapCanvas heatmap={gameHeatmap} maxCount={maxHeatmapCount} size={280} />
+            </div>
+            <div className="mt-4 space-y-2 max-w-[280px] mx-auto">
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span>Short</span>
+                <span>Heavy</span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{
+                background: 'linear-gradient(to right, rgb(0, 100, 200), rgb(0, 200, 150), rgb(100, 200, 50), rgb(255, 200, 0), rgb(255, 120, 0), rgb(255, 40, 40))'
+              }} />
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span>Narrow</span>
+                <span>Wide</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Phase Breakdown with Mini Heatmaps */}
       {phases.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -306,9 +498,8 @@ export default function GameAnalysis() {
                       <span className="text-xs font-medium text-muted-foreground">{phase.name}</span>
                     </div>
                     
-                    {/* Mini Heatmap */}
                     <div className="flex justify-center mb-2">
-                      <MiniHeatmap heatmap={phase.heatmap} maxCount={maxHeatmapCount} size={90} />
+                      <HeatmapCanvas heatmap={phase.heatmap} maxCount={maxHeatmapCount} size={90} />
                     </div>
                     
                     <div className={cn(
@@ -337,7 +528,7 @@ export default function GameAnalysis() {
         </Card>
       )}
 
-      {/* End by End Toggle */}
+      {/* End by End */}
       <Card>
         <CardHeader 
           className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors"
