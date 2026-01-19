@@ -18,6 +18,7 @@ const AnalysisEffectiveness = lazy(() => import("@/pages/analysis-effectiveness"
 const AnalysisHeatmap = lazy(() => import("@/pages/analysis-heatmap"));
 const AnalysisLength = lazy(() => import("@/pages/analysis-length"));
 const AnalysisInsights = lazy(() => import("@/pages/analysis-insights"));
+const GameAnalysis = lazy(() => import("@/pages/game-analysis"));
 const Account = lazy(() => import("@/pages/account"));
 const Admin = lazy(() => import("@/pages/admin"));
 const GameEdit = lazy(() => import("@/pages/game-edit"));
@@ -63,6 +64,7 @@ function Router() {
           <Route path="/analysis/heatmap" component={AnalysisHeatmap} />
           <Route path="/analysis/length" component={AnalysisLength} />
           <Route path="/analysis/insights" component={AnalysisInsights} />
+          <Route path="/games/:id/analysis" component={GameAnalysis} />
           <Route path="/account" component={Account} />
           <Route path="/admin" component={Admin} />
           <Route path="/games/:id/edit" component={GameEdit} />
