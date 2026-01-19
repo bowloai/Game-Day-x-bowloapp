@@ -541,12 +541,12 @@ export default function Games() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setLocation(`/games/${game.id}/analysis`)}
+                            onClick={() => setLocation(`/analysis?game=${game.id}`)}
                             data-testid={`button-analyze-${game.id}`}
                             className="rounded-xl"
                           >
                             <BarChart3 className="h-4 w-4 mr-1" />
-                            Analysis
+                            Analyze
                           </Button>
                           <ShareGameSummary 
                             game={game} 

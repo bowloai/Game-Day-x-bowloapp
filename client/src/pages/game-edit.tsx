@@ -6,10 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Pencil, Save, Check } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatResultShort, isEffective } from "@/lib/bowlResults";
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Save, Check, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Bowl, End } from "@shared/schema";
@@ -128,6 +127,7 @@ export default function GameEdit() {
   const updateBowl = useUpdateBowl();
   const { toast } = useToast();
 
+  const [openEnds, setOpenEnds] = useState<Set<string>>(new Set());
   const [editingBowl, setEditingBowl] = useState<BowlWithEnd | null>(null);
   const [editingEndScores, setEditingEndScores] = useState<{ endId: string; scoreFor: number; scoreAgainst: number } | null>(null);
   const [gridSelection, setGridSelection] = useState<{ row: number; col: number } | null>(null);
@@ -192,9 +192,21 @@ export default function GameEdit() {
           <div className="w-2 h-2 rounded-full bg-primary/60" />
         )}
         {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
-        {isSelected && <Check className="absolute -top-1 -right-1 w-3 h-3" />}
+        {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
       </button>
     );
+  };
+
+  const toggleEnd = (endId: string) => {
+    setOpenEnds(prev => {
+      const next = new Set(prev);
+      if (next.has(endId)) {
+        next.delete(endId);
+      } else {
+        next.add(endId);
+      }
+      return next;
+    });
   };
 
   const handleSaveBowl = async () => {
@@ -302,7 +314,7 @@ export default function GameEdit() {
       </Card>
 
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold">End by End</h2>
+        <h2 className="text-lg font-semibold">Ends & Bowls</h2>
         
         {sortedEnds.length === 0 ? (
           <Card>
@@ -311,104 +323,110 @@ export default function GameEdit() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10 text-center">End</TableHead>
-                    <TableHead className="w-14 text-center">Score</TableHead>
-                    <TableHead className="w-12 text-center">Eff</TableHead>
-                    <TableHead>Bowls</TableHead>
-                    <TableHead className="w-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedEnds.map((end) => {
-                    const sortedBowls = (end.bowls || []).sort((a, b) => a.bowlNumber - b.bowlNumber);
-                    const effectiveCount = sortedBowls.filter(b => isEffective(b.result)).length;
-                    const totalBowls = sortedBowls.length;
-                    const effPercent = totalBowls > 0 ? Math.round((effectiveCount / totalBowls) * 100) : 0;
-                    return (
-                      <TableRow key={end.id} className={cn(end.isDead && "opacity-50")}>
-                        <TableCell className="text-center font-medium px-2">
-                          {end.endNumber}
-                          {end.isDead && <span className="block text-[10px] text-destructive">Dead</span>}
-                        </TableCell>
-                        <TableCell className="text-center px-2">
-                          <div className="flex items-center justify-center gap-0.5 font-mono text-sm">
-                            <span className={cn((end.scoreFor || 0) > (end.scoreAgainst || 0) && "text-green-600 font-bold")}>
-                              {end.scoreFor || 0}
-                            </span>
-                            <span className="text-muted-foreground">-</span>
-                            <span className={cn((end.scoreAgainst || 0) > (end.scoreFor || 0) && "text-red-600 font-bold")}>
-                              {end.scoreAgainst || 0}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center px-2">
+          sortedEnds.map((end) => (
+            <Collapsible
+              key={end.id}
+              open={openEnds.has(end.id)}
+              onOpenChange={() => toggleEnd(end.id)}
+            >
+              <Card className={cn(end.isDead && "opacity-60")}>
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {openEnds.has(end.id) ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <CardTitle className="text-base">End {end.endNumber}</CardTitle>
+                        {end.isDead && (
+                          <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded">Dead</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 font-mono">
                           <span className={cn(
-                            "font-mono text-sm font-medium",
-                            effPercent >= 75 ? "text-green-600" :
-                            effPercent >= 50 ? "text-green-500" :
-                            effPercent >= 25 ? "text-amber-500" :
-                            "text-red-500"
+                            "font-bold",
+                            (end.scoreFor || 0) > (end.scoreAgainst || 0) ? "text-green-600" : ""
                           )}>
-                            {effectiveCount}/{totalBowls}
+                            {end.scoreFor || 0}
                           </span>
-                        </TableCell>
-                        <TableCell className="px-2">
-                          <div className="flex flex-wrap gap-1">
-                            {sortedBowls.length > 0 ? (
-                              sortedBowls.map((bowl) => {
-                                const bowlIsEffective = isEffective(bowl.result);
-                                const isForehand = bowl.hand === "FOREHAND" || bowl.hand === "Forehand";
-                                return (
-                                  <button
-                                    key={bowl.id}
-                                    onClick={() => setEditingBowl({ ...bowl, endId: end.id })}
-                                    className={cn(
-                                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium transition-colors hover:ring-1 hover:ring-primary",
-                                      bowlIsEffective
-                                        ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                                        : isForehand
-                                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-                                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
-                                    )}
-                                    data-testid={`bowl-${bowl.id}`}
-                                  >
-                                    <span className="opacity-60">{bowl.bowlNumber}.</span>
-                                    <span>{formatResultShort(bowl.result)}</span>
-                                  </button>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-muted-foreground">-</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => setEditingEndScores({
+                          <span className="text-muted-foreground">-</span>
+                          <span className={cn(
+                            "font-bold",
+                            (end.scoreAgainst || 0) > (end.scoreFor || 0) ? "text-green-600" : ""
+                          )}>
+                            {end.scoreAgainst || 0}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingEndScores({
                               endId: end.id,
                               scoreFor: end.scoreFor || 0,
                               scoreAgainst: end.scoreAgainst || 0,
-                            })}
-                            data-testid={`button-edit-end-score-${end.id}`}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                            });
+                          }}
+                          data-testid={`button-edit-end-score-${end.id}`}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 pb-4 px-4">
+                    <div className="space-y-2">
+                      {end.bowls && end.bowls.length > 0 ? (
+                        end.bowls
+                          .sort((a, b) => a.bowlNumber - b.bowlNumber)
+                          .map((bowl) => (
+                            <div
+                              key={bowl.id}
+                              className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                              data-testid={`bowl-${bowl.id}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium w-16">Bowl {bowl.bowlNumber}</span>
+                                <span className={cn(
+                                  "text-xs px-2 py-1 rounded",
+                                  bowl.hand === "FOREHAND" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                )}>
+                                  {bowl.hand === "FOREHAND" ? "FH" : "BH"}
+                                </span>
+                                <span className={cn(
+                                  "text-xs px-2 py-1 rounded",
+                                  getResultColor(bowl.result)
+                                )}>
+                                  {getResultLabel(bowl.result)}
+                                </span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setEditingBowl({ ...bowl, endId: end.id })}
+                                data-testid={`button-edit-bowl-${bowl.id}`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-2">No bowls recorded</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          ))
         )}
       </div>
 
