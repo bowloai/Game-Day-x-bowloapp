@@ -378,30 +378,33 @@ export default function AnalysisHeatmap() {
             </CardContent>
           </Card>
 
-          <HeatmapCard 
-            heatmap={allHeatmap} 
-            maxCount={maxHeatmapCount} 
-            title="All Bowls"
-            icon={Target}
-            accentColor="text-primary"
-            bowlCount={allCount}
-          />
-          <HeatmapCard 
-            heatmap={forehandHeatmap} 
-            maxCount={maxHeatmapCount} 
-            title="Forehand"
-            icon={CircleDot}
-            accentColor="text-sky-600 dark:text-sky-400"
-            bowlCount={forehandCount}
-          />
-          <HeatmapCard 
-            heatmap={backhandHeatmap} 
-            maxCount={maxHeatmapCount} 
-            title="Backhand"
-            icon={CircleDot}
-            accentColor="text-violet-600 dark:text-violet-400"
-            bowlCount={backhandCount}
-          />
+          {/* Desktop grid layout for heatmap cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <HeatmapCard 
+              heatmap={allHeatmap} 
+              maxCount={maxHeatmapCount} 
+              title="All Bowls"
+              icon={Target}
+              accentColor="text-primary"
+              bowlCount={allCount}
+            />
+            <HeatmapCard 
+              heatmap={forehandHeatmap} 
+              maxCount={maxHeatmapCount} 
+              title="Forehand"
+              icon={CircleDot}
+              accentColor="text-sky-600 dark:text-sky-400"
+              bowlCount={forehandCount}
+            />
+            <HeatmapCard 
+              heatmap={backhandHeatmap} 
+              maxCount={maxHeatmapCount} 
+              title="Backhand"
+              icon={CircleDot}
+              accentColor="text-violet-600 dark:text-violet-400"
+              bowlCount={backhandCount}
+            />
+          </div>
         </div>
       )}
     </div>

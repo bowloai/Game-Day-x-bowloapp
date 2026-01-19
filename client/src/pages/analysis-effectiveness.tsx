@@ -310,24 +310,27 @@ export default function AnalysisEffectiveness() {
             </CardContent>
           </Card>
 
-          <StatCard 
-            title="All Bowls" 
-            icon={Target}
-            stats={allStats}
-            accentColor="text-primary"
-          />
-          <StatCard 
-            title="Forehand" 
-            icon={CircleDot}
-            stats={forehandStats}
-            accentColor="text-sky-600 dark:text-sky-400"
-          />
-          <StatCard 
-            title="Backhand" 
-            icon={CircleDot}
-            stats={backhandStats}
-            accentColor="text-violet-600 dark:text-violet-400"
-          />
+          {/* Desktop grid layout for stat cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <StatCard 
+              title="All Bowls" 
+              icon={Target}
+              stats={allStats}
+              accentColor="text-primary"
+            />
+            <StatCard 
+              title="Forehand" 
+              icon={CircleDot}
+              stats={forehandStats}
+              accentColor="text-sky-600 dark:text-sky-400"
+            />
+            <StatCard 
+              title="Backhand" 
+              icon={CircleDot}
+              stats={backhandStats}
+              accentColor="text-violet-600 dark:text-violet-400"
+            />
+          </div>
         </div>
       )}
     </div>

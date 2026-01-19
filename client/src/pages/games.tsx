@@ -425,7 +425,7 @@ export default function Games() {
       </div>
 
       {/* Games List */}
-      <div className="px-4 space-y-3">
+      <div className="px-4">
         {filteredGames.length === 0 ? (
           <Card className="border-0 shadow-md">
             <CardContent className="py-12 text-center">
@@ -446,7 +446,8 @@ export default function Games() {
             </CardContent>
           </Card>
         ) : (
-          filteredGames.map(game => {
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filteredGames.map(game => {
             const isCompleted = game.status === 'COMPLETED';
             const isInProgress = game.status === 'IN_PROGRESS';
             const { scoreFor, scoreAgainst } = getGameScore(game);
@@ -605,7 +606,8 @@ export default function Games() {
                 </CardContent>
               </Card>
             );
-          })
+          })}
+          </div>
         )}
       </div>
       

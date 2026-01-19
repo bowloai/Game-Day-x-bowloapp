@@ -1242,14 +1242,16 @@ export default function Analysis() {
         </div>
       )}
 
-      {/* Stats - Simplified to All Bowls only, clickable for hand breakdown */}
+      {/* Effectiveness and Length - side by side on desktop */}
       {allStats && allStats.total > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Stats - Simplified to All Bowls only, clickable for hand breakdown */}
         <div 
           className="cursor-pointer" 
           onClick={() => setLocation(`/analysis/effectiveness${buildFilterQuery()}`)}
           data-testid="card-effectiveness"
         >
-          <Card className="shadow-soft hover:border-primary/50 transition-colors">
+          <Card className="shadow-soft hover:border-primary/50 transition-colors h-full">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1318,11 +1320,10 @@ export default function Analysis() {
             </CardContent>
           </Card>
         </div>
-      )}
 
-      {/* Effectiveness by Jack Length - Redesigned with weight/line breakdown */}
-      {lengthStats && allStats && allStats.total > 0 && (
-        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation(`/analysis/length${buildFilterQuery()}`)} data-testid="card-jack-length">
+        {/* Effectiveness by Jack Length - Redesigned with weight/line breakdown */}
+        {lengthStats && (
+        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors h-full" onClick={() => setLocation(`/analysis/length${buildFilterQuery()}`)} data-testid="card-jack-length">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1392,6 +1393,8 @@ export default function Analysis() {
             </div>
           </CardContent>
         </Card>
+        )}
+      </div>
       )}
 
       {/* Stage and Heatmap - side by side on desktop */}

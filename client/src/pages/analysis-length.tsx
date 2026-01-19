@@ -312,27 +312,30 @@ export default function AnalysisLength() {
             </CardContent>
           </Card>
 
-          <LengthCard 
-            title="All Bowls"
-            icon={Ruler}
-            accentColor="text-primary"
-            stats={allStats}
-            totalBowls={totalBowls}
-          />
-          <LengthCard 
-            title="Forehand"
-            icon={Target}
-            accentColor="text-sky-600"
-            stats={forehandStats}
-            totalBowls={forehandTotal}
-          />
-          <LengthCard 
-            title="Backhand"
-            icon={CircleDot}
-            accentColor="text-violet-600"
-            stats={backhandStats}
-            totalBowls={backhandTotal}
-          />
+          {/* Desktop grid layout for length cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <LengthCard 
+              title="All Bowls"
+              icon={Ruler}
+              accentColor="text-primary"
+              stats={allStats}
+              totalBowls={totalBowls}
+            />
+            <LengthCard 
+              title="Forehand"
+              icon={Target}
+              accentColor="text-sky-600"
+              stats={forehandStats}
+              totalBowls={forehandTotal}
+            />
+            <LengthCard 
+              title="Backhand"
+              icon={CircleDot}
+              accentColor="text-violet-600"
+              stats={backhandStats}
+              totalBowls={backhandTotal}
+            />
+          </div>
         </div>
       )}
     </div>
