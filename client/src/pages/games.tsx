@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useState, useMemo, useEffect } from "react";
 import { format, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear, parseISO } from "date-fns";
-import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil, Trophy, TrendingDown, Minus } from "lucide-react";
+import { Calendar as CalendarIcon, Trash2, BarChart3, Play, X, Download, Pencil, Trophy, TrendingDown, Minus, List } from "lucide-react";
 import { ShareGameSummary } from "@/components/share-game-summary";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -538,6 +538,16 @@ export default function Games() {
                       )}
                       {isCompleted && (
                         <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation(`/games/${game.id}/edit`)}
+                            data-testid={`button-view-ends-${game.id}`}
+                            className="rounded-xl"
+                          >
+                            <List className="h-4 w-4 mr-1" />
+                            Ends
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
