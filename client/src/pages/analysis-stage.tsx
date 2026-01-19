@@ -2,7 +2,8 @@ import { useGamesFull } from "@/lib/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Timer, ChevronDown, ChevronUp } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ArrowLeft, Timer, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useMemo, useRef, useEffect, useState } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide, formatResultShort, getResultColorClass } from "@/lib/bowlResults";
@@ -197,11 +198,27 @@ export default function AnalysisStage() {
   const search = useSearch();
   const { data: gamesWithDetails = [], isLoading } = useGamesFull();
   const [expandedEnds, setExpandedEnds] = useState<Set<string>>(new Set());
+  const [endRange, setEndRange] = useState<[number, number] | null>(null);
 
-  const { stageData, isSingleGame, singleGame, endsByNumber, hasFilters } = useMemo(() => {
+  // Get filtered games and max ends first
+  const { filteredGames, maxEnds, hasFilters } = useMemo(() => {
     const searchParams = new URLSearchParams(search);
-    const filteredGames = applyFilters(gamesWithDetails, searchParams);
+    const filtered = applyFilters(gamesWithDetails, searchParams);
     const hasFilters = searchParams.toString().length > 0;
+    const maxEnds = Math.max(...filtered.map(g => g.totalEnds || 21), 21);
+    return { filteredGames: filtered, maxEnds, hasFilters };
+  }, [gamesWithDetails, search]);
+
+  // Initialize end range when max ends changes
+  useEffect(() => {
+    if (maxEnds > 0 && endRange === null) {
+      setEndRange([1, maxEnds]);
+    }
+  }, [maxEnds, endRange]);
+
+  const currentRange = endRange || [1, maxEnds];
+
+  const { stageData, rangeStats, isSingleGame, singleGame, endsByNumber } = useMemo(() => {
     const isSingleGame = filteredGames.length === 1;
     const singleGame = isSingleGame ? filteredGames[0] : null;
     
@@ -224,6 +241,12 @@ export default function AnalysisStage() {
         }))
       ) || [];
     });
+
+    // Filter bowls by end range for the slider stats
+    const rangeBowls = allBowlsWithMeta.filter(b => 
+      b.endNumber >= currentRange[0] && b.endNumber <= currentRange[1]
+    );
+    const rangeStats = calculateStats(rangeBowls);
 
     const getStageData = (stage: 'start' | 'middle' | 'finish') => {
       const stageBowls = allBowlsWithMeta.filter(b => b.stage === stage);
@@ -251,8 +274,8 @@ export default function AnalysisStage() {
       });
     }
 
-    return { stageData, isSingleGame, singleGame, endsByNumber, hasFilters };
-  }, [gamesWithDetails, search]);
+    return { stageData, rangeStats, isSingleGame, singleGame, endsByNumber };
+  }, [filteredGames, currentRange]);
 
   if (isLoading) {
     return (
@@ -297,6 +320,64 @@ export default function AnalysisStage() {
           </p>
         </div>
       </div>
+
+      {/* End Range Slider */}
+      <Card className="shadow-soft" data-testid="card-end-range">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <SlidersHorizontal className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Filter by End Range</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Ends {currentRange[0]} to {currentRange[1]} ({rangeStats.total} bowls)
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Effectiveness for selected range */}
+          <div className="text-center py-4 bg-primary/5 rounded-xl border border-primary/10">
+            <span className="text-4xl font-bold text-primary">
+              {rangeStats.effectivePercent}%
+            </span>
+            <p className="text-sm text-muted-foreground mt-1">Effectiveness</p>
+          </div>
+
+          {/* Dual-handle slider */}
+          <div className="px-2 py-4">
+            <Slider
+              value={currentRange}
+              onValueChange={(value) => setEndRange(value as [number, number])}
+              min={1}
+              max={maxEnds}
+              step={1}
+              data-testid="slider-end-range"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+              <span>End 1</span>
+              <span>End {maxEnds}</span>
+            </div>
+          </div>
+
+          {/* Quick breakdown */}
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="bg-rose-50 dark:bg-rose-950/30 rounded p-2">
+              <span className="font-semibold text-rose-600 dark:text-rose-400">{rangeStats.shortPercent}%</span>
+              <p className="text-muted-foreground">Short</p>
+            </div>
+            <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
+              <span className="font-semibold text-green-600 dark:text-green-400">{rangeStats.goodWeightPercent}%</span>
+              <p className="text-muted-foreground">Good</p>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-950/30 rounded p-2">
+              <span className="font-semibold text-slate-600 dark:text-slate-400">{rangeStats.heavyPercent}%</span>
+              <p className="text-muted-foreground">Heavy</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stage breakdown cards */}
       {(['start', 'middle', 'finish'] as const).map((stage) => {
