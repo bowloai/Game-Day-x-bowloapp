@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Pencil, Save, Check } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatResultShort } from "@/lib/bowlResults";
+import { formatResultShort, isEffective } from "@/lib/bowlResults";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Bowl, End } from "@shared/schema";
@@ -316,23 +316,27 @@ export default function GameEdit() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12 text-center">End</TableHead>
-                    <TableHead className="w-16 text-center">Score</TableHead>
+                    <TableHead className="w-10 text-center">End</TableHead>
+                    <TableHead className="w-14 text-center">Score</TableHead>
+                    <TableHead className="w-12 text-center">Eff</TableHead>
                     <TableHead>Bowls</TableHead>
-                    <TableHead className="w-10"></TableHead>
+                    <TableHead className="w-8"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sortedEnds.map((end) => {
                     const sortedBowls = (end.bowls || []).sort((a, b) => a.bowlNumber - b.bowlNumber);
+                    const effectiveCount = sortedBowls.filter(b => isEffective(b.result)).length;
+                    const totalBowls = sortedBowls.length;
+                    const effPercent = totalBowls > 0 ? Math.round((effectiveCount / totalBowls) * 100) : 0;
                     return (
                       <TableRow key={end.id} className={cn(end.isDead && "opacity-50")}>
-                        <TableCell className="text-center font-medium">
+                        <TableCell className="text-center font-medium px-2">
                           {end.endNumber}
                           {end.isDead && <span className="block text-[10px] text-destructive">Dead</span>}
                         </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1 font-mono text-sm">
+                        <TableCell className="text-center px-2">
+                          <div className="flex items-center justify-center gap-0.5 font-mono text-sm">
                             <span className={cn((end.scoreFor || 0) > (end.scoreAgainst || 0) && "text-green-600 font-bold")}>
                               {end.scoreFor || 0}
                             </span>
@@ -342,35 +346,52 @@ export default function GameEdit() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center px-2">
+                          <span className={cn(
+                            "font-mono text-sm font-medium",
+                            effPercent >= 75 ? "text-green-600" :
+                            effPercent >= 50 ? "text-green-500" :
+                            effPercent >= 25 ? "text-amber-500" :
+                            "text-red-500"
+                          )}>
+                            {effectiveCount}/{totalBowls}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-2">
                           <div className="flex flex-wrap gap-1">
                             {sortedBowls.length > 0 ? (
-                              sortedBowls.map((bowl) => (
-                                <button
-                                  key={bowl.id}
-                                  onClick={() => setEditingBowl({ ...bowl, endId: end.id })}
-                                  className={cn(
-                                    "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium transition-colors hover:ring-1 hover:ring-primary",
-                                    bowl.hand === "FOREHAND" || bowl.hand === "Forehand"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
-                                  )}
-                                  data-testid={`bowl-${bowl.id}`}
-                                >
-                                  <span className="opacity-60">{bowl.bowlNumber}.</span>
-                                  <span>{formatResultShort(bowl.result)}</span>
-                                </button>
-                              ))
+                              sortedBowls.map((bowl) => {
+                                const bowlIsEffective = isEffective(bowl.result);
+                                const isForehand = bowl.hand === "FOREHAND" || bowl.hand === "Forehand";
+                                return (
+                                  <button
+                                    key={bowl.id}
+                                    onClick={() => setEditingBowl({ ...bowl, endId: end.id })}
+                                    className={cn(
+                                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium transition-colors hover:ring-1 hover:ring-primary",
+                                      bowlIsEffective
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                        : isForehand
+                                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                                          : "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+                                    )}
+                                    data-testid={`bowl-${bowl.id}`}
+                                  >
+                                    <span className="opacity-60">{bowl.bowlNumber}.</span>
+                                    <span>{formatResultShort(bowl.result)}</span>
+                                  </button>
+                                );
+                              })
                             ) : (
-                              <span className="text-xs text-muted-foreground">No bowls</span>
+                              <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="px-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className="h-6 w-6"
                             onClick={() => setEditingEndScores({
                               endId: end.id,
                               scoreFor: end.scoreFor || 0,
