@@ -7,7 +7,16 @@ import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { isEffective, formatResultShort } from "@/lib/bowlResults";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
+
+type Bowl = {
+  id: string;
+  result: string;
+  hand: string;
+  bowlNumber: number;
+  gridRow?: number | null;
+  gridCol?: number | null;
+};
 
 type PhaseStats = {
   name: string;
@@ -15,7 +24,130 @@ type PhaseStats = {
   effectiveCount: number;
   totalBowls: number;
   effectivePercent: number;
+  bowls: Bowl[];
+  heatmap: number[][];
 };
+
+function mapResultToGrid(result: string): { row: number, col: number } {
+  const r = result.toLowerCase();
+  let row = 4;
+  if (r.startsWith('short') || r === 'short') row = 1;
+  else if (r.startsWith('heavy') || r === 'heavy') row = 7;
+  let col = 4;
+  if (r.includes('narrow')) col = 1;
+  else if (r.includes('wide')) col = 7;
+  return { row, col };
+}
+
+function calculateHeatmap(bowls: Bowl[]): number[][] {
+  const grid = Array.from({ length: 9 }, () => Array(9).fill(0));
+  bowls.forEach(bowl => {
+    let row: number, col: number;
+    if (bowl.gridRow !== null && bowl.gridRow !== undefined && 
+        bowl.gridCol !== null && bowl.gridCol !== undefined) {
+      row = bowl.gridRow;
+      col = bowl.gridCol;
+    } else {
+      const mapped = mapResultToGrid(bowl.result);
+      row = mapped.row;
+      col = mapped.col;
+    }
+    if (row >= 0 && row < 9 && col >= 0 && col < 9) {
+      grid[row][col]++;
+    }
+  });
+  return grid;
+}
+
+function getThermalColor(intensity: number): { r: number, g: number, b: number } {
+  if (intensity <= 0.2) {
+    const t = intensity / 0.2;
+    return { r: 0, g: Math.round(100 + t * 155), b: Math.round(200 - t * 50) };
+  } else if (intensity <= 0.4) {
+    const t = (intensity - 0.2) / 0.2;
+    return { r: 0, g: Math.round(255 - t * 55), b: Math.round(150 - t * 100) };
+  } else if (intensity <= 0.6) {
+    const t = (intensity - 0.4) / 0.2;
+    return { r: Math.round(t * 255), g: 200, b: Math.round(50 - t * 50) };
+  } else if (intensity <= 0.8) {
+    const t = (intensity - 0.6) / 0.2;
+    return { r: 255, g: Math.round(200 - t * 80), b: 0 };
+  } else {
+    const t = (intensity - 0.8) / 0.2;
+    return { r: 255, g: Math.round(120 - t * 80), b: Math.round(t * 40) };
+  }
+}
+
+function MiniHeatmap({ heatmap, maxCount, size = 100 }: { heatmap: number[][], maxCount: number, size?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cellSize = size / 9;
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+    
+    ctx.fillStyle = 'rgb(248, 250, 245)';
+    ctx.fillRect(0, 0, size, size);
+    
+    ctx.filter = 'blur(10px)';
+    
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        const count = heatmap[row][col];
+        if (count === 0) continue;
+        
+        const intensity = Math.min(count / Math.max(maxCount, 1), 1);
+        const x = col * cellSize + cellSize / 2;
+        const y = row * cellSize + cellSize / 2;
+        const radius = cellSize * (1.0 + intensity * 0.8);
+        
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        const color = getThermalColor(intensity);
+        gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.6 + intensity * 0.3})`);
+        gradient.addColorStop(0.4, `rgba(${color.r}, ${color.g}, ${color.b}, ${0.25 + intensity * 0.15})`);
+        gradient.addColorStop(1, `rgba(${color.r}, ${color.g}, ${color.b}, 0)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    ctx.filter = 'none';
+    
+    // Draw jack marker
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw effective zone border
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    const zoneStart = (3 / 9) * size;
+    const zoneSize = (3 / 9) * size;
+    ctx.strokeRect(zoneStart, zoneStart, zoneSize, zoneSize);
+  }, [heatmap, maxCount, size, cellSize]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: size, height: size }}
+      className="rounded-lg"
+    />
+  );
+}
 
 export default function GameAnalysis() {
   const { id } = useParams<{ id: string }>();
@@ -23,8 +155,8 @@ export default function GameAnalysis() {
   const { data: game, isLoading } = useGameFull(id);
   const [showEndByEnd, setShowEndByEnd] = useState(false);
 
-  const { sortedEnds, phases, totalScore, overallEffective, overallTotal } = useMemo(() => {
-    if (!game?.ends) return { sortedEnds: [], phases: [], totalScore: { for: 0, against: 0 }, overallEffective: 0, overallTotal: 0 };
+  const { sortedEnds, phases, totalScore, overallEffective, overallTotal, maxHeatmapCount } = useMemo(() => {
+    if (!game?.ends) return { sortedEnds: [], phases: [], totalScore: { for: 0, against: 0 }, overallEffective: 0, overallTotal: 0, maxHeatmapCount: 1 };
     
     const sorted = [...game.ends]
       .filter(e => e.isCompleted)
@@ -38,15 +170,18 @@ export default function GameAnalysis() {
     const endEnds = sorted.slice(thirdSize * 2);
     
     const calcPhase = (ends: typeof sorted, name: string): PhaseStats => {
-      const allBowls = ends.flatMap(e => e.bowls || []);
+      const allBowls = ends.flatMap(e => e.bowls || []) as Bowl[];
       const effective = allBowls.filter(b => isEffective(b.result)).length;
       const total = allBowls.length;
+      const heatmap = calculateHeatmap(allBowls);
       return {
         name,
         ends: ends.map(e => e.endNumber),
         effectiveCount: effective,
         totalBowls: total,
         effectivePercent: total > 0 ? Math.round((effective / total) * 100) : 0,
+        bowls: allBowls,
+        heatmap,
       };
     };
     
@@ -55,6 +190,16 @@ export default function GameAnalysis() {
       calcPhase(middleEnds, "Middle"),
       calcPhase(endEnds, "Finish"),
     ].filter(p => p.totalBowls > 0);
+    
+    // Find max count across all phases for consistent coloring
+    let maxCount = 1;
+    phases.forEach(p => {
+      p.heatmap.forEach(row => {
+        row.forEach(count => {
+          if (count > maxCount) maxCount = count;
+        });
+      });
+    });
     
     const totalFor = sorted.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
     const totalAgainst = sorted.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0);
@@ -69,6 +214,7 @@ export default function GameAnalysis() {
       totalScore: { for: totalFor, against: totalAgainst },
       overallEffective,
       overallTotal,
+      maxHeatmapCount: maxCount,
     };
   }, [game]);
 
@@ -94,7 +240,6 @@ export default function GameAnalysis() {
   const result = totalScore.for > totalScore.against ? "WIN" : totalScore.for < totalScore.against ? "LOSS" : "DRAW";
   const overallPercent = overallTotal > 0 ? Math.round((overallEffective / overallTotal) * 100) : 0;
 
-  // Find best and worst phases
   const bestPhase = phases.length > 0 ? phases.reduce((a, b) => a.effectivePercent > b.effectivePercent ? a : b) : null;
   const worstPhase = phases.length > 0 ? phases.reduce((a, b) => a.effectivePercent < b.effectivePercent ? a : b) : null;
 
@@ -132,7 +277,7 @@ export default function GameAnalysis() {
         </CardContent>
       </Card>
 
-      {/* Phase Breakdown */}
+      {/* Phase Breakdown with Heatmaps */}
       {phases.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -140,7 +285,7 @@ export default function GameAnalysis() {
             <p className="text-xs text-muted-foreground">How you performed through the game</p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {phases.map((phase) => {
                 const isBest = bestPhase && phase.name === bestPhase.name && phases.length > 1 && bestPhase.effectivePercent !== worstPhase?.effectivePercent;
                 const isWorst = worstPhase && phase.name === worstPhase.name && phases.length > 1 && bestPhase?.effectivePercent !== worstPhase.effectivePercent;
@@ -148,36 +293,38 @@ export default function GameAnalysis() {
                   <div 
                     key={phase.name}
                     className={cn(
-                      "text-center p-4 rounded-lg border",
+                      "text-center p-3 rounded-lg border",
                       isBest ? "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800" :
                       isWorst ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" :
                       "bg-muted/30"
                     )}
                   >
-                    <div className="flex items-center justify-center gap-1 mb-1">
+                    <div className="flex items-center justify-center gap-1 mb-2">
                       {isBest && <TrendingUp className="h-3 w-3 text-green-600" />}
                       {isWorst && <TrendingDown className="h-3 w-3 text-red-600" />}
                       {!isBest && !isWorst && <Minus className="h-3 w-3 text-muted-foreground" />}
                       <span className="text-xs font-medium text-muted-foreground">{phase.name}</span>
                     </div>
+                    
+                    {/* Mini Heatmap */}
+                    <div className="flex justify-center mb-2">
+                      <MiniHeatmap heatmap={phase.heatmap} maxCount={maxHeatmapCount} size={90} />
+                    </div>
+                    
                     <div className={cn(
-                      "text-2xl font-bold",
+                      "text-xl font-bold",
                       isBest ? "text-green-600" : isWorst ? "text-red-600" : "text-foreground"
                     )}>
                       {phase.effectivePercent}%
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {phase.effectiveCount}/{phase.totalBowls} bowls
-                    </div>
                     <div className="text-[10px] text-muted-foreground">
-                      Ends {phase.ends[0]}-{phase.ends[phase.ends.length - 1]}
+                      {phase.effectiveCount}/{phase.totalBowls} • Ends {phase.ends[0]}-{phase.ends[phase.ends.length - 1]}
                     </div>
                   </div>
                 );
               })}
             </div>
             
-            {/* Insight text */}
             {bestPhase && worstPhase && bestPhase.effectivePercent !== worstPhase.effectivePercent && (
               <p className="text-sm text-muted-foreground mt-4 text-center">
                 {bestPhase.effectivePercent - worstPhase.effectivePercent >= 20 
