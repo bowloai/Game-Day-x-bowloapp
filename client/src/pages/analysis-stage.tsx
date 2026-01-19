@@ -398,12 +398,15 @@ export default function AnalysisStage() {
             {Array.from(endsByNumber.entries()).sort((a, b) => a[0] - b[0]).map(([endNum, { id, bowls }]) => {
               const isExpanded = expandedEnds.has(id);
               const endStats = calculateStats(bowls);
+              const endStage = bowls[0]?.stage || 'start';
+              const stageLabel = endStage === 'start' ? 'Start' : endStage === 'middle' ? 'Middle' : 'Finish';
               return (
                 <Collapsible key={id} open={isExpanded} onOpenChange={() => toggleEnd(id)}>
                   <CollapsibleTrigger className="w-full" data-testid={`trigger-end-${endNum}`}>
                     <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
                         <span className="font-medium">End {endNum}</span>
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{stageLabel}</span>
                         <span className="text-sm text-muted-foreground">({bowls.length} bowls)</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -423,7 +426,6 @@ export default function AnalysisStage() {
                             <span className="capitalize text-xs bg-muted/50 px-2 py-0.5 rounded">
                               {bowl.hand?.toLowerCase() === 'forehand' ? 'FH' : 'BH'}
                             </span>
-                            <span className="text-xs text-muted-foreground capitalize">{bowl.stage}</span>
                           </div>
                           <span className={`font-medium ${getResultColorClass(bowl.result)}`}>
                             {formatResultShort(bowl.result)}
