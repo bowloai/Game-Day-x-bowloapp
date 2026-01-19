@@ -308,7 +308,7 @@ export default function AnalysisStage() {
         <Button 
           variant="ghost" 
           size="icon"
-          onClick={() => setLocation('/analysis')}
+          onClick={() => setLocation(`/analysis${search ? `?${search}` : ''}`)}
           data-testid="button-back"
         >
           <ArrowLeft className="h-5 w-5" />
