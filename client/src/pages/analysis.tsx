@@ -1394,83 +1394,88 @@ export default function Analysis() {
         </Card>
       )}
 
-      {/* Stage Breakdown - Start/Middle/Finish of End */}
-      {stageStats && allStats && allStats.total > 0 && (
-        <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation(`/analysis/stage${buildFilterQuery()}`)} data-testid="card-stage">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Timer className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Performance by Game Stage</CardTitle>
-                <p className="text-xs text-muted-foreground">Start, middle & finish of games (tap for details)</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-3">
-              {(['start', 'middle', 'finish'] as const).map((stage) => {
-                const stats = stageStats[stage].all;
-                const hasData = stats.total > 0;
-                const label = stage === 'start' ? 'Start' : stage === 'middle' ? 'Middle' : 'Finish';
-                return (
-                  <div key={stage} className="text-center p-3 bg-muted/30 rounded-lg">
-                    <div className={`text-2xl font-bold ${stats.effectivePercent >= 50 ? 'text-primary' : ''}`}>
-                      {hasData ? `${stats.effectivePercent}%` : '-'}
+      {/* Stage and Heatmap - side by side on desktop */}
+      {allStats && allStats.total > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Stage Breakdown - Start/Middle/Finish of End */}
+          {stageStats && (
+            <Card className="shadow-soft cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setLocation(`/analysis/stage${buildFilterQuery()}`)} data-testid="card-stage">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Timer className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Performance by Game Stage</CardTitle>
+                    <p className="text-xs text-muted-foreground">Start, middle & finish of games (tap for details)</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3">
+                  {(['start', 'middle', 'finish'] as const).map((stage) => {
+                    const stats = stageStats[stage].all;
+                    const hasData = stats.total > 0;
+                    const label = stage === 'start' ? 'Start' : stage === 'middle' ? 'Middle' : 'Finish';
+                    return (
+                      <div key={stage} className="text-center p-3 bg-muted/30 rounded-lg">
+                        <div className={`text-2xl font-bold ${stats.effectivePercent >= 50 ? 'text-primary' : ''}`}>
+                          {hasData ? `${stats.effectivePercent}%` : '-'}
+                        </div>
+                        <div className="text-sm font-medium mt-1">{label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {stats.total} bowls
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Heatmap Section - Simplified to overall only, clickable for details */}
+          {allHeatmap && (
+            <div 
+              className="cursor-pointer" 
+              onClick={() => setLocation(`/analysis/heatmap${buildFilterQuery()}`)}
+              data-testid="card-heatmap"
+            >
+              <Card className="shadow-soft overflow-hidden hover:border-primary/50 transition-colors h-full">
+                <CardHeader className="pb-2 bg-gradient-to-r from-primary/5 to-transparent">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    Bowl Landing Heatmap
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Tap to view forehand & backhand breakdown</p>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <HeatmapCanvas heatmap={allHeatmap} maxCount={maxHeatmapCount} />
+                  
+                  {/* Legend */}
+                  <div className="mt-4 space-y-2 max-w-[280px] mx-auto">
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <span>Short</span>
+                      <span>Heavy</span>
                     </div>
-                    <div className="text-sm font-medium mt-1">{label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {stats.total} bowls
+                    <div className="h-2 rounded-full overflow-hidden" style={{
+                      background: 'linear-gradient(to right, rgb(0, 100, 200), rgb(0, 200, 150), rgb(100, 200, 50), rgb(255, 200, 0), rgb(255, 120, 0), rgb(255, 40, 40))'
+                    }} />
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <span>Low</span>
+                      <span>High</span>
                     </div>
                   </div>
-                );
-              })}
+                  
+                  <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
+                    <span>N=Narrow</span>
+                    <span>&#9711; Jack</span>
+                    <span>W=Wide</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Heatmap Section - Simplified to overall only, clickable for details */}
-      {allHeatmap && allStats && allStats.total > 0 && (
-        <div 
-          className="cursor-pointer" 
-          onClick={() => setLocation(`/analysis/heatmap${buildFilterQuery()}`)}
-          data-testid="card-heatmap"
-        >
-          <Card className="shadow-soft overflow-hidden hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-2 bg-gradient-to-r from-primary/5 to-transparent">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                Bowl Landing Heatmap
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Tap to view forehand & backhand breakdown</p>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <HeatmapCanvas heatmap={allHeatmap} maxCount={maxHeatmapCount} />
-              
-              {/* Legend */}
-              <div className="mt-4 space-y-2 max-w-[280px] mx-auto">
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>Short</span>
-                  <span>Heavy</span>
-                </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{
-                  background: 'linear-gradient(to right, rgb(0, 100, 200), rgb(0, 200, 150), rgb(100, 200, 50), rgb(255, 200, 0), rgb(255, 120, 0), rgb(255, 40, 40))'
-                }} />
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>Low</span>
-                  <span>High</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
-                <span>N=Narrow</span>
-                <span>&#9711; Jack</span>
-                <span>W=Wide</span>
-              </div>
-            </CardContent>
-          </Card>
+          )}
         </div>
       )}
       
