@@ -205,19 +205,20 @@ export default function AnalysisStage() {
     const isSingleGame = filteredGames.length === 1;
     const singleGame = isSingleGame ? filteredGames[0] : null;
     
-    const classifyStage = (bowlNumber: number, bowlsPerEnd: number): 'start' | 'middle' | 'finish' => {
-      const third = bowlsPerEnd / 3;
-      if (bowlNumber <= Math.ceil(third)) return 'start';
-      if (bowlNumber <= Math.ceil(third * 2)) return 'middle';
+    // Classify stage based on end number within total ends (divide game into thirds)
+    const classifyStageByEndNumber = (endNumber: number, totalEnds: number): 'start' | 'middle' | 'finish' => {
+      const third = totalEnds / 3;
+      if (endNumber <= Math.ceil(third)) return 'start';
+      if (endNumber <= Math.ceil(third * 2)) return 'middle';
       return 'finish';
     };
 
     const allBowlsWithMeta: BowlWithMeta[] = filteredGames.flatMap(g => {
-      const bowlsPerEnd = g.bowlsPerEnd || 2;
+      const totalEnds = g.totalEnds || 21;
       return g.ends?.flatMap(e => 
         (e.bowls || []).map(b => ({ 
           ...b, 
-          stage: classifyStage(b.bowlNumber, bowlsPerEnd),
+          stage: classifyStageByEndNumber(e.endNumber, totalEnds),
           endId: e.id,
           endNumber: e.endNumber,
         }))
@@ -290,7 +291,7 @@ export default function AnalysisStage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-xl font-semibold">Performance by End Stage</h1>
+          <h1 className="text-xl font-semibold">Performance by Game Stage</h1>
           <p className="text-muted-foreground text-sm">
             {isSingleGame ? `vs ${singleGame?.opponent}` : 'All games'}{hasFilters && " (filtered)"}
           </p>
@@ -300,8 +301,8 @@ export default function AnalysisStage() {
       {/* Stage breakdown cards */}
       {(['start', 'middle', 'finish'] as const).map((stage) => {
         const data = stageData[stage];
-        const label = stage === 'start' ? 'Start of End' : stage === 'middle' ? 'Middle of End' : 'Finish of End';
-        const desc = stage === 'start' ? 'First bowls' : stage === 'middle' ? 'Middle bowls' : 'Final bowls';
+        const label = stage === 'start' ? 'Start of Game' : stage === 'middle' ? 'Middle of Game' : 'Finish of Game';
+        const desc = stage === 'start' ? 'First third of ends' : stage === 'middle' ? 'Middle third of ends' : 'Final third of ends';
         
         return (
           <Card key={stage} className="shadow-soft" data-testid={`card-stage-${stage}`}>

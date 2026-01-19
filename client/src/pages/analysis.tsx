@@ -675,23 +675,22 @@ export default function Analysis() {
       },
     };
 
-    // Calculate stage stats (start/middle/finish of each end)
-    // Get bowls per end from games to classify stages properly
-    const classifyStage = (bowlNumber: number, bowlsPerEnd: number): 'start' | 'middle' | 'finish' => {
-      const totalBowlsInEnd = bowlsPerEnd;
-      const third = totalBowlsInEnd / 3;
-      if (bowlNumber <= Math.ceil(third)) return 'start';
-      if (bowlNumber <= Math.ceil(third * 2)) return 'middle';
+    // Calculate stage stats (start/middle/finish of the game based on end number)
+    // Divide total ends into thirds: start = first third, middle = second third, finish = final third
+    const classifyStageByEndNumber = (endNumber: number, totalEnds: number): 'start' | 'middle' | 'finish' => {
+      const third = totalEnds / 3;
+      if (endNumber <= Math.ceil(third)) return 'start';
+      if (endNumber <= Math.ceil(third * 2)) return 'middle';
       return 'finish';
     };
 
     type BowlWithStage = Bowl & { stage: 'start' | 'middle' | 'finish' };
     const allBowlsWithStage: BowlWithStage[] = filteredGames.flatMap(g => {
-      const bowlsPerEnd = g.bowlsPerEnd || 2;
+      const totalEnds = g.totalEnds || 21;
       return g.ends?.flatMap(e => 
         (e.bowls || []).map(b => ({ 
           ...b, 
-          stage: classifyStage(b.bowlNumber, bowlsPerEnd) 
+          stage: classifyStageByEndNumber(e.endNumber, totalEnds) 
         }))
       ) || [];
     });
@@ -1403,8 +1402,8 @@ export default function Analysis() {
                 <Timer className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Performance by End Stage</CardTitle>
-                <p className="text-xs text-muted-foreground">Start, middle & finish of ends (tap for details)</p>
+                <CardTitle className="text-base">Performance by Game Stage</CardTitle>
+                <p className="text-xs text-muted-foreground">Start, middle & finish of games (tap for details)</p>
               </div>
             </div>
           </CardHeader>
