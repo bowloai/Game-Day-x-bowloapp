@@ -3,12 +3,17 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertGameSchema, insertEndSchema, insertBowlSchema, updateGameSchema, updateEndSchema, updateUserSchema } from "@shared/schema";
 import { fromError } from "zod-validation-error";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
+import type { User } from "@shared/schema";
 
-// Admin middleware - checks if user is admin
+function stripPassword(user: User): Omit<User, 'password'> {
+  const { password: _, ...rest } = user;
+  return rest;
+}
+
 const isAdmin: RequestHandler = async (req: any, res, next) => {
   try {
-    const userId = req.user?.claims?.sub;
+    const userId = req.session.userId;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -22,36 +27,36 @@ const isAdmin: RequestHandler = async (req: any, res, next) => {
   }
 };
 
-export async function registerRoutes(
+export function registerRoutes(
   httpServer: Server,
   app: Express
-): Promise<Server> {
+): Server {
   
-  // Auth middleware
-  await setupAuth(app);
+  setupAuth(app);
 
-  // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const user = await storage.getUser(userId);
-      res.json(user);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(stripPassword(user));
     } catch (error: any) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  // Update user profile
   app.patch('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const updates = updateUserSchema.parse(req.body);
       const user = await storage.updateUser(userId, updates);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      res.json(user);
+      res.json(stripPassword(user));
     } catch (error: any) {
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: fromError(error).toString() });
@@ -60,10 +65,9 @@ export async function registerRoutes(
     }
   });
 
-  // Delete all user game data (user can delete their own data)
   app.delete("/api/auth/data", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       await storage.deleteAllUserGameData(userId);
       res.status(204).send();
     } catch (error: any) {
@@ -80,7 +84,7 @@ export async function registerRoutes(
       const users = query 
         ? await storage.searchUsers(query)
         : await storage.getAllUsers();
-      res.json(users);
+      res.json(users.map(stripPassword));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -94,7 +98,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
       const stats = await storage.getUserStats(req.params.id);
-      res.json({ ...user, stats });
+      res.json({ ...stripPassword(user), stats });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -103,7 +107,7 @@ export async function registerRoutes(
   // Suspend user (admin only)
   app.post("/api/admin/users/:id/suspend", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const adminId = req.user.claims.sub;
+      const adminId = req.session.userId;
       const targetId = req.params.id;
       
       // Prevent self-suspension
@@ -124,7 +128,7 @@ export async function registerRoutes(
         details: `Suspended user ${user.email}`,
       });
 
-      res.json(user);
+      res.json(stripPassword(user));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -133,7 +137,7 @@ export async function registerRoutes(
   // Activate user (admin only)
   app.post("/api/admin/users/:id/activate", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const adminId = req.user.claims.sub;
+      const adminId = req.session.userId;
       const targetId = req.params.id;
 
       const user = await storage.activateUser(targetId);
@@ -149,7 +153,7 @@ export async function registerRoutes(
         details: `Activated user ${user.email}`,
       });
 
-      res.json(user);
+      res.json(stripPassword(user));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -158,7 +162,7 @@ export async function registerRoutes(
   // Delete user and all their data (admin only)
   app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const adminId = req.user.claims.sub;
+      const adminId = req.session.userId;
       const targetId = req.params.id;
 
       // Prevent self-deletion
@@ -201,7 +205,7 @@ export async function registerRoutes(
 
   app.post("/api/games", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const game = insertGameSchema.parse({ ...req.body, userId });
       const newGame = await storage.createGame(game);
       res.json(newGame);
@@ -215,7 +219,7 @@ export async function registerRoutes(
 
   app.get("/api/games", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const games = await storage.getGamesByUser(userId);
       res.json(games);
     } catch (error: any) {
@@ -226,7 +230,7 @@ export async function registerRoutes(
   // Get all games with ends and bowls for analysis (optimized) - must come before :id routes
   app.get("/api/games/full", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const games = await storage.getGamesFullByUser(userId);
       res.json(games);
     } catch (error: any) {
@@ -236,7 +240,7 @@ export async function registerRoutes(
 
   app.get("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const game = await storage.getGame(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
@@ -252,7 +256,7 @@ export async function registerRoutes(
 
   app.patch("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const game = await storage.getGame(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
@@ -273,7 +277,7 @@ export async function registerRoutes(
 
   app.delete("/api/games/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const game = await storage.getGame(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });
@@ -369,7 +373,7 @@ export async function registerRoutes(
   // Composite endpoint: Get game with all ends and bowls (optimized single query)
   app.get("/api/games/:id/full", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId;
       const game = await storage.getGameFull(req.params.id);
       if (!game) {
         return res.status(404).json({ error: "Game not found" });

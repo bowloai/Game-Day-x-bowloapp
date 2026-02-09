@@ -55,8 +55,9 @@ export default function Account() {
     });
   };
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    await fetch("/api/logout", { method: "POST", credentials: "include" });
+    window.location.href = "/";
   };
 
   const deleteAllData = useMutation({

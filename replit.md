@@ -10,6 +10,11 @@ The application follows a modern full-stack architecture with a React frontend, 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **2026-02-09**: Removed splash screen and optimized loading performance (removed framer-motion dependency)
+- **2026-02-09**: Migrated from Replit Auth (OIDC/social sign-in) to email/password authentication using bcrypt + express-session. Removed openid-client, passport, memoizee dependencies. User data preserved.
+
 ## System Architecture
 
 ### Frontend Architecture
