@@ -2,14 +2,24 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Target, BarChart3, Trophy, Mail, Loader2 } from "lucide-react";
+import { Target, BarChart3, Trophy, Mail, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 
+type View = "login" | "forgot";
+
 export default function Landing() {
+  const [view, setView] = useState<View>("login");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirm, setResetConfirm] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,6 +57,52 @@ export default function Landing() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail || !resetPassword || !resetConfirm) return;
+
+    setIsResetting(true);
+    try {
+      const res = await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: resetEmail,
+          newPassword: resetPassword,
+          confirmPassword: resetConfirm,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({
+          title: "Reset failed",
+          description: data.message || "Could not reset password",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Password updated",
+        description: "You can now sign in with your new password.",
+      });
+      setResetEmail("");
+      setResetPassword("");
+      setResetConfirm("");
+      setView("login");
+    } catch (error) {
+      toast({
+        title: "Reset failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6">
@@ -56,49 +112,124 @@ export default function Landing() {
             <p className="text-sm text-primary/70">x bowlo.app</p>
             <p className="text-xl text-muted-foreground pt-2">Track. Analyse. Improve.</p>
           </div>
-          
-          <form onSubmit={handleLogin} className="space-y-3">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Mail className="w-4 h-4" />
-                <span>Sign in with your email</span>
+
+          {view === "login" && (
+            <form onSubmit={handleLogin} className="space-y-3">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <Mail className="w-4 h-4" />
+                  <span>Sign in with your email</span>
+                </div>
+                <Input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="py-6"
+                  required
+                  data-testid="input-email"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="py-6"
+                  required
+                  data-testid="input-password"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full py-6 font-medium"
+                disabled={isLoading}
+                data-testid="button-submit-login"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setView("forgot")}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  data-testid="link-forgot-password"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            </form>
+          )}
+
+          {view === "forgot" && (
+            <form onSubmit={handleForgotPassword} className="space-y-3">
+              <div className="space-y-1 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setView("login")}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                  data-testid="link-back-to-login"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  Back to sign in
+                </button>
+                <h2 className="text-lg font-semibold mt-2">Reset your password</h2>
+                <p className="text-sm text-muted-foreground">
+                  Enter your email address and choose a new password.
+                </p>
               </div>
               <Input
                 type="email"
                 placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
                 className="py-6"
                 required
-                data-testid="input-email"
+                data-testid="input-reset-email"
               />
               <Input
                 type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="New password"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
                 className="py-6"
                 required
-                data-testid="input-password"
+                data-testid="input-reset-password"
               />
-            </div>
-            <Button 
-              type="submit"
-              size="lg" 
-              className="w-full py-6 font-medium"
-              disabled={isLoading}
-              data-testid="button-submit-login"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-          </form>
+              <Input
+                type="password"
+                placeholder="Confirm new password"
+                value={resetConfirm}
+                onChange={(e) => setResetConfirm(e.target.value)}
+                className="py-6"
+                required
+                data-testid="input-reset-confirm"
+              />
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full py-6 font-medium"
+                disabled={isResetting}
+                data-testid="button-submit-reset"
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Updating password...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </form>
+          )}
 
           <div className="flex justify-center gap-4 pt-4">
             <Card className="flex-1 p-3 text-center">

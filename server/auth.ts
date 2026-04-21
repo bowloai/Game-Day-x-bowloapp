@@ -72,6 +72,45 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/forgot-password", async (req, res) => {
+    try {
+      const { email, newPassword, confirmPassword } = req.body;
+      if (!email || !newPassword || !confirmPassword) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email.toLowerCase().trim()));
+
+      if (!user) {
+        return res.status(404).json({ message: "No account found with that email address" });
+      }
+
+      if (user.isSuspended) {
+        return res.status(403).json({ message: "Account is suspended" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      await db
+        .update(users)
+        .set({ password: hashedPassword, updatedAt: new Date() })
+        .where(eq(users.id, user.id));
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ message: "Password reset failed" });
+    }
+  });
+
   app.post("/api/logout", (req, res) => {
     req.session.destroy((err) => {
       if (err) {
