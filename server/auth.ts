@@ -14,7 +14,7 @@ declare module "express-session" {
 }
 
 export function setupAuth(app: Express) {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000;
+  const sessionTtl = 365 * 24 * 60 * 60 * 1000; // 1 year
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -28,7 +28,8 @@ export function setupAuth(app: Express) {
     session({
       secret: process.env.SESSION_SECRET || "bowlo-session-secret-change-me",
       store: sessionStore,
-      resave: false,
+      resave: true,
+      rolling: true,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
