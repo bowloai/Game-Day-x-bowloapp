@@ -40,6 +40,7 @@ const formSchema = z.object({
   position: z.string().optional().nullable(),
   bowlsPerEnd: z.coerce.number().min(1, "Must have at least 1 bowl").max(4, "Maximum 4 bowls per end"),
   ourMat: z.boolean(),
+  trackOpponent: z.boolean(),
 }).refine((data) => {
   if (data.gameEndType === "ends") {
     return data.totalEnds && data.totalEnds >= 1;
@@ -107,6 +108,7 @@ export default function GameSetup() {
       position: "Lead",
       bowlsPerEnd: 2,
       ourMat: true,
+      trackOpponent: false,
     },
   });
 
@@ -134,7 +136,7 @@ export default function GameSetup() {
 
   function onSubmit(values: FormValues) {
     createGame.mutate(
-      { 
+      {
         ...values,
         status: "IN_PROGRESS",
         position: values.position || null,
@@ -452,6 +454,28 @@ export default function GameSetup() {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         data-testid="switch-our-mat"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="trackOpponent"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 border-amber-200 bg-amber-50/50 dark:bg-amber-950/10">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Track Opponent Bowls</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Record your direct opponent's bowls for in-game tactical analysis
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-track-opponent"
                       />
                     </FormControl>
                   </FormItem>

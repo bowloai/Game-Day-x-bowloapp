@@ -67,6 +67,7 @@ export const games = pgTable("games", {
   performanceRating: integer("performance_rating"),
   notes: text("notes"),
   ourMat: boolean("our_mat").notNull().default(true),
+  trackOpponent: boolean("track_opponent").notNull().default(false),
 });
 
 export const ends = pgTable("ends", {
@@ -93,6 +94,7 @@ export const bowls = pgTable("bowls", {
   lineDistanceFeet: doublePrecision("line_distance_feet"),
   totalDistanceFeet: doublePrecision("total_distance_feet"),
   locationSource: text("location_source"),
+  isOpponent: boolean("is_opponent").notNull().default(false),
 });
 
 // Insert schemas

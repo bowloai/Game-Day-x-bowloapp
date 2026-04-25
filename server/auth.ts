@@ -111,7 +111,7 @@ export function setupAuth(app: Express) {
         ? join(process.cwd(), "dist", "migration-data.json")
         : join(process.cwd(), "server", "migration-data.json");
       const hasMigration = existsSync(migrationPath);
-      let migrationUser = null;
+      let migrationUser: { id: string; firstName?: string; lastName?: string; club?: string } | null = null;
 
       if (hasMigration) {
         const migrationData = JSON.parse(readFileSync(migrationPath, "utf-8"));
@@ -164,7 +164,7 @@ export function setupAuth(app: Express) {
           }
         });
 
-        const [createdUser] = await db.select().from(users).where(eq(users.id, migrationUser.id));
+        const [createdUser] = await db.select().from(users).where(eq(users.id, migrationUser!.id));
         req.session.userId = createdUser.id;
         const { password: _, ...userWithoutPassword } = createdUser;
         return res.json({ ...userWithoutPassword, migrated: true, games: migrationData.games?.length ?? 0 });

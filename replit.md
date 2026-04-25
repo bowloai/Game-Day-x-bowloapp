@@ -12,6 +12,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **2026-04-25**: Added opponent bowl tracking (Task #1) and mid-game advantage insights (Task #2).
+  - Schema: `trackOpponent boolean` added to games; `isOpponent boolean` added to bowls.
+  - Game setup: amber-styled "Track Opponent" toggle below "Our Mat" switch.
+  - Game recording: opponent bowling view (amber 9×9 grid) appears after score-entry when enabled; opponent bowls saved with `isOpponent: true`, bowl numbers reset to 1 for each end.
+  - End summary: My/Opponent toggle to switch analysis view; **Tactical Advantage** card compares bowl effectiveness across overall, forehand, backhand, end length, and bowl-number dimensions (unlocks after 3+ opponent bowls, sorted by largest gap first).
 - **2026-02-09**: Removed splash screen and optimized loading performance (removed framer-motion dependency)
 - **2026-02-09**: Migrated from Replit Auth (OIDC/social sign-in) to email/password authentication using bcrypt + express-session. Removed openid-client, passport, memoizee dependencies. User data preserved.
 

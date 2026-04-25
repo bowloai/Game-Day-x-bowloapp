@@ -28,7 +28,7 @@ type BowlResult =
   | 'heavy_narrow'
   | 'heavy_wide';
 
-type ViewState = 'end-setup' | 'bowling' | 'score-entry' | 'end-summary';
+type ViewState = 'end-setup' | 'bowling' | 'score-entry' | 'opponent-bowling' | 'end-summary';
 
 export default function GameRecording() {
   const { id } = useParams();
@@ -54,6 +54,14 @@ export default function GameRecording() {
   const [scoreAgainst, setScoreAgainst] = useState(0);
   const [isDead, setIsDead] = useState(false);
   
+  // Opponent bowl recording state
+  const [oppHand, setOppHand] = useState<"Forehand" | "Backhand">("Forehand");
+  const [oppGridSelection, setOppGridSelection] = useState<{row: number, col: number} | null>(null);
+  const [activeOppBowl, setActiveOppBowl] = useState<number>(1);
+
+  // In-game analysis toggle
+  const [analysisView, setAnalysisView] = useState<'my' | 'opponent'>('my');
+
   // Bowl editing state
   const [editingBowl, setEditingBowl] = useState<{ id: string; bowlNumber: number; hand: "Forehand" | "Backhand"; gridRow?: number | null; gridCol?: number | null } | null>(null);
   const [editHand, setEditHand] = useState<"Forehand" | "Backhand">("Forehand");
@@ -154,13 +162,13 @@ export default function GameRecording() {
   // For first end, use ourMat setting; for subsequent ends, use wonLastEnd
   const canDeliverJack = isLeadRole && (nextEndNumber === 1 ? (game?.ourMat ?? true) : wonLastEnd);
   
-  const endBowls = currentEnd?.bowls?.sort((a, b) => a.bowlNumber - b.bowlNumber) || [];
+  const endBowls = currentEnd?.bowls?.filter(b => !b.isOpponent).sort((a, b) => a.bowlNumber - b.bowlNumber) || [];
 
   useEffect(() => {
     if (!game) return;
     
-    // Don't override end-summary view - user must click button to proceed
-    if (viewState === 'end-summary') return;
+    // Don't override end-summary or opponent-bowling view - user must click button to proceed
+    if (viewState === 'end-summary' || viewState === 'opponent-bowling') return;
     
     if (incompleteEnd) {
       setCurrentEndId(incompleteEnd.id);
@@ -285,7 +293,59 @@ export default function GameRecording() {
       },
       {
         onSuccess: () => {
-          setViewState('end-summary');
+          if (game.trackOpponent) {
+            setActiveOppBowl(1);
+            setOppGridSelection(null);
+            setOppHand("Forehand");
+            setViewState('opponent-bowling');
+          } else {
+            setViewState('end-summary');
+          }
+        },
+      }
+    );
+  };
+
+  const calculateOppResult = (): BowlResult => {
+    if (!oppGridSelection) return 'effective_online';
+    const { row, col } = oppGridSelection;
+    const isShortRow = row <= 2;
+    const isHeavyRow = row >= 6;
+    const isLeft = col <= 2;
+    const isRight = col >= 6;
+    let weight = 'effective';
+    if (isShortRow) weight = 'short';
+    else if (isHeavyRow) weight = 'heavy';
+    let line = 'online';
+    if (isLeft) line = oppHand === 'Forehand' ? 'wide' : 'narrow';
+    else if (isRight) line = oppHand === 'Forehand' ? 'narrow' : 'wide';
+    return `${weight}_${line}` as BowlResult;
+  };
+
+  const saveOppBowl = async () => {
+    if (!oppGridSelection || !currentEnd) return;
+    const result = calculateOppResult();
+    createBowl.mutate(
+      {
+        bowl: {
+          endId: currentEnd.id,
+          bowlNumber: activeOppBowl,
+          hand: oppHand,
+          result,
+          gridRow: oppGridSelection.row,
+          gridCol: oppGridSelection.col,
+          isOpponent: true,
+        },
+        gameId: game.id,
+      },
+      {
+        onSuccess: () => {
+          setOppGridSelection(null);
+          if (activeOppBowl >= bowlsPerEnd) {
+            setViewState('end-summary');
+          } else {
+            setActiveOppBowl(activeOppBowl + 1);
+          }
         },
       }
     );
@@ -298,6 +358,10 @@ export default function GameRecording() {
     setJackEffective(true);
     setEndLength("Medium");
     setCurrentEndId(null);
+    setActiveOppBowl(1);
+    setOppGridSelection(null);
+    setOppHand("Forehand");
+    setAnalysisView('my');
     setViewState('end-setup');
     refetch();
   };
@@ -417,6 +481,64 @@ export default function GameRecording() {
       >
         {isJackCell && !label && !isSelected && (
           <div className="w-2 h-2 rounded-full bg-primary/60" />
+        )}
+        {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
+        {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
+      </button>
+    );
+  };
+
+  const getOpponentZoneColor = (row: number, col: number) => {
+    const isEffectiveZone = row >= 3 && row <= 5 && col >= 3 && col <= 5;
+    if (isEffectiveZone) return "bg-amber-100 dark:bg-amber-950/40 border-amber-400";
+    if (row <= 2) {
+      if (col <= 2 || col >= 6) return "bg-red-50 dark:bg-red-950/20 border-red-200";
+      return "bg-red-100 dark:bg-red-950/30 border-red-300";
+    }
+    if (row >= 6) {
+      if (col <= 2 || col >= 6) return "bg-slate-50 dark:bg-slate-950/20 border-slate-200";
+      return "bg-slate-100 dark:bg-slate-950/30 border-slate-300";
+    }
+    if (col <= 2) return "bg-orange-50 dark:bg-orange-950/20 border-orange-200";
+    if (col >= 6) return "bg-blue-50 dark:bg-blue-950/20 border-blue-200";
+    return "bg-background border-border";
+  };
+
+  const getOppZoneLabel = (row: number, col: number): string => {
+    const isZoneCenter = (row % 3 === 1) && (col % 3 === 1);
+    if (!isZoneCenter) return "";
+    const zoneRow = Math.floor(row / 3);
+    const zoneCol = Math.floor(col / 3);
+    const leftLabel = oppHand === 'Forehand' ? 'W' : 'N';
+    const rightLabel = oppHand === 'Forehand' ? 'N' : 'W';
+    if (zoneRow === 0 && zoneCol === 1) return "S";
+    if (zoneRow === 2 && zoneCol === 1) return "H";
+    if (zoneRow === 1 && zoneCol === 0) return leftLabel;
+    if (zoneRow === 1 && zoneCol === 1) return "✓";
+    if (zoneRow === 1 && zoneCol === 2) return rightLabel;
+    return "";
+  };
+
+  const OpponentGridCell9x9 = ({ r, c }: { r: number, c: number }) => {
+    const isSelected = oppGridSelection?.row === r && oppGridSelection?.col === c;
+    const label = getOppZoneLabel(r, c);
+    const isJackCell = r === 4 && c === 4;
+    return (
+      <button
+        type="button"
+        onClick={() => setOppGridSelection({ row: r, col: c })}
+        className={cn(
+          "aspect-square w-full border rounded flex items-center justify-center transition-all relative text-xs font-medium",
+          isSelected
+            ? "bg-amber-500 text-white ring-2 ring-amber-500 ring-offset-1 z-10"
+            : getOpponentZoneColor(r, c),
+          isSelected ? "" : "hover:opacity-80 hover:ring-1 hover:ring-amber-500/50",
+          isJackCell && !isSelected ? "ring-2 ring-amber-400/30" : ""
+        )}
+        data-testid={`opp-grid-cell-${r}-${c}`}
+      >
+        {isJackCell && !label && !isSelected && (
+          <div className="w-2 h-2 rounded-full bg-amber-400/60" />
         )}
         {label && <span className={cn("text-center leading-tight", label.length > 6 ? "text-[10px]" : "")}>{label}</span>}
         {isSelected && <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3" />}
@@ -639,7 +761,7 @@ export default function GameRecording() {
                       variant="ghost"
                       size="sm"
                       className="absolute top-1 right-1 h-6 w-6 p-0"
-                      onClick={() => openEditBowl(bowl)}
+                      onClick={() => openEditBowl({ ...bowl, hand: bowl.hand as "Forehand" | "Backhand" })}
                       data-testid={`button-edit-bowl-${bowl.bowlNumber}`}
                     >
                       <Pencil className="h-3 w-3" />
@@ -726,10 +848,77 @@ export default function GameRecording() {
         </div>
       )}
 
+      {/* Opponent Bowling View */}
+      {viewState === 'opponent-bowling' && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-widest">Opponent</span>
+              <h3 className="text-lg font-semibold" data-testid="text-opp-bowl-number">
+                Bowl {activeOppBowl} of {bowlsPerEnd}
+              </h3>
+            </div>
+            <div className="flex bg-secondary p-1 rounded-md">
+              <button
+                type="button"
+                className={cn("px-3 py-1 rounded text-sm transition-all", oppHand === "Forehand" ? "bg-white shadow text-amber-600 font-medium" : "text-muted-foreground")}
+                onClick={() => setOppHand("Forehand")}
+                data-testid="button-opp-hand-forehand"
+              >
+                Forehand
+              </button>
+              <button
+                type="button"
+                className={cn("px-3 py-1 rounded text-sm transition-all", oppHand === "Backhand" ? "bg-white shadow text-amber-600 font-medium" : "text-muted-foreground")}
+                onClick={() => setOppHand("Backhand")}
+                data-testid="button-opp-hand-backhand"
+              >
+                Backhand
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-9 gap-0.5">
+            {Array.from({ length: 9 }, (_, row) =>
+              Array.from({ length: 9 }, (_, col) => (
+                <OpponentGridCell9x9 key={`opp-${row}-${col}`} r={row} c={col} />
+              ))
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Tap a cell to mark where your opponent's bowl landed. Each cell = 1 foot.
+          </p>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setViewState('end-summary')}
+              data-testid="button-skip-opp-bowls"
+            >
+              Skip
+            </Button>
+            <Button
+              size="lg"
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-display"
+              disabled={!oppGridSelection || createBowl.isPending}
+              onClick={saveOppBowl}
+              data-testid="button-save-opp-bowl"
+            >
+              {createBowl.isPending ? "Saving..." : activeOppBowl >= bowlsPerEnd ? "Save & Done" : `Save Bowl ${activeOppBowl}`}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* End Summary View - Shows after each completed end */}
       {viewState === 'end-summary' && currentEnd && (() => {
         const allEndsIncludingCurrent = [...completedEnds.filter(e => e.id !== currentEnd.id), currentEnd];
-        const allBowls = allEndsIncludingCurrent.flatMap(e => e.bowls || []);
+        const allMyBowls = allEndsIncludingCurrent.flatMap(e => (e.bowls || []).filter(b => !b.isOpponent));
+        const allOppBowls = allEndsIncludingCurrent.flatMap(e => (e.bowls || []).filter(b => b.isOpponent));
+        const hasOppData = allOppBowls.length > 0;
+        const bowlsForStats = (game.trackOpponent && analysisView === 'opponent') ? allOppBowls : allMyBowls;
+        const allBowls = bowlsForStats;
         const totalBowls = allBowls.length;
         const effectiveBowls = allBowls.filter(b => isEffective(b.result)).length;
         const effectivePercent = totalBowls > 0 ? Math.round((effectiveBowls / totalBowls) * 100) : 0;
@@ -739,11 +928,12 @@ export default function GameRecording() {
         const runningFor = otherEnds.reduce((sum, e) => sum + (e.scoreFor || 0), 0) + (currentEnd.scoreFor || 0);
         const runningAgainst = otherEnds.reduce((sum, e) => sum + (e.scoreAgainst || 0), 0) + (currentEnd.scoreAgainst || 0);
         
-        // Odd/Even end analysis
+        // Odd/Even end analysis - use the filtered bowlsForStats set
+        const isOppView = game.trackOpponent && analysisView === 'opponent';
         const oddEnds = allEndsIncludingCurrent.filter(e => e.endNumber % 2 === 1);
         const evenEnds = allEndsIncludingCurrent.filter(e => e.endNumber % 2 === 0);
-        const oddBowls = oddEnds.flatMap(e => e.bowls || []);
-        const evenBowls = evenEnds.flatMap(e => e.bowls || []);
+        const oddBowls = oddEnds.flatMap(e => (e.bowls || []).filter(b => isOppView ? b.isOpponent : !b.isOpponent));
+        const evenBowls = evenEnds.flatMap(e => (e.bowls || []).filter(b => isOppView ? b.isOpponent : !b.isOpponent));
         
         // Effective percentages
         const oddEffective = oddBowls.filter(b => isEffective(b.result)).length;
@@ -786,6 +976,109 @@ export default function GameRecording() {
           return formatResultShort(result);
         };
 
+        // Tactical advantage insights
+        const MIN_BOWLS = 3;
+        const normLen = (l: string | null | undefined) => {
+          const s = (l || 'medium').toLowerCase();
+          if (s === 'minimum') return 'short';
+          if (s === 'maximum') return 'long';
+          return s;
+        };
+        const oppEffPct = (bowls: typeof allOppBowls) =>
+          bowls.length > 0 ? Math.round((bowls.filter(b => isEffective(b.result)).length / bowls.length) * 100) : -1;
+        const myEffPct = (bowls: typeof allMyBowls) =>
+          bowls.length > 0 ? Math.round((bowls.filter(b => isEffective(b.result)).length / bowls.length) * 100) : -1;
+        type Insight = { text: string; type: 'advantage' | 'warning' | 'neutral'; magnitude: number };
+        const insights: Insight[] = [];
+
+        if (game.trackOpponent && allOppBowls.length >= MIN_BOWLS) {
+          // Overall effectiveness
+          const myTotal = myEffPct(allMyBowls);
+          const oppTotal = oppEffPct(allOppBowls);
+          if (allMyBowls.length >= MIN_BOWLS && myTotal >= 0 && oppTotal >= 0) {
+            const diff = myTotal - oppTotal;
+            if (Math.abs(diff) >= 10) {
+              insights.push({
+                text: diff > 0
+                  ? `You're ${diff}% more effective overall than your opponent`
+                  : `Your opponent is ${Math.abs(diff)}% more effective overall`,
+                type: diff > 0 ? 'advantage' : 'warning',
+                magnitude: Math.abs(diff),
+              });
+            }
+          }
+          // Forehand comparison
+          const myFH = allMyBowls.filter(b => b.hand?.toLowerCase() === 'forehand');
+          const oppFH = allOppBowls.filter(b => b.hand?.toLowerCase() === 'forehand');
+          if (myFH.length >= MIN_BOWLS && oppFH.length >= MIN_BOWLS) {
+            const diff = myEffPct(myFH) - oppEffPct(oppFH);
+            if (Math.abs(diff) >= 15)
+              insights.push({
+                text: diff > 0
+                  ? `Your forehand is stronger — ${myEffPct(myFH)}% vs opponent's ${oppEffPct(oppFH)}%`
+                  : `Your opponent's forehand is stronger — ${oppEffPct(oppFH)}% vs your ${myEffPct(myFH)}%`,
+                type: diff > 0 ? 'advantage' : 'warning', magnitude: Math.abs(diff),
+              });
+          }
+          // Backhand comparison
+          const myBH = allMyBowls.filter(b => b.hand?.toLowerCase() === 'backhand');
+          const oppBH = allOppBowls.filter(b => b.hand?.toLowerCase() === 'backhand');
+          if (myBH.length >= MIN_BOWLS && oppBH.length >= MIN_BOWLS) {
+            const diff = myEffPct(myBH) - oppEffPct(oppBH);
+            if (Math.abs(diff) >= 15)
+              insights.push({
+                text: diff > 0
+                  ? `Your backhand is stronger — ${myEffPct(myBH)}% vs opponent's ${oppEffPct(oppBH)}%`
+                  : `Your opponent's backhand is stronger — ${oppEffPct(oppBH)}% vs your ${myEffPct(myBH)}%`,
+                type: diff > 0 ? 'advantage' : 'warning', magnitude: Math.abs(diff),
+              });
+          }
+          // Opponent hand weakness
+          if (oppFH.length >= MIN_BOWLS && oppEffPct(oppFH) < 25)
+            insights.push({ text: `Opponent's forehand is struggling — only ${oppEffPct(oppFH)}% effective`, type: 'advantage', magnitude: 25 - oppEffPct(oppFH) });
+          if (oppBH.length >= MIN_BOWLS && oppEffPct(oppBH) < 25)
+            insights.push({ text: `Opponent's backhand is struggling — only ${oppEffPct(oppBH)}% effective`, type: 'advantage', magnitude: 25 - oppEffPct(oppBH) });
+          // Opponent hand preference
+          const oppTotal2 = oppFH.length + oppBH.length;
+          if (oppTotal2 >= MIN_BOWLS) {
+            const fhPct = Math.round((oppFH.length / oppTotal2) * 100);
+            if (fhPct >= 75) insights.push({ text: `Opponent strongly favours forehand — ${fhPct}% of their bowls`, type: 'neutral', magnitude: fhPct - 50 });
+            else if (fhPct <= 25) insights.push({ text: `Opponent strongly favours backhand — ${100 - fhPct}% of their bowls`, type: 'neutral', magnitude: 50 - fhPct });
+          }
+          // Length performance
+          for (const length of ['short', 'medium', 'long'] as const) {
+            const myLen = allEndsIncludingCurrent.filter(e => normLen(e.length) === length).flatMap(e => (e.bowls || []).filter(b => !b.isOpponent));
+            const oppLen = allEndsIncludingCurrent.filter(e => normLen(e.length) === length).flatMap(e => (e.bowls || []).filter(b => b.isOpponent));
+            if (myLen.length >= MIN_BOWLS && oppLen.length >= MIN_BOWLS) {
+              const diff = myEffPct(myLen) - oppEffPct(oppLen);
+              if (Math.abs(diff) >= 15)
+                insights.push({
+                  text: diff > 0
+                    ? `You're ${diff}% more effective on ${length} ends`
+                    : `Opponent is ${Math.abs(diff)}% more effective on ${length} ends`,
+                  type: diff > 0 ? 'advantage' : 'warning', magnitude: Math.abs(diff),
+                });
+            }
+          }
+          // Bowl number performance
+          for (let bn = 1; bn <= bowlsPerEnd; bn++) {
+            const myBN = allMyBowls.filter(b => b.bowlNumber === bn);
+            const oppBN = allOppBowls.filter(b => b.bowlNumber === bn);
+            if (myBN.length >= MIN_BOWLS && oppBN.length >= MIN_BOWLS) {
+              const diff = myEffPct(myBN) - oppEffPct(oppBN);
+              const ordinal = bn === 1 ? '1st' : bn === 2 ? '2nd' : bn === 3 ? '3rd' : `${bn}th`;
+              if (Math.abs(diff) >= 15)
+                insights.push({
+                  text: diff > 0
+                    ? `Your ${ordinal} bowl is stronger — ${myEffPct(myBN)}% vs opponent's ${oppEffPct(oppBN)}%`
+                    : `Opponent's ${ordinal} bowl is stronger — ${oppEffPct(oppBN)}% vs your ${myEffPct(myBN)}%`,
+                  type: diff > 0 ? 'advantage' : 'warning', magnitude: Math.abs(diff),
+                });
+            }
+          }
+          insights.sort((a, b) => b.magnitude - a.magnitude);
+        }
+
         return (
           <div className="space-y-6 animate-in fade-in">
             {/* This End Result */}
@@ -810,6 +1103,68 @@ export default function GameRecording() {
                 )}
               </CardContent>
             </Card>
+
+            {/* My / Opponent toggle - only shown when tracking opponent */}
+            {game.trackOpponent && (
+              <div className="flex bg-secondary p-1 rounded-lg">
+                <button
+                  type="button"
+                  className={cn("flex-1 py-2 rounded-md text-sm font-medium transition-all", analysisView === 'my' ? "bg-white dark:bg-background shadow text-primary" : "text-muted-foreground")}
+                  onClick={() => setAnalysisView('my')}
+                  data-testid="button-analysis-my"
+                >
+                  My Bowls
+                </button>
+                <button
+                  type="button"
+                  className={cn("flex-1 py-2 rounded-md text-sm font-medium transition-all", analysisView === 'opponent' ? "bg-amber-500 shadow text-white" : "text-muted-foreground")}
+                  onClick={() => setAnalysisView('opponent')}
+                  data-testid="button-analysis-opponent"
+                >
+                  Opponent
+                  {hasOppData && <span className="ml-1 text-xs opacity-75">({allOppBowls.length})</span>}
+                </button>
+              </div>
+            )}
+
+            {/* Tactical Advantage Insights */}
+            {game.trackOpponent && (
+              <Card className="border-amber-200 bg-amber-50/40 dark:bg-amber-950/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-amber-700 dark:text-amber-400">Tactical Advantage</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {allOppBowls.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      Record opponent bowls after each end to unlock advantage analysis
+                    </p>
+                  ) : allOppBowls.length < MIN_BOWLS ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      Keep recording opponent bowls — insights unlock with more data ({allOppBowls.length}/{MIN_BOWLS} bowls)
+                    </p>
+                  ) : insights.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      No significant differences yet — performances are close
+                    </p>
+                  ) : (
+                    insights.slice(0, 5).map((insight, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          "rounded-md px-3 py-2 text-sm",
+                          insight.type === 'advantage' ? "bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800" :
+                          insight.type === 'warning' ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800" :
+                          "bg-muted/60 text-muted-foreground border border-border"
+                        )}
+                        data-testid={`insight-${i}`}
+                      >
+                        {insight.type === 'advantage' ? '✓ ' : insight.type === 'warning' ? '⚠ ' : 'ℹ '}{insight.text}
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 gap-4">
@@ -998,7 +1353,7 @@ export default function GameRecording() {
               };
               const calcLengthStats = (length: string) => {
                 const endsAtLength = allEndsIncludingCurrent.filter(e => normalizeLength(e.length) === length);
-                const bowlsAtLength = endsAtLength.flatMap(e => e.bowls || []);
+                const bowlsAtLength = endsAtLength.flatMap(e => (e.bowls || []).filter(b => isOppView ? b.isOpponent : !b.isOpponent));
                 const total = bowlsAtLength.length;
                 if (total === 0) return { total: 0, percent: 0, forehandPercent: 0, backhandPercent: 0, forehandTotal: 0, backhandTotal: 0 };
                 const effective = bowlsAtLength.filter(b => isEffective(b.result)).length;
@@ -1091,26 +1446,28 @@ export default function GameRecording() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allEndsIncludingCurrent.map((end) => (
+                    {allEndsIncludingCurrent.map((end) => {
+                      const endDisplayBowls = (end.bowls || []).filter(b => isOppView ? b.isOpponent : !b.isOpponent).sort((a, b) => a.bowlNumber - b.bowlNumber);
+                      return (
                       <TableRow key={end.id}>
                         <TableCell className="font-medium text-xs px-1">{end.endNumber}</TableCell>
                         <TableCell className="text-xs px-1">{end.length?.slice(0,3)}</TableCell>
                         <TableCell className="text-xs px-1">
-                          {end.bowls?.[0] ? (
-                            <span className={cn("font-bold", getResultColorClass(end.bowls[0].result))}>
-                              {shortenResult(end.bowls[0].result)}
+                          {endDisplayBowls[0] ? (
+                            <span className={cn("font-bold", getResultColorClass(endDisplayBowls[0].result))}>
+                              {shortenResult(endDisplayBowls[0].result)}
                               <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
-                                {end.bowls[0].hand === 'Forehand' ? 'F' : 'B'}
+                                {endDisplayBowls[0].hand === 'Forehand' ? 'F' : 'B'}
                               </span>
                             </span>
                           ) : '-'}
                         </TableCell>
                         <TableCell className="text-xs px-1">
-                          {end.bowls?.[1] ? (
-                            <span className={cn("font-bold", getResultColorClass(end.bowls[1].result))}>
-                              {shortenResult(end.bowls[1].result)}
+                          {endDisplayBowls[1] ? (
+                            <span className={cn("font-bold", getResultColorClass(endDisplayBowls[1].result))}>
+                              {shortenResult(endDisplayBowls[1].result)}
                               <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
-                                {end.bowls[1].hand === 'Forehand' ? 'F' : 'B'}
+                                {endDisplayBowls[1].hand === 'Forehand' ? 'F' : 'B'}
                               </span>
                             </span>
                           ) : '-'}
@@ -1127,7 +1484,8 @@ export default function GameRecording() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
