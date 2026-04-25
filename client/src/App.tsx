@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { lazy, Suspense } from "react";
 import Layout from "@/components/layout";
 import Landing from "@/pages/landing";
+import InstallPrompt from "@/components/install-prompt";
 
 const Home = lazy(() => import("@/pages/home"));
 const GameSetup = lazy(() => import("@/pages/game-setup"));
@@ -81,6 +82,7 @@ function App() {
       <TooltipProvider>
         <Router />
         <Toaster />
+        <InstallPrompt />
       </TooltipProvider>
     </QueryClientProvider>
   );
