@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Share, Plus } from "lucide-react";
 
-const DISMISSED_KEY = "pwa-install-dismissed";
+const DISMISSED_KEY = "pwa-install-dismissed-session";
 
 function isIos() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -22,7 +22,7 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     if (isInStandaloneMode()) return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    if (sessionStorage.getItem(DISMISSED_KEY)) return;
 
     if (isIos()) {
       const timer = setTimeout(() => setShowIos(true), 2000);
@@ -40,7 +40,7 @@ export default function InstallPrompt() {
   }, []);
 
   const dismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, "1");
+    sessionStorage.setItem(DISMISSED_KEY, "1");
     setShowAndroid(false);
     setShowIos(false);
   };
@@ -50,7 +50,7 @@ export default function InstallPrompt() {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
-      localStorage.setItem(DISMISSED_KEY, "1");
+      sessionStorage.setItem(DISMISSED_KEY, "1");
     }
     setDeferredPrompt(null);
     setShowAndroid(false);
