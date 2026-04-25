@@ -73,6 +73,36 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.get("/api/check-setup", async (req, res) => {
+    const existingUsers = await db.select().from(users).limit(1);
+    res.json({ needsSetup: existingUsers.length === 0 });
+  });
+
+  app.post("/api/setup", async (req, res) => {
+    try {
+      const existingUsers = await db.select().from(users).limit(1);
+      if (existingUsers.length > 0) {
+        return res.status(403).json({ message: "Setup already complete" });
+      }
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const [user] = await db.insert(users).values({
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        isAdmin: true,
+      }).returning();
+      req.session.userId = user.id;
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Setup error:", error);
+      res.status(500).json({ message: "Setup failed" });
+    }
+  });
+
   app.post("/api/forgot-password", async (req, res) => {
     try {
       const { email, newPassword, confirmPassword } = req.body;
