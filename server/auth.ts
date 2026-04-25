@@ -3,9 +3,15 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { users } from "@shared/schema";
+import { users, games, ends, bowls } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { readFileSync, existsSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 declare module "express-session" {
   interface SessionData {
@@ -89,6 +95,70 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email and password are required" });
       }
       const hashedPassword = await bcrypt.hash(password, 12);
+
+      // Check for migration data to carry over existing game history
+      const migrationPath = join(__dirname, "migration-data.json");
+      const hasMigration = existsSync(migrationPath);
+      let migrationUser = null;
+
+      if (hasMigration) {
+        const migrationData = JSON.parse(readFileSync(migrationPath, "utf-8"));
+        migrationUser = migrationData.users?.[0];
+
+        await db.transaction(async (tx) => {
+          // Insert the original user record (preserving ID so game foreign keys work)
+          if (migrationUser) {
+            await tx.insert(users).values({
+              id: migrationUser.id,
+              email: email.toLowerCase().trim(),
+              password: hashedPassword,
+              firstName: migrationUser.firstName,
+              lastName: migrationUser.lastName,
+              club: migrationUser.club,
+              isAdmin: true,
+              isSuspended: false,
+            });
+          }
+
+          for (const g of migrationData.games ?? []) {
+            await tx.insert(games).values({
+              id: g.id, userId: g.userId, opponent: g.opponent, venue: g.venue,
+              surface: g.surface, rink: g.rink, type: g.type, totalEnds: g.totalEnds,
+              position: g.position, status: g.status, greenSpeed: g.greenSpeed,
+              greenComparable: g.greenComparable, mentalFeeling: g.mentalFeeling,
+              performanceRating: g.performanceRating, notes: g.notes,
+              gameFormat: g.gameFormat ?? "fours", pairsType: g.pairsType,
+              bowlsPerEnd: g.bowlsPerEnd ?? 2, gameEndType: g.gameEndType ?? "ends",
+              targetScore: g.targetScore, ourMat: g.ourMat ?? true,
+            });
+          }
+
+          for (const e of migrationData.ends ?? []) {
+            await tx.insert(ends).values({
+              id: e.id, gameId: e.gameId, endNumber: e.endNumber,
+              jackEffective: e.jackEffective, length: e.length,
+              scoreFor: e.scoreFor ?? 0, scoreAgainst: e.scoreAgainst ?? 0,
+              isDead: e.isDead ?? false, isCompleted: e.isCompleted ?? false,
+            });
+          }
+
+          for (const b of migrationData.bowls ?? []) {
+            await tx.insert(bowls).values({
+              id: b.id, endId: b.endId, bowlNumber: b.bowlNumber,
+              hand: b.hand, result: b.result, gridRow: b.gridRow, gridCol: b.gridCol,
+              weightDistanceFeet: b.weightDistanceFeet, lineDistanceFeet: b.lineDistanceFeet,
+              totalDistanceFeet: b.totalDistanceFeet, locationSource: b.locationSource,
+            });
+          }
+        });
+
+        const [createdUser] = await db.select().from(users).where(eq(users.id, migrationUser.id));
+        req.session.userId = createdUser.id;
+        const { password: _, ...userWithoutPassword } = createdUser;
+        return res.json({ ...userWithoutPassword, migrated: true, games: migrationData.games?.length ?? 0 });
+      }
+
+      // No migration data — create fresh account
       const [user] = await db.insert(users).values({
         email: email.toLowerCase().trim(),
         password: hashedPassword,

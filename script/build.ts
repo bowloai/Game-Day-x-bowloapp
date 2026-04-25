@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, copyFile, access } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -59,6 +59,15 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  // Copy migration data if it exists
+  try {
+    await access("server/migration-data.json");
+    await copyFile("server/migration-data.json", "dist/migration-data.json");
+    console.log("copied migration-data.json to dist/");
+  } catch {
+    // No migration file — that's fine
+  }
 }
 
 buildAll().catch((err) => {
