@@ -75,6 +75,19 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/reset-all", async (req, res) => {
+    const { token } = req.body;
+    if (token !== "BOWLO-RESET-2026") {
+      return res.status(403).json({ message: "Invalid token" });
+    }
+    try {
+      await db.delete(users);
+      res.json({ message: "All data cleared" });
+    } catch (error) {
+      res.status(500).json({ message: "Reset failed" });
+    }
+  });
+
   app.get("/api/check-setup", async (req, res) => {
     const existingUsers = await db.select().from(users).limit(1);
     res.json({ needsSetup: existingUsers.length === 0 });
