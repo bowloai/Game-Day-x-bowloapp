@@ -596,7 +596,7 @@ export default function Analysis() {
     };
     type BowlWithLength = Bowl & { endLength: string };
     const allBowlsWithLength: BowlWithLength[] = filteredGames.flatMap(g => 
-      g.ends?.flatMap(e => (e.bowls || []).map(b => ({ ...b, endLength: normalizeLength(e.length) }))) || []
+      g.ends?.flatMap(e => (e.bowls || []).filter(b => !b.isOpponent).map(b => ({ ...b, endLength: normalizeLength(e.length) }))) || []
     );
     
     const allBowls: Bowl[] = allBowlsWithLength;
@@ -688,7 +688,7 @@ export default function Analysis() {
     const allBowlsWithStage: BowlWithStage[] = filteredGames.flatMap(g => {
       const totalEnds = g.totalEnds || 21;
       return g.ends?.flatMap(e => 
-        (e.bowls || []).map(b => ({ 
+        (e.bowls || []).filter(b => !b.isOpponent).map(b => ({ 
           ...b, 
           stage: classifyStageByEndNumber(e.endNumber, totalEnds) 
         }))
