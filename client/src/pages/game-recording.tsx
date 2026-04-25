@@ -167,20 +167,40 @@ export default function GameRecording() {
   useEffect(() => {
     if (!game) return;
     
-    // Don't override end-summary or opponent-bowling view - user must click button to proceed
-    if (viewState === 'end-summary' || viewState === 'opponent-bowling') return;
+    // Don't override end-summary view - user must click button to proceed
+    if (viewState === 'end-summary') return;
     
     if (incompleteEnd) {
       setCurrentEndId(incompleteEnd.id);
-      const bowlCount = incompleteEnd.bowls?.length || 0;
-      if (bowlCount === 0) {
-        setViewState('bowling');
-        setActiveBowl(1);
-      } else if (bowlCount < bowlsPerEnd) {
-        setViewState('bowling');
-        setActiveBowl(bowlCount + 1);
+      if (game.trackOpponent) {
+        const myBowlCount = incompleteEnd.bowls?.filter(b => !b.isOpponent).length || 0;
+        const oppBowlCount = incompleteEnd.bowls?.filter(b => b.isOpponent).length || 0;
+        if (myBowlCount === 0) {
+          setViewState('bowling');
+          setActiveBowl(1);
+        } else if (myBowlCount > oppBowlCount) {
+          // My bowl N saved — waiting for opponent bowl N
+          setActiveOppBowl(myBowlCount);
+          setViewState('opponent-bowling');
+        } else if (myBowlCount < bowlsPerEnd) {
+          // Both at N bowls — ready for my bowl N+1
+          setActiveBowl(myBowlCount + 1);
+          setViewState('bowling');
+        } else {
+          // All bowls delivered — score entry
+          setViewState('score-entry');
+        }
       } else {
-        setViewState('score-entry');
+        const bowlCount = incompleteEnd.bowls?.filter(b => !b.isOpponent).length || 0;
+        if (bowlCount === 0) {
+          setViewState('bowling');
+          setActiveBowl(1);
+        } else if (bowlCount < bowlsPerEnd) {
+          setViewState('bowling');
+          setActiveBowl(bowlCount + 1);
+        } else {
+          setViewState('score-entry');
+        }
       }
     } else {
       setCurrentEndId(null);
@@ -267,7 +287,12 @@ export default function GameRecording() {
         onSuccess: () => {
           toast({ title: `Bowl ${activeBowl} recorded` });
           setGridSelection(null);
-          if (activeBowl < bowlsPerEnd) {
+          if (game.trackOpponent) {
+            setActiveOppBowl(activeBowl);
+            setOppGridSelection(null);
+            setOppHand("Forehand");
+            setViewState('opponent-bowling');
+          } else if (activeBowl < bowlsPerEnd) {
             setActiveBowl(activeBowl + 1);
           } else {
             setViewState('score-entry');
@@ -293,14 +318,7 @@ export default function GameRecording() {
       },
       {
         onSuccess: () => {
-          if (game.trackOpponent) {
-            setActiveOppBowl(1);
-            setOppGridSelection(null);
-            setOppHand("Forehand");
-            setViewState('opponent-bowling');
-          } else {
-            setViewState('end-summary');
-          }
+          setViewState('end-summary');
         },
       }
     );
@@ -342,9 +360,11 @@ export default function GameRecording() {
         onSuccess: () => {
           setOppGridSelection(null);
           if (activeOppBowl >= bowlsPerEnd) {
-            setViewState('end-summary');
+            setViewState('score-entry');
           } else {
+            setActiveBowl(activeOppBowl + 1);
             setActiveOppBowl(activeOppBowl + 1);
+            setViewState('bowling');
           }
         },
       }
@@ -893,8 +913,16 @@ export default function GameRecording() {
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => setViewState('end-summary')}
-              data-testid="button-skip-opp-bowls"
+              onClick={() => {
+                if (activeOppBowl >= bowlsPerEnd) {
+                  setViewState('score-entry');
+                } else {
+                  setActiveBowl(activeOppBowl + 1);
+                  setActiveOppBowl(activeOppBowl + 1);
+                  setViewState('bowling');
+                }
+              }}
+              data-testid="button-skip-opp-bowl"
             >
               Skip
             </Button>
