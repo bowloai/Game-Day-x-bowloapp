@@ -7,11 +7,7 @@ import { users, games, ends, bowls } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { readFileSync, existsSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { join } from "path";
 
 declare module "express-session" {
   interface SessionData {
@@ -97,7 +93,10 @@ export function setupAuth(app: Express) {
       const hashedPassword = await bcrypt.hash(password, 12);
 
       // Check for migration data to carry over existing game history
-      const migrationPath = join(__dirname, "migration-data.json");
+      // In production the file is copied to dist/, in dev it lives in server/
+      const migrationPath = existsSync(join(process.cwd(), "dist", "migration-data.json"))
+        ? join(process.cwd(), "dist", "migration-data.json")
+        : join(process.cwd(), "server", "migration-data.json");
       const hasMigration = existsSync(migrationPath);
       let migrationUser = null;
 

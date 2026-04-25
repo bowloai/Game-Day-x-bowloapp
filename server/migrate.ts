@@ -1,12 +1,8 @@
 import type { Express } from "express";
 import { db } from "./db";
 import { users, games, ends, bowls } from "@shared/schema";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function registerMigrationRoute(app: Express) {
   app.post("/api/migrate-data", async (req, res) => {
@@ -16,7 +12,9 @@ export function registerMigrationRoute(app: Express) {
         return res.status(403).json({ message: "Migration already complete — data exists" });
       }
 
-      const dataPath = join(__dirname, "migration-data.json");
+      const dataPath = existsSync(join(process.cwd(), "dist", "migration-data.json"))
+        ? join(process.cwd(), "dist", "migration-data.json")
+        : join(process.cwd(), "server", "migration-data.json");
       const data = JSON.parse(readFileSync(dataPath, "utf-8"));
 
       await db.transaction(async (tx) => {
