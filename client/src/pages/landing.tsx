@@ -6,7 +6,7 @@ import { Target, BarChart3, Trophy, Mail, Loader2, ArrowLeft } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 
-type View = "login" | "forgot" | "setup";
+type View = "login" | "forgot" | "setup" | "signup";
 
 export default function Landing() {
   const [view, setView] = useState<View>("login");
@@ -25,6 +25,11 @@ export default function Landing() {
   const [setupPassword, setSetupPassword] = useState("");
   const [setupConfirm, setSetupConfirm] = useState("");
   const [isSettingUp, setIsSettingUp] = useState(false);
+
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirm, setSignupConfirm] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   const { toast } = useToast();
 
@@ -115,6 +120,34 @@ export default function Landing() {
     }
   };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signupEmail || !signupPassword || !signupConfirm) return;
+    if (signupPassword !== signupConfirm) {
+      toast({ title: "Passwords don't match", description: "Please make sure both passwords are the same.", variant: "destructive" });
+      return;
+    }
+    setIsSigningUp(true);
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: signupEmail, password: signupPassword, confirmPassword: signupConfirm }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Sign up failed", description: data.message || "Could not create account", variant: "destructive" });
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    } catch {
+      toast({ title: "Sign up failed", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
   if (checkingSetup) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -146,9 +179,12 @@ export default function Landing() {
               <Button type="submit" size="lg" className="w-full py-6 font-medium" disabled={isLoading} data-testid="button-submit-login">
                 {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Signing in...</> : "Sign In"}
               </Button>
-              <div className="text-center">
-                <button type="button" onClick={() => setView("forgot")} className="text-sm text-muted-foreground hover:text-primary transition-colors" data-testid="link-forgot-password">
+              <div className="text-center space-y-2">
+                <button type="button" onClick={() => setView("forgot")} className="text-sm text-muted-foreground hover:text-primary transition-colors block w-full" data-testid="link-forgot-password">
                   Forgot your password?
+                </button>
+                <button type="button" onClick={() => setView("signup")} className="text-sm text-primary hover:text-primary/80 font-medium transition-colors" data-testid="link-signup">
+                  Don't have an account? Sign up
                 </button>
               </div>
             </form>
@@ -168,6 +204,24 @@ export default function Landing() {
               <Input type="password" placeholder="Confirm new password" value={resetConfirm} onChange={(e) => setResetConfirm(e.target.value)} className="py-6" required data-testid="input-reset-confirm" />
               <Button type="submit" size="lg" className="w-full py-6 font-medium" disabled={isResetting} data-testid="button-submit-reset">
                 {isResetting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating password...</> : "Update Password"}
+              </Button>
+            </form>
+          )}
+
+          {view === "signup" && (
+            <form onSubmit={handleSignup} className="space-y-3">
+              <div className="space-y-1 mb-2">
+                <button type="button" onClick={() => setView("login")} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors" data-testid="link-back-to-login-from-signup">
+                  <ArrowLeft className="w-3 h-3" />Back to sign in
+                </button>
+                <h2 className="text-lg font-semibold mt-2">Create your account</h2>
+                <p className="text-sm text-muted-foreground">Set up your email and password to get started.</p>
+              </div>
+              <Input type="email" placeholder="Email address" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} className="py-6" required data-testid="input-signup-email" />
+              <Input type="password" placeholder="Password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} className="py-6" required data-testid="input-signup-password" />
+              <Input type="password" placeholder="Confirm password" value={signupConfirm} onChange={(e) => setSignupConfirm(e.target.value)} className="py-6" required data-testid="input-signup-confirm" />
+              <Button type="submit" size="lg" className="w-full py-6 font-medium" disabled={isSigningUp} data-testid="button-submit-signup">
+                {isSigningUp ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating account...</> : "Create Account"}
               </Button>
             </form>
           )}

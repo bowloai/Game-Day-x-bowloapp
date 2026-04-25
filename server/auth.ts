@@ -93,6 +93,38 @@ export function setupAuth(app: Express) {
     res.json({ needsSetup: existingUsers.length === 0 });
   });
 
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { email, password, confirmPassword } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const [existing] = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim()));
+      if (existing) {
+        return res.status(409).json({ message: "An account with that email already exists" });
+      }
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const [newUser] = await db.insert(users).values({
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        isAdmin: false,
+        isSuspended: false,
+      }).returning();
+      req.session.userId = newUser.id;
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Register error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
   app.post("/api/setup", async (req, res) => {
     try {
       const existingUsers = await db.select().from(users).limit(1);
