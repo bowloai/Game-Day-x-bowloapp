@@ -89,8 +89,7 @@ export default function Admin() {
       if (!res.ok) throw new Error("Failed to delete user");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-logs"] });
+      queryClient.clear();
       toast({ title: "User deleted" });
     },
     onError: () => {

@@ -70,7 +70,7 @@ export default function Account() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      queryClient.clear();
       setShowDeleteDialog(false);
       toast({
         title: "Data deleted",
