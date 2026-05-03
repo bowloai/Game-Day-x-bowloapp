@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import generatedImage from '@assets/generated_images/a_minimalist,_geometric_lawn_bowls_jack_and_bowl_logo_icon_in_green_and_gold.png';
+const generatedImage = '/logo-nobg.png';
 
 const BUILD_ID = "2024.12.22.1";
 
