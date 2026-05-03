@@ -10,10 +10,29 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve sw.js and manifest.json with no-cache so browsers always pick up new versions
+  app.get("/sw.js", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.sendFile(path.resolve(distPath, "sw.js"));
+  });
 
-  // fall through to index.html if the file doesn't exist
+  app.get("/manifest.json", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.sendFile(path.resolve(distPath, "manifest.json"));
+  });
+
+  // Hashed assets (JS/CSS chunks) — long cache, they change filename on rebuild
+  app.use("/assets", express.static(path.join(distPath, "assets"), {
+    maxAge: "1y",
+    immutable: true,
+  }));
+
+  // Everything else (icons, fonts, etc.) — short cache
+  app.use(express.static(distPath, { maxAge: "1d" }));
+
+  // Always serve index.html with no-cache so the latest HTML (with new asset hashes) is loaded
   app.use("*", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

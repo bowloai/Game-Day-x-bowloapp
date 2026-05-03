@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 import { lazy, Suspense } from "react";
 import Layout from "@/components/layout";
 import Landing from "@/pages/landing";
@@ -76,13 +77,22 @@ function Router() {
   );
 }
 
+function AppInner() {
+  useVersionCheck();
+  return (
+    <>
+      <Router />
+      <Toaster />
+      <InstallPrompt />
+    </>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router />
-        <Toaster />
-        <InstallPrompt />
+        <AppInner />
       </TooltipProvider>
     </QueryClientProvider>
   );

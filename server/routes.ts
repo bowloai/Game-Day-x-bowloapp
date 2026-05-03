@@ -27,12 +27,21 @@ const isAdmin: RequestHandler = async (req: any, res, next) => {
   }
 };
 
+// Build ID generated once at server startup — changes on every new deployment
+const SERVER_BUILD_ID = Date.now().toString();
+
 export function registerRoutes(
   httpServer: Server,
   app: Express
 ): Server {
   
   setupAuth(app);
+
+  // Version endpoint — unauthenticated so the client can poll before login too
+  app.get("/api/version", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ buildId: SERVER_BUILD_ID });
+  });
 
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
