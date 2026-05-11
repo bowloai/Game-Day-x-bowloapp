@@ -556,9 +556,7 @@ export default function Analysis() {
     if (gameIdFromUrl) {
       filteredGames = filteredGames.filter(g => g.id === gameIdFromUrl);
     }
-    if (filterCategory !== "All") {
-      filteredGames = filteredGames.filter(g => g.category === filterCategory);
-    }
+    filteredGames = filteredGames.filter(g => g.category === filterCategory);
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g => g.type === filterType);
     }
@@ -776,7 +774,7 @@ export default function Analysis() {
     );
   }
 
-  const hasActiveFilters = filterCategory !== "game" || filterType !== "All" || filterSurface !== "All" || 
+  const hasActiveFilters = filterCategory === "drill" || filterType !== "All" || filterSurface !== "All" || 
     filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All" || !!dateRange;
   
   const clearAllFilters = () => {
@@ -795,7 +793,7 @@ export default function Analysis() {
   const buildFilterQuery = () => {
     const params = new URLSearchParams();
     if (gameIdFromUrl) params.set("gameId", gameIdFromUrl);
-    if (filterCategory !== "All") params.set("category", filterCategory);
+    if (filterCategory !== "game") params.set("category", filterCategory);
     if (filterType !== "All") params.set("type", filterType);
     if (filterSurface !== "All") params.set("surface", filterSurface);
     if (filterPosition !== "All") params.set("position", filterPosition);
@@ -1112,7 +1110,6 @@ export default function Analysis() {
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
                       <SelectItem value="game">Games</SelectItem>
                       <SelectItem value="drill">Drills</SelectItem>
                     </SelectContent>

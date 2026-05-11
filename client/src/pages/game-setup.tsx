@@ -133,8 +133,14 @@ export default function GameSetup() {
       form.setValue("position", null);
       form.setValue("trackOpponent", false);
       form.setValue("rink", "1");
+      form.setValue("gameEndType", "ends");
       if (!form.getValues("totalEnds")) {
         form.setValue("totalEnds", 10);
+      }
+    } else {
+      // Switching back to Game — reset any drill-only values
+      if (form.getValues("type") === "The Phantom") {
+        form.setValue("type", "Pennant");
       }
     }
   }, [isDrill, form]);
