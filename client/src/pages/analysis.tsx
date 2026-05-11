@@ -496,6 +496,12 @@ export default function Analysis() {
   const [gameReportOpen, setGameReportOpen] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>("game");
   const [filterType, setFilterType] = useState<string>("All");
+
+  // Reset type filter when category changes to avoid invalid combinations
+  const handleFilterCategoryChange = (val: string) => {
+    setFilterCategory(val);
+    setFilterType("All");
+  };
   const [filterSurface, setFilterSurface] = useState<string>("All");
   const [filterPosition, setFilterPosition] = useState<string>("All");
   const [filterVenue, setFilterVenue] = useState<string>("All");
@@ -551,7 +557,7 @@ export default function Analysis() {
       filteredGames = filteredGames.filter(g => g.id === gameIdFromUrl);
     }
     if (filterCategory !== "All") {
-      filteredGames = filteredGames.filter(g => (g as any).category === filterCategory);
+      filteredGames = filteredGames.filter(g => g.category === filterCategory);
     }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g => g.type === filterType);
@@ -1101,7 +1107,7 @@ export default function Analysis() {
                 {/* Category */}
                 <div className="space-y-1">
                   <Label className="text-xs">Category</Label>
-                  <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <Select value={filterCategory} onValueChange={handleFilterCategoryChange}>
                     <SelectTrigger className="h-9" data-testid="select-filter-category">
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
@@ -1113,7 +1119,7 @@ export default function Analysis() {
                   </Select>
                 </div>
 
-                {/* Game Type */}
+                {/* Game Type — options filtered by selected category */}
                 <div className="space-y-1">
                   <Label className="text-xs">Type</Label>
                   <Select value={filterType} onValueChange={setFilterType}>
@@ -1122,10 +1128,16 @@ export default function Analysis() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">All Types</SelectItem>
-                      <SelectItem value="Pennant">Pennant</SelectItem>
-                      <SelectItem value="Tournament">Tournament</SelectItem>
-                      <SelectItem value="Practice">Practice</SelectItem>
-                      <SelectItem value="The Phantom">The Phantom</SelectItem>
+                      {filterCategory !== "drill" && (
+                        <>
+                          <SelectItem value="Pennant">Pennant</SelectItem>
+                          <SelectItem value="Tournament">Tournament</SelectItem>
+                          <SelectItem value="Practice">Practice</SelectItem>
+                        </>
+                      )}
+                      {filterCategory !== "game" && (
+                        <SelectItem value="The Phantom">The Phantom</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

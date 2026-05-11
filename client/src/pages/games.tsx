@@ -500,7 +500,7 @@ export default function Games() {
                             </span>
                           )}
 
-                          {(game as any).category === "drill" && (
+                          {game.category === "drill" && (
                             <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                               Drill
                             </span>

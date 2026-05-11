@@ -749,6 +749,34 @@ export default function GameRecording() {
       {/* Bowling View */}
       {viewState === 'bowling' && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+          {/* Phantom running scoreboard */}
+          {isPhantom && (() => {
+            const savedFor = endBowls.reduce((acc, b) => {
+              const row = b.gridRow ?? 4;
+              return (row >= 3 && row <= 5) ? acc + 1 : acc;
+            }, 0);
+            const savedAgainst = endBowls.length - savedFor;
+            const previewRow = gridSelection?.row ?? null;
+            const previewFor = previewRow !== null && previewRow >= 3 && previewRow <= 5 ? 1 : 0;
+            const previewAgainst = previewRow !== null && !(previewRow >= 3 && previewRow <= 5) ? 1 : 0;
+            return (
+              <div className="flex items-center justify-center gap-6 p-3 bg-amber-50/60 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800" data-testid="phantom-scoreboard">
+                <div className="text-center">
+                  <span className="text-3xl font-bold text-primary" data-testid="phantom-score-you">{savedFor + previewFor}</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">You</p>
+                </div>
+                <span className="text-sm font-light text-muted-foreground">vs</span>
+                <div className="text-center">
+                  <span className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="phantom-score-phantom">{savedAgainst + previewAgainst}</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Phantom</p>
+                </div>
+                {previewRow !== null && (
+                  <span className="text-xs text-muted-foreground italic">(preview)</span>
+                )}
+              </div>
+            );
+          })()}
+
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold" data-testid="text-bowl-number">
               Bowl {activeBowl} of {bowlsPerEnd}

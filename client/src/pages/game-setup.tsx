@@ -250,32 +250,38 @@ export default function GameSetup() {
                 </div>
               )}
 
-              {/* Game Type — hidden for drill (locked to The Phantom) */}
-              {!isDrill && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Game Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-type">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Practice">Practice</SelectItem>
-                            <SelectItem value="Tournament">Tournament</SelectItem>
-                            <SelectItem value="Pennant">Pennant</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              {/* Game Type — category-filtered options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{isDrill ? "Drill Type" : "Game Type"}</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isDrill}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-type">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isDrill ? (
+                            <SelectItem value="The Phantom">The Phantom</SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="Practice">Practice</SelectItem>
+                              <SelectItem value="Tournament">Tournament</SelectItem>
+                              <SelectItem value="Pennant">Pennant</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
+                {!isDrill && (
                   <FormField
                     control={form.control}
                     name="gameFormat"
@@ -299,8 +305,8 @@ export default function GameSetup() {
                       </FormItem>
                     )}
                   />
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Pairs Type */}
               {showPairsType && (
