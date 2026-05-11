@@ -46,6 +46,7 @@ export default function GameRecording() {
   const [activeBowl, setActiveBowl] = useState<number>(1);
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
+  const isPhantom = game?.type === "The Phantom";
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);
@@ -198,15 +199,17 @@ export default function GameRecording() {
         } else if (bowlCount < bowlsPerEnd) {
           setViewState('bowling');
           setActiveBowl(bowlCount + 1);
-        } else {
+        } else if (!isPhantom) {
           setViewState('score-entry');
         }
+        // For Phantom: when bowlCount === bowlsPerEnd, the saveBowl onSuccess
+        // handles updateEnd + setViewState('end-summary'). Don't override here.
       }
     } else {
       setCurrentEndId(null);
       setViewState('end-setup');
     }
-  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd]);
+  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd, isPhantom]);
 
   if (isLoading) return <div className="text-center py-12">Loading game...</div>;
   if (!game) return <div className="text-center py-12">Game not found</div>;
@@ -270,6 +273,7 @@ export default function GameRecording() {
     if (!gridSelection || !currentEnd) return;
 
     const result = calculateResult();
+    const savedGridRow = gridSelection.row;
     
     createBowl.mutate(
       {
@@ -287,7 +291,36 @@ export default function GameRecording() {
         onSuccess: () => {
           toast({ title: `Bowl ${activeBowl} recorded` });
           setGridSelection(null);
-          if (game.trackOpponent) {
+
+          if (isPhantom) {
+            if (activeBowl < bowlsPerEnd) {
+              setActiveBowl(activeBowl + 1);
+            } else {
+              // Last Phantom bowl — auto-calculate score (no score-entry view)
+              let autoScoreFor = 0;
+              let autoScoreAgainst = 0;
+              endBowls.forEach(b => {
+                const row = b.gridRow ?? 4;
+                if (row >= 3 && row <= 5) autoScoreFor++;
+                else autoScoreAgainst++;
+              });
+              if (savedGridRow >= 3 && savedGridRow <= 5) autoScoreFor++;
+              else autoScoreAgainst++;
+
+              updateEnd.mutate(
+                {
+                  id: currentEnd.id,
+                  gameId: game.id,
+                  updates: {
+                    scoreFor: autoScoreFor,
+                    scoreAgainst: autoScoreAgainst,
+                    isCompleted: true,
+                  },
+                },
+                { onSuccess: () => setViewState('end-summary') }
+              );
+            }
+          } else if (game.trackOpponent) {
             setActiveOppBowl(activeBowl);
             setOppGridSelection(null);
             setOppHand("Forehand");

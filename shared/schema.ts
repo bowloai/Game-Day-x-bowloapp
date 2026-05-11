@@ -68,6 +68,7 @@ export const games = pgTable("games", {
   notes: text("notes"),
   ourMat: boolean("our_mat").notNull().default(true),
   trackOpponent: boolean("track_opponent").notNull().default(false),
+  category: text("category").notNull().default("game"),
 });
 
 export const ends = pgTable("ends", {

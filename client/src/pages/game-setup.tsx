@@ -25,13 +25,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  opponent: z.string().min(2, "Opponent name is required"),
+  category: z.enum(["game", "drill"] as const),
+  opponent: z.string().min(1, "This field is required"),
   venue: z.string().min(2, "Venue is required"),
   surface: z.enum(["Grass", "Plastic", "Carpet"] as const),
   rink: z.string().min(1, "Rink number is required"),
-  type: z.enum(["Practice", "Tournament", "Pennant"] as const),
+  type: z.enum(["Practice", "Tournament", "Pennant", "The Phantom"] as const),
   gameEndType: z.enum(["ends", "score"] as const),
   totalEnds: z.coerce.number().min(1, "Must have at least 1 end").optional().nullable(),
   targetScore: z.coerce.number().min(1, "Target score must be at least 1").optional().nullable(),
@@ -95,6 +97,7 @@ export default function GameSetup() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      category: "game",
       opponent: "",
       venue: "",
       surface: "Grass",
@@ -112,15 +115,32 @@ export default function GameSetup() {
     },
   });
 
+  const category = useWatch({ control: form.control, name: "category" });
   const gameFormat = useWatch({ control: form.control, name: "gameFormat" });
   const pairsType = useWatch({ control: form.control, name: "pairsType" });
   const gameEndType = useWatch({ control: form.control, name: "gameEndType" });
 
+  const isDrill = category === "drill";
   const positionOptions = getPositionOptions(gameFormat, pairsType);
-  const showPosition = positionOptions.length > 0;
-  const showPairsType = gameFormat === "pairs";
+  const showPosition = !isDrill && positionOptions.length > 0;
+  const showPairsType = !isDrill && gameFormat === "pairs";
 
   useEffect(() => {
+    if (isDrill) {
+      form.setValue("type", "The Phantom");
+      form.setValue("bowlsPerEnd", 4);
+      form.setValue("gameFormat", "singles");
+      form.setValue("position", null);
+      form.setValue("trackOpponent", false);
+      form.setValue("rink", "1");
+      if (!form.getValues("totalEnds")) {
+        form.setValue("totalEnds", 10);
+      }
+    }
+  }, [isDrill, form]);
+
+  useEffect(() => {
+    if (isDrill) return;
     if (gameFormat !== "pairs") {
       form.setValue("pairsType", null);
     }
@@ -129,10 +149,9 @@ export default function GameSetup() {
     } else if (positionOptions.length > 0 && !positionOptions.includes(form.getValues("position") || "")) {
       form.setValue("position", positionOptions[0]);
     }
-    // Update bowls per end default when format changes
     const defaultBowls = getBowlsPerEnd(gameFormat, pairsType);
     form.setValue("bowlsPerEnd", defaultBowls);
-  }, [gameFormat, pairsType, form, showPosition, positionOptions]);
+  }, [gameFormat, pairsType, form, showPosition, positionOptions, isDrill]);
 
   function onSubmit(values: FormValues) {
     createGame.mutate(
@@ -146,18 +165,14 @@ export default function GameSetup() {
       },
       {
         onSuccess: (game) => {
-          toast({
-            title: "Game created",
-            description: `Ready to start vs ${game.opponent}`,
-          });
+          const desc = isDrill
+            ? `The Phantom drill is ready. Good luck!`
+            : `Ready to start vs ${game.opponent}`;
+          toast({ title: isDrill ? "Drill created" : "Game created", description: desc });
           setLocation(`/play/${game.id}`);
         },
         onError: (error) => {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: error.message,
-          });
+          toast({ variant: "destructive", title: "Error", description: error.message });
         },
       }
     );
@@ -165,9 +180,9 @@ export default function GameSetup() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <Button 
-        variant="ghost" 
-        onClick={() => setLocation("/")} 
+      <Button
+        variant="ghost"
+        onClick={() => setLocation("/")}
         className="gap-2 pl-0 hover:pl-2 transition-all"
         data-testid="button-back"
       >
@@ -176,63 +191,118 @@ export default function GameSetup() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl text-primary">Game Setup</CardTitle>
+          <CardTitle className="text-2xl text-primary">
+            {isDrill ? "Drill Setup" : "Game Setup"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              
-              {/* Game Type and Format - First selections */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Game Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-type">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Practice">Practice</SelectItem>
-                          <SelectItem value="Tournament">Tournament</SelectItem>
-                          <SelectItem value="Pennant">Pennant</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="gameFormat"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Format</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-format">
-                            <SelectValue placeholder="Select format" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="singles">Singles</SelectItem>
-                          <SelectItem value="pairs">Pairs</SelectItem>
-                          <SelectItem value="triples">Triples</SelectItem>
-                          <SelectItem value="fours">Fours</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Category Toggle */}
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <FormControl>
+                      <div className="flex bg-secondary p-1 rounded-lg w-full gap-1" data-testid="toggle-category">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("game")}
+                          className={cn(
+                            "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
+                            field.value === "game"
+                              ? "bg-white dark:bg-slate-800 shadow text-primary"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                          data-testid="toggle-category-game"
+                        >
+                          Game
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("drill")}
+                          className={cn(
+                            "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all",
+                            field.value === "drill"
+                              ? "bg-amber-500 shadow text-white"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                          data-testid="toggle-category-drill"
+                        >
+                          Drill
+                        </button>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-              {/* Pairs Type - shown only when pairs is selected */}
+              {/* Drill info banner */}
+              {isDrill && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">The Phantom Drill</p>
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    Deliver 4 bowls per end. Bowls landing in the effective weight zone (within 2 feet of the jack) score you a point. All others score The Phantom. No score entry — results are calculated automatically.
+                  </p>
+                </div>
+              )}
+
+              {/* Game Type — hidden for drill (locked to The Phantom) */}
+              {!isDrill && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Game Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-type">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Practice">Practice</SelectItem>
+                            <SelectItem value="Tournament">Tournament</SelectItem>
+                            <SelectItem value="Pennant">Pennant</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gameFormat"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Format</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-format">
+                              <SelectValue placeholder="Select format" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="singles">Singles</SelectItem>
+                            <SelectItem value="pairs">Pairs</SelectItem>
+                            <SelectItem value="triples">Triples</SelectItem>
+                            <SelectItem value="fours">Fours</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Pairs Type */}
               {showPairsType && (
                 <FormField
                   control={form.control}
@@ -258,26 +328,22 @@ export default function GameSetup() {
                 />
               )}
 
-              {/* Bowls per end - editable with smart default */}
-              <FormField
-                control={form.control}
-                name="bowlsPerEnd"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bowls Per End</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min={1}
-                        max={4}
-                        {...field} 
-                        data-testid="input-bowls-per-end" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Bowls per end — only shown for games */}
+              {!isDrill && (
+                <FormField
+                  control={form.control}
+                  name="bowlsPerEnd"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bowls Per End</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} max={4} {...field} data-testid="input-bowls-per-end" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
@@ -285,9 +351,13 @@ export default function GameSetup() {
                   name="opponent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Opponent</FormLabel>
+                      <FormLabel>{isDrill ? "Session Name" : "Opponent"}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Team or Player Name" {...field} data-testid="input-opponent" />
+                        <Input
+                          placeholder={isDrill ? "e.g. Morning Session" : "Team or Player Name"}
+                          {...field}
+                          data-testid="input-opponent"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -310,7 +380,7 @@ export default function GameSetup() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField
+                <FormField
                   control={form.control}
                   name="surface"
                   render={({ field }) => (
@@ -333,29 +403,33 @@ export default function GameSetup() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="rink"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rink Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. 4" {...field} data-testid="input-rink" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Rink — hidden for drills */}
+                {!isDrill && (
+                  <FormField
+                    control={form.control}
+                    name="rink"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rink Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. 4" {...field} data-testid="input-rink" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
+              {/* Ends/Score config */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="gameEndType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Game Ends When</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel>{isDrill ? "Drill Ends When" : "Game Ends When"}</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isDrill}>
                         <FormControl>
                           <SelectTrigger data-testid="select-game-end-type">
                             <SelectValue placeholder="Select end condition" />
@@ -363,7 +437,7 @@ export default function GameSetup() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="ends">Total Ends Played</SelectItem>
-                          <SelectItem value="score">First to Target Score</SelectItem>
+                          {!isDrill && <SelectItem value="score">First to Target Score</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -379,12 +453,7 @@ export default function GameSetup() {
                       <FormItem>
                         <FormLabel>Total Ends</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            value={field.value ?? ""} 
-                            data-testid="input-total-ends" 
-                          />
+                          <Input type="number" {...field} value={field.value ?? ""} data-testid="input-total-ends" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -398,13 +467,7 @@ export default function GameSetup() {
                       <FormItem>
                         <FormLabel>Target Score (First to)</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
-                            value={field.value ?? ""} 
-                            placeholder="e.g. 25"
-                            data-testid="input-target-score" 
-                          />
+                          <Input type="number" {...field} value={field.value ?? ""} placeholder="e.g. 25" data-testid="input-target-score" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -413,6 +476,7 @@ export default function GameSetup() {
                 )}
               </div>
 
+              {/* Position — only for games */}
               {showPosition && (
                 <FormField
                   control={form.control}
@@ -438,59 +502,60 @@ export default function GameSetup() {
                 />
               )}
 
-              <FormField
-                control={form.control}
-                name="ourMat"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Our Mat (First End)</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Does your team deliver the jack on the first end?
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="switch-our-mat"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {/* Our Mat — only for games */}
+              {!isDrill && (
+                <FormField
+                  control={form.control}
+                  name="ourMat"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Our Mat (First End)</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Does your team deliver the jack on the first end?
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-our-mat" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
 
-              <FormField
-                control={form.control}
-                name="trackOpponent"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 border-amber-200 bg-amber-50/50 dark:bg-amber-950/10">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Track Opponent Bowls</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Record your direct opponent's bowls for in-game tactical analysis
-                      </p>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="switch-track-opponent"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {/* Track Opponent — only for games */}
+              {!isDrill && (
+                <FormField
+                  control={form.control}
+                  name="trackOpponent"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 border-amber-200 bg-amber-50/50 dark:bg-amber-950/10">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Track Opponent Bowls</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Record your direct opponent's bowls for in-game tactical analysis
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-track-opponent" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="pt-4">
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  size="lg"
+                  className={cn(
+                    "w-full",
+                    isDrill && "bg-amber-500 hover:bg-amber-600 text-white"
+                  )}
                   disabled={createGame.isPending}
                   data-testid="button-start-game"
                 >
-                  {createGame.isPending ? "Creating..." : "Start Game"}
+                  {createGame.isPending ? "Creating..." : isDrill ? "Start Drill" : "Start Game"}
                 </Button>
               </div>
             </form>

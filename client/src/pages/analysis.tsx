@@ -494,6 +494,7 @@ export default function Analysis() {
   // Filters and Game Report
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gameReportOpen, setGameReportOpen] = useState(true);
+  const [filterCategory, setFilterCategory] = useState<string>("game");
   const [filterType, setFilterType] = useState<string>("All");
   const [filterSurface, setFilterSurface] = useState<string>("All");
   const [filterPosition, setFilterPosition] = useState<string>("All");
@@ -548,6 +549,9 @@ export default function Analysis() {
     // Apply filters
     if (gameIdFromUrl) {
       filteredGames = filteredGames.filter(g => g.id === gameIdFromUrl);
+    }
+    if (filterCategory !== "All") {
+      filteredGames = filteredGames.filter(g => (g as any).category === filterCategory);
     }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g => g.type === filterType);
@@ -756,7 +760,7 @@ export default function Analysis() {
       lengthStats,
       stageStats,
     };
-  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
+  }, [gamesWithDetails, gameIdFromUrl, filterCategory, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
 
   if (isLoading) {
     return (
@@ -766,10 +770,11 @@ export default function Analysis() {
     );
   }
 
-  const hasActiveFilters = filterType !== "All" || filterSurface !== "All" || 
+  const hasActiveFilters = filterCategory !== "game" || filterType !== "All" || filterSurface !== "All" || 
     filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All" || !!dateRange;
   
   const clearAllFilters = () => {
+    setFilterCategory("game");
     setFilterType("All");
     setFilterSurface("All");
     setFilterPosition("All");
@@ -784,6 +789,7 @@ export default function Analysis() {
   const buildFilterQuery = () => {
     const params = new URLSearchParams();
     if (gameIdFromUrl) params.set("gameId", gameIdFromUrl);
+    if (filterCategory !== "All") params.set("category", filterCategory);
     if (filterType !== "All") params.set("type", filterType);
     if (filterSurface !== "All") params.set("surface", filterSurface);
     if (filterPosition !== "All") params.set("position", filterPosition);
@@ -1092,6 +1098,21 @@ export default function Analysis() {
               )}
               
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {/* Category */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Category</Label>
+                  <Select value={filterCategory} onValueChange={setFilterCategory}>
+                    <SelectTrigger className="h-9" data-testid="select-filter-category">
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All</SelectItem>
+                      <SelectItem value="game">Games</SelectItem>
+                      <SelectItem value="drill">Drills</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Game Type */}
                 <div className="space-y-1">
                   <Label className="text-xs">Type</Label>
@@ -1104,6 +1125,7 @@ export default function Analysis() {
                       <SelectItem value="Pennant">Pennant</SelectItem>
                       <SelectItem value="Tournament">Tournament</SelectItem>
                       <SelectItem value="Practice">Practice</SelectItem>
+                      <SelectItem value="The Phantom">The Phantom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
