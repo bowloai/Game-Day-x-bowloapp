@@ -58,7 +58,7 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
   const dateRange = fromDate ? { from: parseDateString(fromDate), to: toDate ? parseDateString(toDate) : undefined } : undefined;
 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
-    if (g.category !== filterCategory) return false;
+    if (filterCategory !== "all" && g.category !== filterCategory) return false;
     if (filterType !== "All" && g.type !== filterType) return false;
     if (filterSurface !== "All" && g.surface !== filterSurface) return false;
     if (filterPosition !== "All" && g.position !== filterPosition) return false;

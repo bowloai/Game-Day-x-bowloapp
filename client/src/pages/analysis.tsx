@@ -556,7 +556,9 @@ export default function Analysis() {
     if (gameIdFromUrl) {
       filteredGames = filteredGames.filter(g => g.id === gameIdFromUrl);
     }
-    filteredGames = filteredGames.filter(g => g.category === filterCategory);
+    if (filterCategory !== "all") {
+      filteredGames = filteredGames.filter(g => g.category === filterCategory);
+    }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g => g.type === filterType);
     }
@@ -774,7 +776,7 @@ export default function Analysis() {
     );
   }
 
-  const hasActiveFilters = filterCategory === "drill" || filterType !== "All" || filterSurface !== "All" || 
+  const hasActiveFilters = filterCategory !== "game" || filterType !== "All" || filterSurface !== "All" || 
     filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All" || !!dateRange;
   
   const clearAllFilters = () => {
@@ -1110,6 +1112,7 @@ export default function Analysis() {
                       <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
                       <SelectItem value="game">Games</SelectItem>
                       <SelectItem value="drill">Drills</SelectItem>
                     </SelectContent>
@@ -1132,7 +1135,7 @@ export default function Analysis() {
                           <SelectItem value="Practice">Practice</SelectItem>
                         </>
                       )}
-                      {filterCategory !== "game" && (
+                      {(filterCategory === "drill" || filterCategory === "all") && (
                         <SelectItem value="The Phantom">The Phantom</SelectItem>
                       )}
                     </SelectContent>

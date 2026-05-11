@@ -156,7 +156,7 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
     if (gameId && g.id !== gameId) return false;
-    if (g.category !== filterCategory) return false;
+    if (filterCategory !== "all" && g.category !== filterCategory) return false;
     if (filterType !== "All" && g.type !== filterType) return false;
     if (filterSurface !== "All" && g.surface !== filterSurface) return false;
     if (filterPosition !== "All" && g.position !== filterPosition) return false;
