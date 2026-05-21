@@ -24,7 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -116,16 +116,18 @@ export default function GameSetup() {
   });
 
   const category = useWatch({ control: form.control, name: "category" });
-  const gameType = useWatch({ control: form.control, name: "type" });
   const gameFormat = useWatch({ control: form.control, name: "gameFormat" });
   const pairsType = useWatch({ control: form.control, name: "pairsType" });
   const gameEndType = useWatch({ control: form.control, name: "gameEndType" });
 
+  const [singlesVariant, setSinglesVariant] = useState<"standard" | "100up">("standard");
+
   const isDrill = category === "drill";
-  const is100up = !isDrill && gameType === "100up";
+  const is100up = !isDrill && gameFormat === "singles" && singlesVariant === "100up";
   const positionOptions = getPositionOptions(gameFormat, pairsType);
   const showPosition = !isDrill && !is100up && positionOptions.length > 0;
-  const showPairsType = !isDrill && !is100up && gameFormat === "pairs";
+  const showPairsType = !isDrill && gameFormat === "pairs";
+  const showSinglesVariant = !isDrill && gameFormat === "singles";
 
   useEffect(() => {
     if (isDrill) {
@@ -147,18 +149,30 @@ export default function GameSetup() {
     }
   }, [isDrill, form]);
 
+  // Reset singlesVariant when format changes away from singles
+  useEffect(() => {
+    if (gameFormat !== "singles") {
+      setSinglesVariant("standard");
+    }
+  }, [gameFormat]);
+
+  // Apply 100up locked settings when singlesVariant changes
   useEffect(() => {
     if (isDrill) return;
-    if (is100up) {
-      form.setValue("gameFormat", "singles");
+    if (singlesVariant === "100up") {
+      form.setValue("type", "100up");
       form.setValue("bowlsPerEnd", 4);
       form.setValue("position", null);
       form.setValue("gameEndType", "score");
       if (!form.getValues("targetScore") || form.getValues("targetScore") === 25) {
         form.setValue("targetScore", 100);
       }
+    } else {
+      if (form.getValues("type") === "100up") {
+        form.setValue("type", "Pennant");
+      }
     }
-  }, [is100up, isDrill, form]);
+  }, [singlesVariant, isDrill, form]);
 
   useEffect(() => {
     if (isDrill || is100up) return;
@@ -272,14 +286,14 @@ export default function GameSetup() {
               )}
 
               {/* Game Type — category-filtered options */}
-              <div className={cn("grid gap-6", !isDrill && !is100up ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{isDrill ? "Drill Type" : "Game Type"}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isDrill}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isDrill || is100up}>
                         <FormControl>
                           <SelectTrigger data-testid="select-type">
                             <SelectValue placeholder="Select type" />
@@ -293,7 +307,6 @@ export default function GameSetup() {
                               <SelectItem value="Practice">Practice</SelectItem>
                               <SelectItem value="Tournament">Tournament</SelectItem>
                               <SelectItem value="Pennant">Pennant</SelectItem>
-                              <SelectItem value="100up">100up (Singles)</SelectItem>
                             </>
                           )}
                         </SelectContent>
@@ -303,7 +316,7 @@ export default function GameSetup() {
                   )}
                 />
 
-                {!isDrill && !is100up && (
+                {!isDrill && (
                   <FormField
                     control={form.control}
                     name="gameFormat"
@@ -330,13 +343,22 @@ export default function GameSetup() {
                 )}
               </div>
 
-              {/* 100up info banner */}
-              {is100up && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
-                  <p className="text-sm font-semibold text-primary">100up — Scoring Guide</p>
-                  <p className="text-xs text-muted-foreground">
-                    Singles format, 4 bowls each. After every end, rank all 8 bowls by distance to the jack — closest gets 4 pts, then 3, 2, 1. Both players can score each end. Max 10 pts per end. First player to reach the target wins.
-                  </p>
+              {/* Singles Variant — shown when format is singles, mirrors Pairs Type */}
+              {showSinglesVariant && (
+                <div>
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Singles Type</label>
+                  <Select
+                    value={singlesVariant}
+                    onValueChange={(v) => setSinglesVariant(v as "standard" | "100up")}
+                  >
+                    <SelectTrigger className="mt-2" data-testid="select-singles-variant">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">Standard</SelectItem>
+                      <SelectItem value="100up">100up</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
