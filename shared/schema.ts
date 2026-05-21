@@ -57,6 +57,7 @@ export const games = pgTable("games", {
   targetScore: integer("target_score"),
   gameFormat: text("game_format").notNull().default("fours"),
   pairsType: text("pairs_type"),
+  singlesType: text("singles_type"),
   bowlsPerEnd: integer("bowls_per_end").notNull().default(2),
   position: text("position"),
   status: text("status").notNull().default("IN_PROGRESS"),

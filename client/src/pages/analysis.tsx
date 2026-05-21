@@ -560,7 +560,9 @@ export default function Analysis() {
       filteredGames = filteredGames.filter(g => g.category === filterCategory);
     }
     if (filterType !== "All") {
-      filteredGames = filteredGames.filter(g => g.type === filterType);
+      filteredGames = filteredGames.filter(g =>
+        filterType === "100up" ? g.singlesType === "100up" : g.type === filterType
+      );
     }
     if (filterSurface !== "All") {
       filteredGames = filteredGames.filter(g => g.surface === filterSurface);

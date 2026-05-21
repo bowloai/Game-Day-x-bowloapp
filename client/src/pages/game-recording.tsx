@@ -47,7 +47,7 @@ export default function GameRecording() {
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
   const isPhantom = game?.type === "The Phantom";
-  const is100up = game?.type === "100up";
+  const is100up = game?.singlesType === "100up";
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);

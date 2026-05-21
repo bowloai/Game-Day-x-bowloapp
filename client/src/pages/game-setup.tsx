@@ -160,16 +160,11 @@ export default function GameSetup() {
   useEffect(() => {
     if (isDrill) return;
     if (singlesVariant === "100up") {
-      form.setValue("type", "100up");
       form.setValue("bowlsPerEnd", 4);
       form.setValue("position", null);
       form.setValue("gameEndType", "score");
       if (!form.getValues("targetScore") || form.getValues("targetScore") === 25) {
         form.setValue("targetScore", 100);
-      }
-    } else {
-      if (form.getValues("type") === "100up") {
-        form.setValue("type", "Pennant");
       }
     }
   }, [singlesVariant, isDrill, form]);
@@ -195,6 +190,7 @@ export default function GameSetup() {
         status: "IN_PROGRESS",
         position: values.position || null,
         pairsType: values.pairsType || null,
+        singlesType: singlesVariant === "100up" ? "100up" : null,
         totalEnds: values.gameEndType === "ends" ? values.totalEnds : null,
         targetScore: values.gameEndType === "score" ? values.targetScore : null,
       },
@@ -293,7 +289,7 @@ export default function GameSetup() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{isDrill ? "Drill Type" : "Game Type"}</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isDrill || is100up}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isDrill}>
                         <FormControl>
                           <SelectTrigger data-testid="select-type">
                             <SelectValue placeholder="Select type" />
