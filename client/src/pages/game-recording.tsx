@@ -202,9 +202,31 @@ export default function GameRecording() {
           setActiveBowl(bowlCount + 1);
         } else if (!isPhantom) {
           setViewState('score-entry');
+        } else if (!updateEnd.isPending) {
+          // Recovery path: all 4 Phantom bowls are saved but the end isn't
+          // marked complete (e.g. the user returned after updateEnd previously failed).
+          // Re-calculate the score from the saved bowls and complete the end.
+          const bwls = incompleteEnd.bowls?.filter(b => !b.isOpponent) || [];
+          const autoFor = bwls.reduce((acc, b) => {
+            const r = b.gridRow ?? 4;
+            return r >= 3 && r <= 5 ? acc + 1 : acc;
+          }, 0);
+          updateEnd.mutate(
+            {
+              id: incompleteEnd.id,
+              gameId: game.id,
+              updates: {
+                scoreFor: autoFor,
+                scoreAgainst: bwls.length - autoFor,
+                isCompleted: true,
+              },
+            },
+            {
+              onSuccess: () => setViewState('end-summary'),
+              onError: () => toast({ title: "Failed to complete end", description: "Please try again.", variant: "destructive" }),
+            }
+          );
         }
-        // For Phantom: when bowlCount === bowlsPerEnd, the saveBowl onSuccess
-        // handles updateEnd + setViewState('end-summary'). Don't override here.
       }
     } else {
       setCurrentEndId(null);
@@ -266,6 +288,7 @@ export default function GameRecording() {
           // Alternate hand based on end number - odd ends use Forehand, even ends use Backhand
           setHand(nextEndNumber % 2 === 1 ? "Forehand" : "Backhand");
         },
+        onError: () => toast({ title: "Failed to start end", description: "Please try again.", variant: "destructive" }),
       }
     );
   };
@@ -318,7 +341,10 @@ export default function GameRecording() {
                     isCompleted: true,
                   },
                 },
-                { onSuccess: () => setViewState('end-summary') }
+                {
+                  onSuccess: () => setViewState('end-summary'),
+                  onError: () => toast({ title: "Failed to complete end", description: "Please try again.", variant: "destructive" }),
+                }
               );
             }
           } else if (game.trackOpponent) {
@@ -816,11 +842,11 @@ export default function GameRecording() {
           <Button 
             size="lg" 
             className="w-full font-display text-lg" 
-            disabled={!gridSelection || createBowl.isPending}
+            disabled={!gridSelection || createBowl.isPending || updateEnd.isPending}
             onClick={saveBowl}
             data-testid="button-save-bowl"
           >
-            {createBowl.isPending ? "Saving..." : `Save Bowl ${activeBowl}`}
+            {updateEnd.isPending ? "Completing end..." : createBowl.isPending ? "Saving..." : `Save Bowl ${activeBowl}`}
           </Button>
         </div>
       )}
