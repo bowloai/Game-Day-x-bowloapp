@@ -1133,6 +1133,7 @@ export default function Analysis() {
                           <SelectItem value="Pennant">Pennant</SelectItem>
                           <SelectItem value="Tournament">Tournament</SelectItem>
                           <SelectItem value="Practice">Practice</SelectItem>
+                          <SelectItem value="100up">100up</SelectItem>
                         </>
                       )}
                       {(filterCategory === "drill" || filterCategory === "all") && (

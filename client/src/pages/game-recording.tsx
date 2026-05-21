@@ -47,6 +47,7 @@ export default function GameRecording() {
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
   const isPhantom = game?.type === "The Phantom";
+  const is100up = game?.type === "100up";
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);
@@ -865,7 +866,74 @@ export default function GameRecording() {
                 </div>
               </div>
 
-              {!isDead && (
+              {!isDead && is100up && (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Rank all 8 bowls by distance — 4 pts closest, then 3, 2, 1. Max 10 pts per end.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 text-center">
+                      <Label className="text-sm font-medium">Your Points</Label>
+                      <div className="flex items-center justify-center gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 text-xl"
+                          onClick={() => setScoreFor(Math.max(0, scoreFor - 1))}
+                          data-testid="button-100up-your-minus"
+                        >
+                          −
+                        </Button>
+                        <span className="text-4xl font-bold text-primary min-w-[2.5rem]" data-testid="text-100up-your-score">{scoreFor}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 text-xl"
+                          onClick={() => setScoreFor(Math.min(10 - scoreAgainst, scoreFor + 1))}
+                          data-testid="button-100up-your-plus"
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-center">
+                      <Label className="text-sm font-medium">Opponent's Points</Label>
+                      <div className="flex items-center justify-center gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 text-xl"
+                          onClick={() => setScoreAgainst(Math.max(0, scoreAgainst - 1))}
+                          data-testid="button-100up-opp-minus"
+                        >
+                          −
+                        </Button>
+                        <span className="text-4xl font-bold text-destructive min-w-[2.5rem]" data-testid="text-100up-opp-score">{scoreAgainst}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 text-xl"
+                          onClick={() => setScoreAgainst(Math.min(10 - scoreFor, scoreAgainst + 1))}
+                          data-testid="button-100up-opp-plus"
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-center text-sm text-muted-foreground">
+                    End total: <span className="font-semibold">{scoreFor + scoreAgainst}</span> / 10 pts
+                  </p>
+                </div>
+              )}
+
+              {!isDead && !is100up && (
                 <div className="space-y-4">
                   <Label className="text-center block">End Score</Label>
                   <div className="flex items-center justify-center gap-4">

@@ -33,7 +33,7 @@ const formSchema = z.object({
   venue: z.string().min(2, "Venue is required"),
   surface: z.enum(["Grass", "Plastic", "Carpet"] as const),
   rink: z.string().min(1, "Rink number is required"),
-  type: z.enum(["Practice", "Tournament", "Pennant", "The Phantom"] as const),
+  type: z.enum(["Practice", "Tournament", "Pennant", "The Phantom", "100up"] as const),
   gameEndType: z.enum(["ends", "score"] as const),
   totalEnds: z.coerce.number().min(1, "Must have at least 1 end").optional().nullable(),
   targetScore: z.coerce.number().min(1, "Target score must be at least 1").optional().nullable(),
@@ -116,14 +116,16 @@ export default function GameSetup() {
   });
 
   const category = useWatch({ control: form.control, name: "category" });
+  const gameType = useWatch({ control: form.control, name: "type" });
   const gameFormat = useWatch({ control: form.control, name: "gameFormat" });
   const pairsType = useWatch({ control: form.control, name: "pairsType" });
   const gameEndType = useWatch({ control: form.control, name: "gameEndType" });
 
   const isDrill = category === "drill";
+  const is100up = !isDrill && gameType === "100up";
   const positionOptions = getPositionOptions(gameFormat, pairsType);
-  const showPosition = !isDrill && positionOptions.length > 0;
-  const showPairsType = !isDrill && gameFormat === "pairs";
+  const showPosition = !isDrill && !is100up && positionOptions.length > 0;
+  const showPairsType = !isDrill && !is100up && gameFormat === "pairs";
 
   useEffect(() => {
     if (isDrill) {
@@ -147,6 +149,19 @@ export default function GameSetup() {
 
   useEffect(() => {
     if (isDrill) return;
+    if (is100up) {
+      form.setValue("gameFormat", "singles");
+      form.setValue("bowlsPerEnd", 4);
+      form.setValue("position", null);
+      form.setValue("gameEndType", "score");
+      if (!form.getValues("targetScore") || form.getValues("targetScore") === 25) {
+        form.setValue("targetScore", 100);
+      }
+    }
+  }, [is100up, isDrill, form]);
+
+  useEffect(() => {
+    if (isDrill || is100up) return;
     if (gameFormat !== "pairs") {
       form.setValue("pairsType", null);
     }
@@ -157,7 +172,7 @@ export default function GameSetup() {
     }
     const defaultBowls = getBowlsPerEnd(gameFormat, pairsType);
     form.setValue("bowlsPerEnd", defaultBowls);
-  }, [gameFormat, pairsType, form, showPosition, positionOptions, isDrill]);
+  }, [gameFormat, pairsType, form, showPosition, positionOptions, isDrill, is100up]);
 
   function onSubmit(values: FormValues) {
     createGame.mutate(
@@ -257,7 +272,7 @@ export default function GameSetup() {
               )}
 
               {/* Game Type — category-filtered options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={cn("grid gap-6", !isDrill && !is100up ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                 <FormField
                   control={form.control}
                   name="type"
@@ -278,6 +293,7 @@ export default function GameSetup() {
                               <SelectItem value="Practice">Practice</SelectItem>
                               <SelectItem value="Tournament">Tournament</SelectItem>
                               <SelectItem value="Pennant">Pennant</SelectItem>
+                              <SelectItem value="100up">100up (Singles)</SelectItem>
                             </>
                           )}
                         </SelectContent>
@@ -287,7 +303,7 @@ export default function GameSetup() {
                   )}
                 />
 
-                {!isDrill && (
+                {!isDrill && !is100up && (
                   <FormField
                     control={form.control}
                     name="gameFormat"
@@ -313,6 +329,16 @@ export default function GameSetup() {
                   />
                 )}
               </div>
+
+              {/* 100up info banner */}
+              {is100up && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-primary">100up — Scoring Guide</p>
+                  <p className="text-xs text-muted-foreground">
+                    Singles format, 4 bowls each. After every end, rank all 8 bowls by distance to the jack — closest gets 4 pts, then 3, 2, 1. Both players can score each end. Max 10 pts per end. First player to reach the target wins.
+                  </p>
+                </div>
+              )}
 
               {/* Pairs Type */}
               {showPairsType && (
@@ -340,8 +366,8 @@ export default function GameSetup() {
                 />
               )}
 
-              {/* Bowls per end — only shown for games */}
-              {!isDrill && (
+              {/* Bowls per end — only shown for regular games (not drills or 100up which lock to 4) */}
+              {!isDrill && !is100up && (
                 <FormField
                   control={form.control}
                   name="bowlsPerEnd"
