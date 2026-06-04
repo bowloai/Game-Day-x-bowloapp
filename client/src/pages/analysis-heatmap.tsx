@@ -69,7 +69,7 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
     if (filterType !== "All") {
-      if (filterType === "100up" ? g.singlesType !== "100up" : g.type !== filterType) return false;
+      if (g.type !== filterType) return false;
     }
     if (filterSurface !== "All" && g.surface !== filterSurface) return false;
     if (filterPosition !== "All" && g.position !== filterPosition) return false;

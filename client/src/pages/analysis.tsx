@@ -551,7 +551,7 @@ export default function Analysis() {
     }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g =>
-        filterType === "100up" ? g.singlesType === "100up" : g.type === filterType
+        g.type === filterType
       );
     }
     if (filterSurface !== "All") {
@@ -1106,7 +1106,6 @@ export default function Analysis() {
                       <SelectItem value="Pennant">Pennant</SelectItem>
                       <SelectItem value="Tournament">Tournament</SelectItem>
                       <SelectItem value="Practice">Practice</SelectItem>
-                      <SelectItem value="100up">100up</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
