@@ -52,7 +52,7 @@ function generateLengthInsights(allStats: LengthStatsSet, forehandStats: LengthS
 }
 
 function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
-  const filterCategory = searchParams.get("category") || "game";
+  const filterCategory = searchParams.get("category") || "all";
   const filterType = searchParams.get("type") || "All";
   const filterSurface = searchParams.get("surface") || "All";
   const filterPosition = searchParams.get("position") || "All";

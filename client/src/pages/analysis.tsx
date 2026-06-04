@@ -494,14 +494,7 @@ export default function Analysis() {
   // Filters and Game Report
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gameReportOpen, setGameReportOpen] = useState(true);
-  const [filterCategory, setFilterCategory] = useState<string>("game");
   const [filterType, setFilterType] = useState<string>("All");
-
-  // Reset type filter when category changes to avoid invalid combinations
-  const handleFilterCategoryChange = (val: string) => {
-    setFilterCategory(val);
-    setFilterType("All");
-  };
   const [filterSurface, setFilterSurface] = useState<string>("All");
   const [filterPosition, setFilterPosition] = useState<string>("All");
   const [filterVenue, setFilterVenue] = useState<string>("All");
@@ -555,9 +548,6 @@ export default function Analysis() {
     // Apply filters
     if (gameIdFromUrl) {
       filteredGames = filteredGames.filter(g => g.id === gameIdFromUrl);
-    }
-    if (filterCategory !== "all") {
-      filteredGames = filteredGames.filter(g => g.category === filterCategory);
     }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g =>
@@ -768,7 +758,7 @@ export default function Analysis() {
       lengthStats,
       stageStats,
     };
-  }, [gamesWithDetails, gameIdFromUrl, filterCategory, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
+  }, [gamesWithDetails, gameIdFromUrl, filterType, filterSurface, filterPosition, filterVenue, filterOpponent, filterFormat, dateRange]);
 
   if (isLoading) {
     return (
@@ -778,11 +768,10 @@ export default function Analysis() {
     );
   }
 
-  const hasActiveFilters = filterCategory !== "game" || filterType !== "All" || filterSurface !== "All" || 
+  const hasActiveFilters = filterType !== "All" || filterSurface !== "All" || 
     filterPosition !== "All" || filterVenue !== "All" || filterOpponent !== "All" || filterFormat !== "All" || !!dateRange;
   
   const clearAllFilters = () => {
-    setFilterCategory("game");
     setFilterType("All");
     setFilterSurface("All");
     setFilterPosition("All");
@@ -797,7 +786,6 @@ export default function Analysis() {
   const buildFilterQuery = () => {
     const params = new URLSearchParams();
     if (gameIdFromUrl) params.set("gameId", gameIdFromUrl);
-    if (filterCategory !== "game") params.set("category", filterCategory);
     if (filterType !== "All") params.set("type", filterType);
     if (filterSurface !== "All") params.set("surface", filterSurface);
     if (filterPosition !== "All") params.set("position", filterPosition);
@@ -1106,22 +1094,7 @@ export default function Analysis() {
               )}
               
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {/* Category */}
-                <div className="space-y-1">
-                  <Label className="text-xs">Category</Label>
-                  <Select value={filterCategory} onValueChange={handleFilterCategoryChange}>
-                    <SelectTrigger className="h-9" data-testid="select-filter-category">
-                      <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="game">Games</SelectItem>
-                      <SelectItem value="drill">Drills</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Game Type — options filtered by selected category */}
+                {/* Game Type */}
                 <div className="space-y-1">
                   <Label className="text-xs">Type</Label>
                   <Select value={filterType} onValueChange={setFilterType}>
@@ -1130,17 +1103,10 @@ export default function Analysis() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">All Types</SelectItem>
-                      {filterCategory !== "drill" && (
-                        <>
-                          <SelectItem value="Pennant">Pennant</SelectItem>
-                          <SelectItem value="Tournament">Tournament</SelectItem>
-                          <SelectItem value="Practice">Practice</SelectItem>
-                          <SelectItem value="100up">100up</SelectItem>
-                        </>
-                      )}
-                      {(filterCategory === "drill" || filterCategory === "all") && (
-                        <SelectItem value="The Phantom">The Phantom</SelectItem>
-                      )}
+                      <SelectItem value="Pennant">Pennant</SelectItem>
+                      <SelectItem value="Tournament">Tournament</SelectItem>
+                      <SelectItem value="Practice">Practice</SelectItem>
+                      <SelectItem value="100up">100up</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

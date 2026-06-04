@@ -46,7 +46,6 @@ export default function GameRecording() {
   const [activeBowl, setActiveBowl] = useState<number>(1);
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
-  const isPhantom = game?.type === "The Phantom";
   const is100up = game?.singlesType === "100up";
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
@@ -200,39 +199,15 @@ export default function GameRecording() {
         } else if (bowlCount < bowlsPerEnd) {
           setViewState('bowling');
           setActiveBowl(bowlCount + 1);
-        } else if (!isPhantom) {
+        } else {
           setViewState('score-entry');
-        } else if (!updateEnd.isPending) {
-          // Recovery path: all 4 Phantom bowls are saved but the end isn't
-          // marked complete (e.g. the user returned after updateEnd previously failed).
-          // Re-calculate the score from the saved bowls and complete the end.
-          const bwls = incompleteEnd.bowls?.filter(b => !b.isOpponent) || [];
-          const autoFor = bwls.reduce((acc, b) => {
-            const r = b.gridRow ?? 4;
-            return r >= 3 && r <= 5 ? acc + 1 : acc;
-          }, 0);
-          updateEnd.mutate(
-            {
-              id: incompleteEnd.id,
-              gameId: game.id,
-              updates: {
-                scoreFor: autoFor,
-                scoreAgainst: bwls.length - autoFor,
-                isCompleted: true,
-              },
-            },
-            {
-              onSuccess: () => setViewState('end-summary'),
-              onError: () => toast({ title: "Failed to complete end", description: "Please try again.", variant: "destructive" }),
-            }
-          );
         }
       }
     } else {
       setCurrentEndId(null);
       setViewState('end-setup');
     }
-  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd, isPhantom]);
+  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd]);
 
   if (isLoading) return <div className="text-center py-12">Loading game...</div>;
   if (!game) return <div className="text-center py-12">Game not found</div>;
@@ -316,38 +291,7 @@ export default function GameRecording() {
           toast({ title: `Bowl ${activeBowl} recorded` });
           setGridSelection(null);
 
-          if (isPhantom) {
-            if (activeBowl < bowlsPerEnd) {
-              setActiveBowl(activeBowl + 1);
-            } else {
-              // Last Phantom bowl — auto-calculate score (no score-entry view)
-              let autoScoreFor = 0;
-              let autoScoreAgainst = 0;
-              endBowls.forEach(b => {
-                const row = b.gridRow ?? 4;
-                if (row >= 3 && row <= 5) autoScoreFor++;
-                else autoScoreAgainst++;
-              });
-              if (savedGridRow >= 3 && savedGridRow <= 5) autoScoreFor++;
-              else autoScoreAgainst++;
-
-              updateEnd.mutate(
-                {
-                  id: currentEnd.id,
-                  gameId: game.id,
-                  updates: {
-                    scoreFor: autoScoreFor,
-                    scoreAgainst: autoScoreAgainst,
-                    isCompleted: true,
-                  },
-                },
-                {
-                  onSuccess: () => setViewState('end-summary'),
-                  onError: () => toast({ title: "Failed to complete end", description: "Please try again.", variant: "destructive" }),
-                }
-              );
-            }
-          } else if (game.trackOpponent) {
+          if (game.trackOpponent) {
             setActiveOppBowl(activeBowl);
             setOppGridSelection(null);
             setOppHand("Forehand");
@@ -776,34 +720,6 @@ export default function GameRecording() {
       {/* Bowling View */}
       {viewState === 'bowling' && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-          {/* Phantom running scoreboard */}
-          {isPhantom && (() => {
-            const savedFor = endBowls.reduce((acc, b) => {
-              const row = b.gridRow ?? 4;
-              return (row >= 3 && row <= 5) ? acc + 1 : acc;
-            }, 0);
-            const savedAgainst = endBowls.length - savedFor;
-            const previewRow = gridSelection?.row ?? null;
-            const previewFor = previewRow !== null && previewRow >= 3 && previewRow <= 5 ? 1 : 0;
-            const previewAgainst = previewRow !== null && !(previewRow >= 3 && previewRow <= 5) ? 1 : 0;
-            return (
-              <div className="flex items-center justify-center gap-6 p-3 bg-amber-50/60 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800" data-testid="phantom-scoreboard">
-                <div className="text-center">
-                  <span className="text-3xl font-bold text-primary" data-testid="phantom-score-you">{savedFor + previewFor}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">You</p>
-                </div>
-                <span className="text-sm font-light text-muted-foreground">vs</span>
-                <div className="text-center">
-                  <span className="text-3xl font-bold text-amber-600 dark:text-amber-400" data-testid="phantom-score-phantom">{savedAgainst + previewAgainst}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">Phantom</p>
-                </div>
-                {previewRow !== null && (
-                  <span className="text-xs text-muted-foreground italic">(preview)</span>
-                )}
-              </div>
-            );
-          })()}
-
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold" data-testid="text-bowl-number">
               Bowl {activeBowl} of {bowlsPerEnd}
