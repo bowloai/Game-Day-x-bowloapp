@@ -41,7 +41,6 @@ function generateInsights(allStats: ReturnType<typeof calculateStats>, forehandS
 }
 
 function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
-  const filterCategory = searchParams.get("category") || "all";
   const filterType = searchParams.get("type") || "All";
   const filterSurface = searchParams.get("surface") || "All";
   const filterPosition = searchParams.get("position") || "All";
@@ -58,7 +57,6 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
   const dateRange = fromDate ? { from: parseDateString(fromDate), to: toDate ? parseDateString(toDate) : undefined } : undefined;
 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
-    if (filterCategory !== "all" && g.category !== filterCategory) return false;
     if (filterType !== "All") {
       if (filterType === "100up" ? g.singlesType !== "100up" : g.type !== filterType) return false;
     }

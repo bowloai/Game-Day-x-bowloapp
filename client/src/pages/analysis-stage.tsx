@@ -138,7 +138,6 @@ function HeatmapCanvas({ heatmap, maxCount, size = 140 }: { heatmap: number[][],
 }
 
 function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): GameWithDetails[] {
-  const filterCategory = searchParams.get("category") || "all";
   const filterType = searchParams.get("type") || "All";
   const filterSurface = searchParams.get("surface") || "All";
   const filterPosition = searchParams.get("position") || "All";
@@ -156,7 +155,6 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
     if (gameId && g.id !== gameId) return false;
-    if (filterCategory !== "all" && g.category !== filterCategory) return false;
     if (filterType !== "All") {
       if (filterType === "100up" ? g.singlesType !== "100up" : g.type !== filterType) return false;
     }
