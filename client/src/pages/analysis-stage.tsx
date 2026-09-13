@@ -318,7 +318,7 @@ export default function AnalysisStage() {
         <div>
           <h1 className="text-xl font-semibold">Performance by Game Stage</h1>
           <p className="text-muted-foreground text-sm">
-            {isSingleGame ? `vs ${singleGame?.opponent}` : 'All games'}{hasFilters && " (filtered)"}
+            {isSingleGame ? (singleGame?.type === "Roll Up" ? "Roll Up" : `vs ${singleGame?.opponent}`) : 'All games'}{hasFilters && " (filtered)"}
           </p>
         </div>
       </div>

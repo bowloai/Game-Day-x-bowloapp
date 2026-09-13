@@ -824,7 +824,7 @@ export default function Analysis() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm text-muted-foreground">Viewing analysis for:</span>
-                <span className="ml-2 font-semibold">vs {selectedGame.opponent}</span>
+                <span className="ml-2 font-semibold">{selectedGame.type === "Roll Up" ? "Roll Up" : `vs ${selectedGame.opponent}`}</span>
                 <span className="ml-2 text-sm text-muted-foreground">
                   ({format(new Date(selectedGame.createdAt), "MMM d, yyyy")} at {selectedGame.venue})
                 </span>
@@ -1106,6 +1106,7 @@ export default function Analysis() {
                       <SelectItem value="Pennant">Pennant</SelectItem>
                       <SelectItem value="Tournament">Tournament</SelectItem>
                       <SelectItem value="Practice">Practice</SelectItem>
+                       <SelectItem value="Roll Up">Roll Up</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

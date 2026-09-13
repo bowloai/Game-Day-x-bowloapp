@@ -123,6 +123,7 @@ export default function GameEdit() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { data: game, isLoading } = useGameFull(id);
+  const isRollUp = game?.type === "Roll Up";
   const updateEnd = useUpdateEnd();
   const updateBowl = useUpdateBowl();
   const { toast } = useToast();
@@ -277,7 +278,7 @@ export default function GameEdit() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-primary" data-testid="heading-edit-game">Edit Game</h1>
-          <p className="text-muted-foreground text-sm">vs {game.opponent}</p>
+          <p className="text-muted-foreground text-sm">{isRollUp ? "Solo practice" : `vs ${game.opponent}`}</p>
         </div>
       </div>
 
@@ -296,10 +297,10 @@ export default function GameEdit() {
               <span className="text-muted-foreground">Surface:</span>{" "}
               <span className="font-medium">{game.surface}</span>
             </div>
-            <div>
+            {!isRollUp && <div>
               <span className="text-muted-foreground">Position:</span>{" "}
               <span className="font-medium">{game.position}</span>
-            </div>
+            </div>}
             <div>
               <span className="text-muted-foreground">Status:</span>{" "}
               <span className={cn(
@@ -344,7 +345,7 @@ export default function GameEdit() {
                           <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded">Dead</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
+                      {!isRollUp && <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1 font-mono">
                           <span className={cn(
                             "font-bold",
@@ -376,7 +377,7 @@ export default function GameEdit() {
                         >
                           <Pencil className="h-3 w-3" />
                         </Button>
-                      </div>
+                      </div>}
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -507,7 +508,7 @@ export default function GameEdit() {
       </Dialog>
 
       {/* Edit End Scores Dialog */}
-      <Dialog open={!!editingEndScores} onOpenChange={() => setEditingEndScores(null)}>
+      <Dialog open={!isRollUp && !!editingEndScores} onOpenChange={() => setEditingEndScores(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Edit End Scores</DialogTitle>

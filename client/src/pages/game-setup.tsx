@@ -27,11 +27,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 
 const formSchema = z.object({
-  opponent: z.string().min(1, "This field is required"),
+  opponent: z.string(),
   venue: z.string().min(2, "Venue is required"),
   surface: z.enum(["Grass", "Plastic", "Carpet"] as const),
   rink: z.string().min(1, "Rink number is required"),
-  type: z.enum(["Practice", "Tournament", "Pennant", "100up"] as const),
+  type: z.enum(["Practice", "Tournament", "Pennant", "100up", "Roll Up"] as const),
   gameEndType: z.enum(["ends", "score"] as const),
   totalEnds: z.coerce.number().min(1, "Must have at least 1 end").optional().nullable(),
   targetScore: z.coerce.number().min(1, "Target score must be at least 1").optional().nullable(),
@@ -42,6 +42,9 @@ const formSchema = z.object({
   ourMat: z.boolean(),
   trackOpponent: z.boolean(),
 }).refine((data) => {
+  return data.type === "Roll Up" || data.opponent.trim().length > 0;
+}, { message: "Opponent is required", path: ["opponent"] })
+.refine((data) => {
   if (data.gameEndType === "ends") {
     return data.totalEnds && data.totalEnds >= 1;
   }
@@ -115,10 +118,12 @@ export default function GameSetup() {
   const gameFormat = useWatch({ control: form.control, name: "gameFormat" });
   const pairsType = useWatch({ control: form.control, name: "pairsType" });
   const gameEndType = useWatch({ control: form.control, name: "gameEndType" });
+  const gameType = useWatch({ control: form.control, name: "type" });
 
   const [singlesVariant, setSinglesVariant] = useState<"standard" | "100up">("standard");
 
   const is100up = gameFormat === "singles" && singlesVariant === "100up";
+  const isRollUp = gameType === "Roll Up";
   const positionOptions = getPositionOptions(gameFormat, pairsType);
   const showPosition = !is100up && positionOptions.length > 0;
   const showPairsType = gameFormat === "pairs";
@@ -144,7 +149,20 @@ export default function GameSetup() {
   }, [singlesVariant, form]);
 
   useEffect(() => {
-    if (is100up) return;
+    if (!isRollUp) return;
+    form.setValue("opponent", "");
+    form.setValue("gameFormat", "singles");
+    form.setValue("pairsType", null);
+    form.setValue("position", null);
+    form.setValue("bowlsPerEnd", 4);
+    form.setValue("gameEndType", "ends");
+    form.setValue("targetScore", null);
+    form.setValue("trackOpponent", false);
+    setSinglesVariant("standard");
+  }, [isRollUp, form]);
+
+  useEffect(() => {
+    if (is100up || isRollUp) return;
     if (gameFormat !== "pairs") {
       form.setValue("pairsType", null);
     }
@@ -155,23 +173,28 @@ export default function GameSetup() {
     }
     const defaultBowls = getBowlsPerEnd(gameFormat, pairsType);
     form.setValue("bowlsPerEnd", defaultBowls);
-  }, [gameFormat, pairsType, form, showPosition, positionOptions, is100up]);
+  }, [gameFormat, pairsType, form, showPosition, positionOptions, is100up, isRollUp]);
 
   function onSubmit(values: FormValues) {
     createGame.mutate(
       {
         ...values,
+        opponent: isRollUp ? "Solo practice" : values.opponent,
         category: "game",
         status: "IN_PROGRESS",
         position: values.position || null,
         pairsType: values.pairsType || null,
-        singlesType: singlesVariant === "100up" ? "100up" : null,
-        totalEnds: values.gameEndType === "ends" ? values.totalEnds : null,
-        targetScore: values.gameEndType === "score" ? values.targetScore : null,
+        gameFormat: isRollUp ? "singles" : values.gameFormat,
+        bowlsPerEnd: isRollUp ? 4 : values.bowlsPerEnd,
+        gameEndType: isRollUp ? "ends" : values.gameEndType,
+        trackOpponent: isRollUp ? false : values.trackOpponent,
+        singlesType: !isRollUp && singlesVariant === "100up" ? "100up" : null,
+        totalEnds: isRollUp || values.gameEndType === "ends" ? values.totalEnds : null,
+        targetScore: !isRollUp && values.gameEndType === "score" ? values.targetScore : null,
       },
       {
         onSuccess: (game) => {
-          toast({ title: "Game created", description: `Ready to start vs ${game.opponent}` });
+          toast({ title: isRollUp ? "Roll Up created" : "Game created", description: isRollUp ? "Ready to start your solo practice" : `Ready to start vs ${game.opponent}` });
           setLocation(`/play/${game.id}`);
         },
         onError: (error) => {
@@ -217,7 +240,8 @@ export default function GameSetup() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Practice">Practice</SelectItem>
+                           <SelectItem value="Practice">Practice</SelectItem>
+                           <SelectItem value="Roll Up">Roll Up</SelectItem>
                           <SelectItem value="Tournament">Tournament</SelectItem>
                           <SelectItem value="Pennant">Pennant</SelectItem>
                         </SelectContent>
@@ -227,7 +251,7 @@ export default function GameSetup() {
                   )}
                 />
 
-                <FormField
+                {!isRollUp && <FormField
                   control={form.control}
                   name="gameFormat"
                   render={({ field }) => (
@@ -249,11 +273,11 @@ export default function GameSetup() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                />}
               </div>
 
               {/* Singles Variant — shown when format is singles, mirrors Pairs Type */}
-              {showSinglesVariant && (
+              {showSinglesVariant && !isRollUp && (
                 <div>
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Singles Type</label>
                   <Select
@@ -272,7 +296,7 @@ export default function GameSetup() {
               )}
 
               {/* Pairs Type */}
-              {showPairsType && (
+              {showPairsType && !isRollUp && (
                 <FormField
                   control={form.control}
                   name="pairsType"
@@ -298,7 +322,7 @@ export default function GameSetup() {
               )}
 
               {/* Bowls per end — hidden for 100up which locks to 4 */}
-              {!is100up && (
+              {!is100up && !isRollUp && (
                 <FormField
                   control={form.control}
                   name="bowlsPerEnd"
@@ -315,7 +339,7 @@ export default function GameSetup() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
+                {!isRollUp && <FormField
                   control={form.control}
                   name="opponent"
                   render={({ field }) => (
@@ -331,7 +355,7 @@ export default function GameSetup() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                />}
 
                 <FormField
                   control={form.control}
@@ -349,7 +373,7 @@ export default function GameSetup() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
+                {!isRollUp && <FormField
                   control={form.control}
                   name="surface"
                   render={({ field }) => (
@@ -370,7 +394,7 @@ export default function GameSetup() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                />}
 
                 <FormField
                   control={form.control}
@@ -389,7 +413,7 @@ export default function GameSetup() {
 
               {/* Ends/Score config */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
+                {!isRollUp && <FormField
                   control={form.control}
                   name="gameEndType"
                   render={({ field }) => (
@@ -409,7 +433,7 @@ export default function GameSetup() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                />}
 
                 {gameEndType === "ends" ? (
                   <FormField
@@ -425,7 +449,7 @@ export default function GameSetup() {
                       </FormItem>
                     )}
                   />
-                ) : (
+                ) : !isRollUp ? (
                   <FormField
                     control={form.control}
                     name="targetScore"
@@ -439,11 +463,11 @@ export default function GameSetup() {
                       </FormItem>
                     )}
                   />
-                )}
+                ) : null}
               </div>
 
               {/* Position — only for games */}
-              {showPosition && (
+              {showPosition && !isRollUp && (
                 <FormField
                   control={form.control}
                   name="position"
@@ -469,7 +493,7 @@ export default function GameSetup() {
               )}
 
               {/* Our Mat */}
-              <FormField
+              {!isRollUp && <FormField
                 control={form.control}
                 name="ourMat"
                 render={({ field }) => (
@@ -485,10 +509,10 @@ export default function GameSetup() {
                     </FormControl>
                   </FormItem>
                 )}
-              />
+              />}
 
               {/* Track Opponent */}
-              <FormField
+              {!isRollUp && <FormField
                 control={form.control}
                 name="trackOpponent"
                 render={({ field }) => (
@@ -504,7 +528,7 @@ export default function GameSetup() {
                     </FormControl>
                   </FormItem>
                 )}
-              />
+              />}
 
               <div className="pt-4">
                 <Button

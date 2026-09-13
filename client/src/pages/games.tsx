@@ -150,13 +150,14 @@ export default function Games() {
     const rows: string[][] = [];
 
     gamesWithDetails.forEach(game => {
+      const isRollUp = game.type === "Roll Up";
       const { scoreFor: totalFor, scoreAgainst: totalAgainst } = getGameScore(game);
-      const result = totalFor > totalAgainst ? "Win" : totalFor < totalAgainst ? "Loss" : "Draw";
+      const result = isRollUp ? "Solo practice" : totalFor > totalAgainst ? "Win" : totalFor < totalAgainst ? "Loss" : "Draw";
       
       if (!game.ends || game.ends.length === 0) {
         rows.push([
           format(new Date(game.createdAt), "yyyy-MM-dd"),
-          game.opponent,
+          isRollUp ? "" : game.opponent,
           game.venue,
           game.surface,
           game.rink,
@@ -164,8 +165,8 @@ export default function Games() {
           game.position || "",
           String(game.totalEnds),
           game.status,
-          String(totalFor),
-          String(totalAgainst),
+          isRollUp ? "" : String(totalFor),
+          isRollUp ? "" : String(totalAgainst),
           result,
           "", "", "", "", "", "", "", "", ""
         ]);
@@ -174,7 +175,7 @@ export default function Games() {
           if (!end.bowls || end.bowls.length === 0) {
             rows.push([
               format(new Date(game.createdAt), "yyyy-MM-dd"),
-              game.opponent,
+              isRollUp ? "" : game.opponent,
               game.venue,
               game.surface,
               game.rink,
@@ -182,12 +183,12 @@ export default function Games() {
               game.position || "",
               String(game.totalEnds),
               game.status,
-              String(totalFor),
-              String(totalAgainst),
+              isRollUp ? "" : String(totalFor),
+              isRollUp ? "" : String(totalAgainst),
               result,
               String(end.endNumber),
-              String(end.scoreFor || 0),
-              String(end.scoreAgainst || 0),
+              isRollUp ? "" : String(end.scoreFor || 0),
+              isRollUp ? "" : String(end.scoreAgainst || 0),
               end.jackEffective ? "Yes" : "No",
               end.length || "",
               end.isDead ? "Yes" : "No",
@@ -197,7 +198,7 @@ export default function Games() {
             end.bowls.forEach(bowl => {
               rows.push([
                 format(new Date(game.createdAt), "yyyy-MM-dd"),
-                game.opponent,
+                isRollUp ? "" : game.opponent,
                 game.venue,
                 game.surface,
                 game.rink,
@@ -205,12 +206,12 @@ export default function Games() {
                 game.position || "",
                 String(game.totalEnds),
                 game.status,
-                String(totalFor),
-                String(totalAgainst),
+                isRollUp ? "" : String(totalFor),
+                isRollUp ? "" : String(totalAgainst),
                 result,
                 String(end.endNumber),
-                String(end.scoreFor || 0),
-                String(end.scoreAgainst || 0),
+                isRollUp ? "" : String(end.scoreFor || 0),
+                isRollUp ? "" : String(end.scoreAgainst || 0),
                 end.jackEffective ? "Yes" : "No",
                 end.length || "",
                 end.isDead ? "Yes" : "No",
@@ -450,6 +451,7 @@ export default function Games() {
           {filteredGames.map(game => {
             const isCompleted = game.status === 'COMPLETED';
             const isInProgress = game.status === 'IN_PROGRESS';
+            const isRollUp = game.type === "Roll Up";
             const { scoreFor, scoreAgainst } = getGameScore(game);
             const completedEnds = game.ends?.filter(e => e.isCompleted).length || 0;
             const isWin = scoreFor > scoreAgainst;
@@ -465,6 +467,7 @@ export default function Games() {
                   {/* Result indicator strip */}
                   <div className={cn(
                     "h-1",
+                    isCompleted && isRollUp ? "bg-gradient-to-r from-primary to-emerald-500" :
                     isCompleted && isWin ? "bg-gradient-to-r from-green-500 to-emerald-500" :
                     isCompleted && isLoss ? "bg-gradient-to-r from-red-500 to-rose-500" :
                     isCompleted ? "bg-gradient-to-r from-gray-400 to-gray-500" :
@@ -477,11 +480,11 @@ export default function Games() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="font-semibold text-lg" data-testid={`text-opponent-${game.id}`}>
-                            vs {game.opponent}
+                             {isRollUp ? "Roll Up" : `vs ${game.opponent}`}
                           </h3>
                           
                           {/* Result badge */}
-                          {isCompleted && (
+                           {isCompleted && !isRollUp && (
                             <span className={cn(
                               "flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full",
                               isWin ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
@@ -503,12 +506,16 @@ export default function Games() {
                         </div>
                         
                         <p className="text-sm text-muted-foreground mt-1">
-                          {format(new Date(game.createdAt), "MMM d, yyyy")} · {game.venue} · {game.position}
+                           {format(new Date(game.createdAt), "MMM d, yyyy")} · {game.venue}{!isRollUp && game.position ? ` · ${game.position}` : ""}
                         </p>
                       </div>
                       
                       {/* Score Display */}
-                      <div className="flex items-center gap-1 bg-muted/50 rounded-xl px-4 py-2">
+                      {isRollUp ? (
+                        <div className="bg-primary/10 text-primary rounded-xl px-4 py-2 text-sm font-semibold">
+                          {completedEnds} ends
+                        </div>
+                      ) : <div className="flex items-center gap-1 bg-muted/50 rounded-xl px-4 py-2">
                         <span className={cn(
                           "text-2xl font-bold tabular-nums",
                           isWin ? "text-green-600 dark:text-green-400" : ""
@@ -522,7 +529,7 @@ export default function Games() {
                         )} data-testid={`text-score-against-${game.id}`}>
                           {scoreAgainst}
                         </span>
-                      </div>
+                      </div>}
                     </div>
                     
                     {/* Action buttons */}
@@ -550,11 +557,11 @@ export default function Games() {
                             <BarChart3 className="h-4 w-4 mr-1" />
                             Analyze
                           </Button>
-                          <ShareGameSummary 
+                          {!isRollUp && <ShareGameSummary
                             game={game} 
                             scoreFor={scoreFor} 
                             scoreAgainst={scoreAgainst} 
-                          />
+                          />}
                         </>
                       )}
                       <Button
@@ -585,7 +592,7 @@ export default function Games() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Game</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete the game vs {game.opponent}? 
+                              Are you sure you want to delete this {isRollUp ? "Roll Up" : `game vs ${game.opponent}`}?
                               This will permanently remove all recorded ends and bowls for this game. 
                               This action cannot be undone.
                             </AlertDialogDescription>

@@ -21,7 +21,8 @@ export default function Home() {
   );
   const effectiveRate = allBowls.length > 0 ? Math.round((effectiveBowls.length / allBowls.length) * 100) : 0;
 
-  const totalWins = completedGames.filter(g => {
+  const competitiveGames = completedGames.filter(g => g.type !== "Roll Up");
+  const totalWins = competitiveGames.filter(g => {
     const game = gamesFull?.find(gf => gf.id === g.id);
     if (!game?.ends) return false;
     const scoreFor = game.ends.reduce((sum, e) => sum + (e.scoreFor || 0), 0);
@@ -29,7 +30,7 @@ export default function Home() {
     return scoreFor > scoreAgainst;
   }).length;
 
-  const winRate = completedGames.length > 0 ? Math.round((totalWins / completedGames.length) * 100) : 0;
+  const winRate = competitiveGames.length > 0 ? Math.round((totalWins / competitiveGames.length) * 100) : 0;
 
   const firstName = user?.firstName || 'Player';
 
@@ -102,13 +103,13 @@ export default function Home() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-semibold">vs {game.opponent}</p>
+                    <p className="font-semibold">{game.type === "Roll Up" ? "Roll Up" : `vs ${game.opponent}`}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {game.venue}
                     </p>
                   </div>
                   <span className="text-xs font-medium px-2 py-1 bg-muted text-muted-foreground rounded">
-                    {game.position}
+                    {game.type === "Roll Up" ? "Solo" : game.position}
                   </span>
                 </div>
                 <Link href={`/play/${game.id}`}>

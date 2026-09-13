@@ -47,6 +47,7 @@ export default function GameRecording() {
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
   const is100up = game?.singlesType === "100up";
+  const isRollUp = game?.type === "Roll Up";
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);
@@ -165,6 +166,23 @@ export default function GameRecording() {
   
   const endBowls = currentEnd?.bowls?.filter(b => !b.isOpponent).sort((a, b) => a.bowlNumber - b.bowlNumber) || [];
 
+  const completeRollUpEnd = (endId: string) => {
+    updateEnd.mutate(
+      {
+        id: endId,
+        gameId: game!.id,
+        updates: { scoreFor: 0, scoreAgainst: 0, isDead: false, isCompleted: true },
+      },
+      {
+        onSuccess: () => {
+          refetch();
+          setViewState('end-summary');
+        },
+        onError: () => toast({ title: "Failed to finish end", description: "Please try again.", variant: "destructive" }),
+      }
+    );
+  };
+
   useEffect(() => {
     if (!game) return;
     
@@ -187,6 +205,8 @@ export default function GameRecording() {
           // Both at N bowls — ready for my bowl N+1
           setActiveBowl(myBowlCount + 1);
           setViewState('bowling');
+        } else if (isRollUp) {
+          completeRollUpEnd(incompleteEnd.id);
         } else {
           // All bowls delivered — score entry
           setViewState('score-entry');
@@ -199,6 +219,8 @@ export default function GameRecording() {
         } else if (bowlCount < bowlsPerEnd) {
           setViewState('bowling');
           setActiveBowl(bowlCount + 1);
+        } else if (isRollUp) {
+          completeRollUpEnd(incompleteEnd.id);
         } else {
           setViewState('score-entry');
         }
@@ -207,7 +229,7 @@ export default function GameRecording() {
       setCurrentEndId(null);
       setViewState('end-setup');
     }
-  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd]);
+  }, [game?.ends?.length, incompleteEnd?.bowls?.length, viewState, bowlsPerEnd, isRollUp]);
 
   if (isLoading) return <div className="text-center py-12">Loading game...</div>;
   if (!game) return <div className="text-center py-12">Game not found</div>;
@@ -298,6 +320,8 @@ export default function GameRecording() {
             setViewState('opponent-bowling');
           } else if (activeBowl < bowlsPerEnd) {
             setActiveBowl(activeBowl + 1);
+          } else if (isRollUp) {
+            completeRollUpEnd(currentEnd.id);
           } else {
             setViewState('score-entry');
           }
@@ -667,7 +691,7 @@ export default function GameRecording() {
                 }
               </p>
               <p className="text-sm text-muted-foreground">
-                Final Score: {totalFor} - {totalAgainst}
+                {isRollUp ? `${completedEnds.length} ends recorded` : `Final Score: ${totalFor} - ${totalAgainst}`}
               </p>
               <Button onClick={handleFinishGame} className="mt-2" data-testid="button-finish-game-alert">
                 Finish Game
@@ -1186,7 +1210,12 @@ export default function GameRecording() {
                 <CardTitle className="text-primary">End {currentEnd.endNumber} Complete</CardTitle>
               </CardHeader>
               <CardContent>
-                {currentEnd.isDead ? (
+                {isRollUp ? (
+                  <div className="text-center py-3">
+                    <p className="text-3xl font-bold text-primary">{effectiveBowls} of {totalBowls}</p>
+                    <p className="text-sm text-muted-foreground">bowls close to the jack</p>
+                  </div>
+                ) : currentEnd.isDead ? (
                   <p className="text-center text-muted-foreground py-4">Dead End - No Score</p>
                 ) : (
                   <div className="flex justify-center gap-8 py-2">
@@ -1267,7 +1296,7 @@ export default function GameRecording() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 gap-4">
-              <Card className="bg-muted/30">
+              {!isRollUp && <Card className="bg-muted/30">
                 <CardContent className="py-4 text-center">
                   <span className="text-sm text-muted-foreground">Game Score</span>
                   <div className="flex justify-center items-baseline gap-2 mt-1">
@@ -1276,7 +1305,7 @@ export default function GameRecording() {
                     <span className="text-3xl font-bold text-destructive">{runningAgainst}</span>
                   </div>
                 </CardContent>
-              </Card>
+              </Card>}
               <Card className={cn(
                 "bg-muted/30",
                 effectivePercent >= 50 ? "border-primary/30" : ""
@@ -1539,9 +1568,10 @@ export default function GameRecording() {
                     <TableRow>
                       <TableHead className="text-xs px-1 w-8">#</TableHead>
                       <TableHead className="text-xs px-1">Len</TableHead>
-                      <TableHead className="text-xs px-1">B1</TableHead>
-                      <TableHead className="text-xs px-1">B2</TableHead>
-                      <TableHead className="text-xs px-1 text-right">Scr</TableHead>
+                      {Array.from({ length: bowlsPerEnd }, (_, index) => (
+                        <TableHead key={index} className="text-xs px-1">B{index + 1}</TableHead>
+                      ))}
+                      {!isRollUp && <TableHead className="text-xs px-1 text-right">Scr</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1551,27 +1581,22 @@ export default function GameRecording() {
                       <TableRow key={end.id}>
                         <TableCell className="font-medium text-xs px-1">{end.endNumber}</TableCell>
                         <TableCell className="text-xs px-1">{end.length?.slice(0,3)}</TableCell>
-                        <TableCell className="text-xs px-1">
-                          {endDisplayBowls[0] ? (
-                            <span className={cn("font-bold", getResultColorClass(endDisplayBowls[0].result))}>
-                              {shortenResult(endDisplayBowls[0].result)}
-                              <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
-                                {endDisplayBowls[0].hand === 'Forehand' ? 'F' : 'B'}
-                              </span>
-                            </span>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell className="text-xs px-1">
-                          {endDisplayBowls[1] ? (
-                            <span className={cn("font-bold", getResultColorClass(endDisplayBowls[1].result))}>
-                              {shortenResult(endDisplayBowls[1].result)}
-                              <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
-                                {endDisplayBowls[1].hand === 'Forehand' ? 'F' : 'B'}
-                              </span>
-                            </span>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell className="text-right text-xs px-1">
+                        {Array.from({ length: bowlsPerEnd }, (_, index) => {
+                          const bowl = endDisplayBowls[index];
+                          return (
+                            <TableCell key={index} className="text-xs px-1">
+                              {bowl ? (
+                                <span className={cn("font-bold", getResultColorClass(bowl.result))}>
+                                  {shortenResult(bowl.result)}
+                                  <span className="text-muted-foreground text-[10px] ml-0.5 font-normal">
+                                    {bowl.hand === 'Forehand' ? 'F' : 'B'}
+                                  </span>
+                                </span>
+                              ) : '-'}
+                            </TableCell>
+                          );
+                        })}
+                        {!isRollUp && <TableCell className="text-right text-xs px-1">
                           {end.isDead ? (
                             <span className="text-muted-foreground">D</span>
                           ) : (
@@ -1581,7 +1606,7 @@ export default function GameRecording() {
                               <span className="text-destructive font-medium">{end.scoreAgainst}</span>
                             </span>
                           )}
-                        </TableCell>
+                        </TableCell>}
                       </TableRow>
                       );
                     })}
