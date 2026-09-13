@@ -1,0 +1,128 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dl4ylIXV2XwuS33RWaSec"
+uri = "file://screenshots/marketing/01-dashboard.jpg"
+type = "image"
+title = "Dashboard"
+description = "Actual Game Day dashboard rendered with fictional performance data."
+logical_id = "4c34e997-2e37-46b8-bc7a-be32ccb26724"
+content_hash = "sha256:ecc3fb04abf843c9ff6283f646da4d018b355d98d79fd9d16f5800618b8cc649"
+size = 61504
+mtime_ms = 1789343577789
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/4c34e997-2e37-46b8-bc7a-be32ccb26724/a39a1f15-def4-4d99-8682-a3b5b39f183d"
+storage_version_token = "1789343622226705"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "d_ZdgTX_cnpZTbykIy0a_"
+uri = "file://screenshots/marketing/02-game-setup.jpg"
+type = "image"
+title = "Game setup"
+description = "Actual Game Day Pennant setup screen."
+logical_id = "43341601-7dcf-44b7-9045-8793acf957ae"
+content_hash = "sha256:53102e3ee96cff2954039d18aa6cf60ae828afa826c13903b4dc1dfb429bb188"
+size = 55543
+mtime_ms = 1789343580137
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/43341601-7dcf-44b7-9045-8793acf957ae/cdbc05cc-caf8-402e-9be9-f667f15bf924"
+storage_version_token = "1789343623708352"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "PrplRSTvbt6QsIVPKmKmY"
+uri = "file://screenshots/marketing/03-roll-up-setup.jpg"
+type = "image"
+title = "Roll Up setup"
+description = "Actual Practice, Singles, Roll Up selection flow."
+logical_id = "4ab9ca62-df5d-45d7-9a57-81760c2e910c"
+content_hash = "sha256:11b5bd1d984014936f52010c1c20765f3aa9962cd38b0f86dc4efccff9976093"
+size = 50227
+mtime_ms = 1789343582737
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/4ab9ca62-df5d-45d7-9a57-81760c2e910c/1f6ac061-a307-4a9d-8b34-30872bc3244f"
+storage_version_token = "1789343625187118"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "QrMxYlKDJlvG1ozr_7Oye"
+uri = "file://screenshots/marketing/04-live-recording.jpg"
+type = "image"
+title = "Live bowl recording"
+description = "Actual bowl placement grid during End 7."
+logical_id = "0d663942-45a0-498c-aaa9-eb3ed7390e3d"
+content_hash = "sha256:b45fc11e70850f9f4707d677ee6df7e39c45c9aec164ab186c3a97f27d57104d"
+size = 58719
+mtime_ms = 1789343585089
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/0d663942-45a0-498c-aaa9-eb3ed7390e3d/d7881049-42c2-4808-a91d-92cc5265c151"
+storage_version_token = "1789343626718917"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "JOJm68_fbzI6elVk20R0i"
+uri = "file://screenshots/marketing/05-game-history.jpg"
+type = "image"
+title = "Game history"
+description = "Actual game list with fictional match and Roll Up records."
+logical_id = "a2811e9a-f9e3-460e-bf6f-916e9e03ec05"
+content_hash = "sha256:e878122a241ce552d45846ccce55469ed32f8be4824028b59e9b37edb655b259"
+size = 118937
+mtime_ms = 1789343587477
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/a2811e9a-f9e3-460e-bf6f-916e9e03ec05/856dba34-4d90-4a98-b67e-1f2849621208"
+storage_version_token = "1789343628533752"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "QgJFgUPIYsgXvUn8uzy-m"
+uri = "file://screenshots/marketing/06-analysis-overview.jpg"
+type = "image"
+title = "Analysis overview"
+description = "Actual performance analysis overview with fictional bowls."
+logical_id = "c397e65a-1107-418a-b172-654dd3e41583"
+content_hash = "sha256:e9d30412dd28b4795eb80b38f6de83cb5d9899531b613ca20115507acb2ebd66"
+size = 91003
+mtime_ms = 1789343589821
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/c397e65a-1107-418a-b172-654dd3e41583/b9439d37-268f-4523-a3b6-12960c6262db"
+storage_version_token = "1789343630132869"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "p0ssH-0ono8mgcq8EQiOr"
+uri = "file://screenshots/marketing/07-effectiveness.jpg"
+type = "image"
+title = "Effectiveness breakdown"
+description = "Actual forehand and backhand effectiveness view."
+logical_id = "a4f0d451-80a8-431f-b2df-cd87ffd344a2"
+content_hash = "sha256:5d6d625163e4eb50eaf6bec6898e07a45a97c0f70487bc285a2f74263b496c6b"
+size = 102833
+mtime_ms = 1789343592173
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/a4f0d451-80a8-431f-b2df-cd87ffd344a2/b0e92819-0f1e-4813-af05-f444b514927b"
+storage_version_token = "1789343631891621"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "CYk7Pa_iZGUPDeDi62lf7"
+uri = "file://screenshots/marketing/08-heatmaps.jpg"
+type = "image"
+title = "Bowl landing heatmaps"
+description = "Actual landing heatmaps generated from fictional bowl positions."
+logical_id = "57eb6fa9-c6ed-4ef0-b908-c22697f6ab4c"
+content_hash = "sha256:a9bd1cdca02122e62e01b7dcd91eba6c17482df57f72de4f7f063b9dc22c6be6"
+size = 83535
+mtime_ms = 1789343594537
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/57eb6fa9-c6ed-4ef0-b908-c22697f6ab4c/1cba2181-12f5-4b24-bda9-10adf82e010a"
+storage_version_token = "1789343633412949"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "lHhD2-_KQXkHWvt7UHh0h"
+uri = "file://screenshots/marketing/game-day-marketing-screenshots.zip"
+type = "unspecified"
+title = "Complete screenshot bundle"
+description = "All eight corrected Game Day product screenshots in one ZIP file."
+logical_id = "9d36e4bf-efcc-4e2a-973c-f8172184dee7"
+content_hash = "sha256:5629d4cce6c0b8a65fe549a6057e6684c26d42be5d2b22c204105fc702aadea6"
+size = 468814
+mtime_ms = 1789343601825
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:6723928c-374d-4b0d-a8f7-f4464587c831/9d36e4bf-efcc-4e2a-973c-f8172184dee7/1f121b21-6b09-4cec-9074-0b7736a90973"
+storage_version_token = "1789343635942665"
+content_type = "application/octet-stream"
