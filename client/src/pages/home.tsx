@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, ArrowRight, MapPin, BarChart3, List, Target } from "lucide-react";
+import { isRollUpGame } from "@/lib/gameTypes";
 
 export default function Home() {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export default function Home() {
   );
   const effectiveRate = allBowls.length > 0 ? Math.round((effectiveBowls.length / allBowls.length) * 100) : 0;
 
-  const competitiveGames = completedGames.filter(g => g.type !== "Roll Up");
+  const competitiveGames = completedGames.filter(g => !isRollUpGame(g));
   const totalWins = competitiveGames.filter(g => {
     const game = gamesFull?.find(gf => gf.id === g.id);
     if (!game?.ends) return false;
@@ -103,13 +104,13 @@ export default function Home() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-semibold">{game.type === "Roll Up" ? "Roll Up" : `vs ${game.opponent}`}</p>
+                    <p className="font-semibold">{isRollUpGame(game) ? "Roll Up" : `vs ${game.opponent}`}</p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {game.venue}
                     </p>
                   </div>
                   <span className="text-xs font-medium px-2 py-1 bg-muted text-muted-foreground rounded">
-                    {game.type === "Roll Up" ? "Solo" : game.position}
+                    {isRollUpGame(game) ? "Solo" : game.position}
                   </span>
                 </div>
                 <Link href={`/play/${game.id}`}>

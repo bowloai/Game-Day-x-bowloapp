@@ -12,6 +12,7 @@ import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Save, Check, CheckCircle2
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Bowl, End } from "@shared/schema";
+import { isRollUpGame } from "@/lib/gameTypes";
 
 const RESULT_LABELS: Record<string, string> = {
   "SHORT_NARROW": "Short Narrow",
@@ -123,7 +124,7 @@ export default function GameEdit() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { data: game, isLoading } = useGameFull(id);
-  const isRollUp = game?.type === "Roll Up";
+  const isRollUp = isRollUpGame(game);
   const updateEnd = useUpdateEnd();
   const updateBowl = useUpdateBowl();
   const { toast } = useToast();

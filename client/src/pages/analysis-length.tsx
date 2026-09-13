@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
 import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
+import { matchesGameType } from "@/lib/gameTypes";
 
 type LengthStatsSet = {
   short: ReturnType<typeof calcLengthStats>;
@@ -68,7 +69,7 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
     if (filterType !== "All") {
-      if (g.type !== filterType) return false;
+      if (!matchesGameType(g, filterType)) return false;
     }
     if (filterSurface !== "All" && g.surface !== filterSurface) return false;
     if (filterPosition !== "All" && g.position !== filterPosition) return false;

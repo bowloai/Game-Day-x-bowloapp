@@ -11,6 +11,7 @@ import type { GameWithDetails } from "@/lib/api";
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 import { ChevronDown, ChevronUp, ChevronRight, Filter, Target, CircleDot, X, FileText, Star, Brain, Gauge, StickyNote, Calendar as CalendarIcon, Ruler, Lightbulb, BookOpen, Timer } from "lucide-react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide } from "@/lib/bowlResults";
+import { isRollUpGame, matchesGameType } from "@/lib/gameTypes";
 
 type Bowl = {
   id: string;
@@ -551,7 +552,7 @@ export default function Analysis() {
     }
     if (filterType !== "All") {
       filteredGames = filteredGames.filter(g =>
-        g.type === filterType
+        matchesGameType(g, filterType)
       );
     }
     if (filterSurface !== "All") {
@@ -824,7 +825,7 @@ export default function Analysis() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm text-muted-foreground">Viewing analysis for:</span>
-                <span className="ml-2 font-semibold">{selectedGame.type === "Roll Up" ? "Roll Up" : `vs ${selectedGame.opponent}`}</span>
+                <span className="ml-2 font-semibold">{isRollUpGame(selectedGame) ? "Roll Up" : `vs ${selectedGame.opponent}`}</span>
                 <span className="ml-2 text-sm text-muted-foreground">
                   ({format(new Date(selectedGame.createdAt), "MMM d, yyyy")} at {selectedGame.venue})
                 </span>

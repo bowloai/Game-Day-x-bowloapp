@@ -25,13 +25,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import { ROLL_UP_SINGLES_TYPE } from "@/lib/gameTypes";
 
 const formSchema = z.object({
   opponent: z.string(),
   venue: z.string().min(2, "Venue is required"),
   surface: z.enum(["Grass", "Plastic", "Carpet"] as const),
   rink: z.string().min(1, "Rink number is required"),
-  type: z.enum(["Practice", "Tournament", "Pennant", "100up", "Roll Up"] as const),
+  type: z.enum(["Practice", "Tournament", "Pennant", "100up"] as const),
   gameEndType: z.enum(["ends", "score"] as const),
   totalEnds: z.coerce.number().min(1, "Must have at least 1 end").optional().nullable(),
   targetScore: z.coerce.number().min(1, "Target score must be at least 1").optional().nullable(),
@@ -42,7 +43,7 @@ const formSchema = z.object({
   ourMat: z.boolean(),
   trackOpponent: z.boolean(),
 }).refine((data) => {
-  return data.type === "Roll Up" || data.opponent.trim().length > 0;
+  return data.opponent.trim().length > 0;
 }, { message: "Opponent is required", path: ["opponent"] })
 .refine((data) => {
   if (data.gameEndType === "ends") {
@@ -120,10 +121,10 @@ export default function GameSetup() {
   const gameEndType = useWatch({ control: form.control, name: "gameEndType" });
   const gameType = useWatch({ control: form.control, name: "type" });
 
-  const [singlesVariant, setSinglesVariant] = useState<"standard" | "100up">("standard");
+  const [singlesVariant, setSinglesVariant] = useState<"standard" | "100up" | "roll_up">("standard");
 
   const is100up = gameFormat === "singles" && singlesVariant === "100up";
-  const isRollUp = gameType === "Roll Up";
+  const isRollUp = gameType === "Practice" && singlesVariant === "roll_up";
   const positionOptions = getPositionOptions(gameFormat, pairsType);
   const showPosition = !is100up && positionOptions.length > 0;
   const showPairsType = gameFormat === "pairs";
@@ -135,6 +136,12 @@ export default function GameSetup() {
       setSinglesVariant("standard");
     }
   }, [gameFormat]);
+
+  useEffect(() => {
+    if (gameType !== "Practice" && singlesVariant === "roll_up") {
+      setSinglesVariant("standard");
+    }
+  }, [gameType, singlesVariant]);
 
   // Apply 100up locked settings when singlesVariant changes
   useEffect(() => {
@@ -149,16 +156,17 @@ export default function GameSetup() {
   }, [singlesVariant, form]);
 
   useEffect(() => {
-    if (!isRollUp) return;
-    form.setValue("opponent", "");
-    form.setValue("gameFormat", "singles");
-    form.setValue("pairsType", null);
-    form.setValue("position", null);
-    form.setValue("bowlsPerEnd", 4);
-    form.setValue("gameEndType", "ends");
-    form.setValue("targetScore", null);
-    form.setValue("trackOpponent", false);
-    setSinglesVariant("standard");
+    if (isRollUp) {
+      form.setValue("opponent", "Solo practice");
+      form.setValue("pairsType", null);
+      form.setValue("position", null);
+      form.setValue("bowlsPerEnd", 4);
+      form.setValue("gameEndType", "ends");
+      form.setValue("targetScore", null);
+      form.setValue("trackOpponent", false);
+    } else if (form.getValues("opponent") === "Solo practice") {
+      form.setValue("opponent", "");
+    }
   }, [isRollUp, form]);
 
   useEffect(() => {
@@ -188,7 +196,8 @@ export default function GameSetup() {
         bowlsPerEnd: isRollUp ? 4 : values.bowlsPerEnd,
         gameEndType: isRollUp ? "ends" : values.gameEndType,
         trackOpponent: isRollUp ? false : values.trackOpponent,
-        singlesType: !isRollUp && singlesVariant === "100up" ? "100up" : null,
+        type: isRollUp ? "Practice" : values.type,
+        singlesType: isRollUp ? ROLL_UP_SINGLES_TYPE : singlesVariant === "100up" ? "100up" : null,
         totalEnds: isRollUp || values.gameEndType === "ends" ? values.totalEnds : null,
         targetScore: !isRollUp && values.gameEndType === "score" ? values.targetScore : null,
       },
@@ -241,7 +250,6 @@ export default function GameSetup() {
                         </FormControl>
                         <SelectContent>
                            <SelectItem value="Practice">Practice</SelectItem>
-                           <SelectItem value="Roll Up">Roll Up</SelectItem>
                           <SelectItem value="Tournament">Tournament</SelectItem>
                           <SelectItem value="Pennant">Pennant</SelectItem>
                         </SelectContent>
@@ -251,7 +259,7 @@ export default function GameSetup() {
                   )}
                 />
 
-                {!isRollUp && <FormField
+                <FormField
                   control={form.control}
                   name="gameFormat"
                   render={({ field }) => (
@@ -273,16 +281,16 @@ export default function GameSetup() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />}
+                />
               </div>
 
               {/* Singles Variant — shown when format is singles, mirrors Pairs Type */}
-              {showSinglesVariant && !isRollUp && (
+              {showSinglesVariant && (
                 <div>
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Singles Type</label>
                   <Select
                     value={singlesVariant}
-                    onValueChange={(v) => setSinglesVariant(v as "standard" | "100up")}
+                    onValueChange={(v) => setSinglesVariant(v as "standard" | "100up" | "roll_up")}
                   >
                     <SelectTrigger className="mt-2" data-testid="select-singles-variant">
                       <SelectValue />
@@ -290,6 +298,7 @@ export default function GameSetup() {
                     <SelectContent>
                       <SelectItem value="standard">Standard</SelectItem>
                       <SelectItem value="100up">100up</SelectItem>
+                      {gameType === "Practice" && <SelectItem value="roll_up">Roll Up</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>

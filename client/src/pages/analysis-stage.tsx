@@ -9,6 +9,7 @@ import { useMemo, useRef, useEffect, useState } from "react";
 import { isEffective, hasGoodWeight, isShort, isHeavy, isOnLine, isNarrow, isWide, formatResultShort, getResultColorClass } from "@/lib/bowlResults";
 import { startOfDay, endOfDay, isWithinInterval, format } from "date-fns";
 import type { GameWithDetails } from "@/lib/api";
+import { isRollUpGame, matchesGameType } from "@/lib/gameTypes";
 
 type Bowl = {
   id: string;
@@ -156,7 +157,7 @@ function applyFilters(games: GameWithDetails[], searchParams: URLSearchParams): 
   return games.filter(g => g.status === 'COMPLETED').filter(g => {
     if (gameId && g.id !== gameId) return false;
     if (filterType !== "All") {
-      if (g.type !== filterType) return false;
+      if (!matchesGameType(g, filterType)) return false;
     }
     if (filterSurface !== "All" && g.surface !== filterSurface) return false;
     if (filterPosition !== "All" && g.position !== filterPosition) return false;
@@ -318,7 +319,7 @@ export default function AnalysisStage() {
         <div>
           <h1 className="text-xl font-semibold">Performance by Game Stage</h1>
           <p className="text-muted-foreground text-sm">
-            {isSingleGame ? (singleGame?.type === "Roll Up" ? "Roll Up" : `vs ${singleGame?.opponent}`) : 'All games'}{hasFilters && " (filtered)"}
+            {isSingleGame ? (isRollUpGame(singleGame) ? "Roll Up" : `vs ${singleGame?.opponent}`) : 'All games'}{hasFilters && " (filtered)"}
           </p>
         </div>
       </div>

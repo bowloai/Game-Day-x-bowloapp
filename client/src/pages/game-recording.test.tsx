@@ -8,6 +8,7 @@ let bowlCount = 1;
 let opponentBowlCount = 0;
 let bowlsPerEnd = 4;
 let gameType = "Roll Up";
+let singlesType: string | null = null;
 let trackOpponent = false;
 
 const bowlsFor = (count: number, isOpponent: boolean) =>
@@ -44,7 +45,7 @@ const game = () => ({
   targetScore: null,
   gameFormat: "singles",
   pairsType: null,
-  singlesType: null,
+  singlesType,
   bowlsPerEnd,
   position: null,
   status: "IN_PROGRESS",
@@ -94,12 +95,23 @@ beforeEach(() => {
   opponentBowlCount = 0;
   bowlsPerEnd = 4;
   gameType = "Roll Up";
+  singlesType = null;
   trackOpponent = false;
   updateEndMutate.mockReset();
   refetch.mockReset();
 });
 
 describe("Roll Up resume flow", () => {
+  it("recognises the Practice singles subtype", async () => {
+    gameType = "Practice";
+    singlesType = "roll_up";
+    bowlCount = 2;
+    render(<GameRecording />);
+
+    expect(await screen.findByTestId("text-bowl-number")).toHaveTextContent("Bowl 3 of 4");
+    expect(screen.queryByText("Record End Score")).not.toBeInTheDocument();
+  });
+
   it.each([1, 2, 3])("resumes after bowl %i at the next bowl without score entry", async (savedBowls) => {
     bowlCount = savedBowls;
     render(<GameRecording />);

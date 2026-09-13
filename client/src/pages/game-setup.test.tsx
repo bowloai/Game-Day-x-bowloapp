@@ -25,11 +25,15 @@ describe("Roll Up game setup", () => {
     render(<GameSetup />);
 
     await user.click(screen.getByTestId("select-type"));
+    await user.click(screen.getByRole("option", { name: "Practice" }));
+    await user.click(screen.getByTestId("select-format"));
+    await user.click(screen.getByRole("option", { name: "Singles" }));
+    await user.click(screen.getByTestId("select-singles-variant"));
     await user.click(screen.getByRole("option", { name: "Roll Up" }));
 
     await waitFor(() => {
       expect(screen.queryByTestId("input-opponent")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("select-format")).not.toBeInTheDocument();
+      expect(screen.getByTestId("select-format")).toBeInTheDocument();
       expect(screen.queryByTestId("input-bowls-per-end")).not.toBeInTheDocument();
       expect(screen.queryByTestId("select-game-end-type")).not.toBeInTheDocument();
       expect(screen.queryByTestId("switch-track-opponent")).not.toBeInTheDocument();
@@ -44,9 +48,10 @@ describe("Roll Up game setup", () => {
 
     await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
     expect(mutate.mock.calls[0][0]).toMatchObject({
-      type: "Roll Up",
+      type: "Practice",
       opponent: "Solo practice",
       gameFormat: "singles",
+      singlesType: "roll_up",
       bowlsPerEnd: 4,
       gameEndType: "ends",
       totalEnds: 12,

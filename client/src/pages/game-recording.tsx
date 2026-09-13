@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, ArrowLeft, ArrowRight, Flag, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatResult, formatResultShort, formatHandShort, isEffective, isShort, isHeavy, isNarrow, isWide, getResultColorClass } from "@/lib/bowlResults";
+import { isRollUpGame } from "@/lib/gameTypes";
 
 // Database format for bowl results: weight_line
 type BowlResult = 
@@ -47,7 +48,7 @@ export default function GameRecording() {
   
   const bowlsPerEnd = game?.bowlsPerEnd || 2;
   const is100up = game?.singlesType === "100up";
-  const isRollUp = game?.type === "Roll Up";
+  const isRollUp = isRollUpGame(game);
   const [hand, setHand] = useState<"Forehand" | "Backhand">("Forehand");
   const [gridSelection, setGridSelection] = useState<{row: number, col: number} | null>(null);
   const [jackEffective, setJackEffective] = useState(true);

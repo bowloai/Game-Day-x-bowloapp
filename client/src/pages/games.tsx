@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import * as api from "@/lib/api";
 import type { GameWithDetails } from "@/lib/api";
+import { isRollUpGame } from "@/lib/gameTypes";
 
 export default function Games() {
   const { data: games, isLoading } = useGames();
@@ -150,7 +151,7 @@ export default function Games() {
     const rows: string[][] = [];
 
     gamesWithDetails.forEach(game => {
-      const isRollUp = game.type === "Roll Up";
+      const isRollUp = isRollUpGame(game);
       const { scoreFor: totalFor, scoreAgainst: totalAgainst } = getGameScore(game);
       const result = isRollUp ? "Solo practice" : totalFor > totalAgainst ? "Win" : totalFor < totalAgainst ? "Loss" : "Draw";
       
@@ -161,7 +162,7 @@ export default function Games() {
           game.venue,
           game.surface,
           game.rink,
-          game.type,
+          isRollUp ? "Roll Up" : game.type,
           game.position || "",
           String(game.totalEnds),
           game.status,
@@ -179,7 +180,7 @@ export default function Games() {
               game.venue,
               game.surface,
               game.rink,
-              game.type,
+              isRollUp ? "Roll Up" : game.type,
               game.position || "",
               String(game.totalEnds),
               game.status,
@@ -202,7 +203,7 @@ export default function Games() {
                 game.venue,
                 game.surface,
                 game.rink,
-                game.type,
+                isRollUp ? "Roll Up" : game.type,
                 game.position || "",
                 String(game.totalEnds),
                 game.status,
@@ -451,7 +452,7 @@ export default function Games() {
           {filteredGames.map(game => {
             const isCompleted = game.status === 'COMPLETED';
             const isInProgress = game.status === 'IN_PROGRESS';
-            const isRollUp = game.type === "Roll Up";
+            const isRollUp = isRollUpGame(game);
             const { scoreFor, scoreAgainst } = getGameScore(game);
             const completedEnds = game.ends?.filter(e => e.isCompleted).length || 0;
             const isWin = scoreFor > scoreAgainst;
