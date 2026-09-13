@@ -23,6 +23,7 @@ type ReloadAttempt = {
 };
 
 let activeCheck: Promise<void> | null = null;
+let pendingBuildId: string | null = null;
 
 export function isSafeUpdatePath(pathname: string): boolean {
   const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
@@ -73,23 +74,46 @@ async function runUpdateCheck(options: UpdateCheckOptions) {
     await registration?.update();
   });
 
+  const applyUpdate = async (serverBuildId: string) => {
+    if (!isSafeUpdatePath(getPathname())) {
+      pendingBuildId = serverBuildId;
+      return;
+    }
+    if (readAttempt(attemptStorage, serverBuildId, now())) {
+      pendingBuildId = null;
+      return;
+    }
+
+    await updateServiceWorker().catch(() => {});
+
+    // The user may have navigated into a form while the service worker was updating.
+    if (!isSafeUpdatePath(getPathname())) {
+      pendingBuildId = serverBuildId;
+      return;
+    }
+
+    if (!writeAttempt(attemptStorage, serverBuildId, now())) return;
+    pendingBuildId = null;
+    reload();
+  };
+
   try {
+    if (pendingBuildId && pendingBuildId !== clientBuildId) {
+      await applyUpdate(pendingBuildId);
+      return;
+    }
+
     const res = await fetchVersion("/api/version", { cache: "no-store" });
     if (!res.ok) return;
 
     const data = await res.json();
     const serverBuildId = typeof data.buildId === "string" ? data.buildId : null;
-    if (!serverBuildId || serverBuildId === clientBuildId) return;
-    if (!isSafeUpdatePath(getPathname())) return;
-    if (readAttempt(attemptStorage, serverBuildId, now())) return;
-
-    await updateServiceWorker().catch(() => {});
-
-    // The user may have navigated into a form while the network checks were running.
-    if (!isSafeUpdatePath(getPathname())) return;
-
-    if (!writeAttempt(attemptStorage, serverBuildId, now())) return;
-    reload();
+    if (!serverBuildId) return;
+    if (serverBuildId === clientBuildId) {
+      pendingBuildId = null;
+      return;
+    }
+    await applyUpdate(serverBuildId);
   } catch {
     // Offline, malformed responses, and denied storage are retried later.
   }
@@ -103,7 +127,7 @@ export function checkForAppUpdate(options: UpdateCheckOptions = {}) {
   return activeCheck;
 }
 
-export function useVersionCheck() {
+export function useVersionCheck(pathname?: string) {
   useEffect(() => {
     const check = () => void checkForAppUpdate();
     const checkWhenVisible = () => {
@@ -122,5 +146,10 @@ export function useVersionCheck() {
       document.removeEventListener("visibilitychange", checkWhenVisible);
       window.clearInterval(id);
     };
-  }, []);
+  }, [pathname]);
+}
+
+export function resetVersionCheckStateForTests() {
+  activeCheck = null;
+  pendingBuildId = null;
 }

@@ -1,6 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { checkForAppUpdate, isSafeUpdatePath, useVersionCheck } from "./useVersionCheck";
+import {
+  checkForAppUpdate,
+  isSafeUpdatePath,
+  resetVersionCheckStateForTests,
+  useVersionCheck,
+} from "./useVersionCheck";
 
 function response(buildId: string, ok = true) {
   return Promise.resolve({
@@ -23,6 +28,7 @@ describe("automatic app updates", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
+    resetVersionCheckStateForTests();
   });
 
   it("does not reload when the running client matches the deployment", async () => {
@@ -101,6 +107,59 @@ describe("automatic app updates", () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
+  it("applies a pending update immediately after navigation to a safe route", async () => {
+    let pathname = "/play/game-1";
+    const fetchVersion = vi.fn(() => response("200"));
+
+    await checkForAppUpdate({
+      clientBuildId: "100",
+      fetchVersion,
+      getPathname: () => pathname,
+      reload,
+      updateServiceWorker,
+    });
+
+    expect(reload).not.toHaveBeenCalled();
+    pathname = "/";
+
+    await checkForAppUpdate({
+      clientBuildId: "100",
+      fetchVersion,
+      getPathname: () => pathname,
+      reload,
+      updateServiceWorker,
+    });
+
+    expect(fetchVersion).toHaveBeenCalledOnce();
+    expect(updateServiceWorker).toHaveBeenCalledOnce();
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a pending update deferred across protected route navigation", async () => {
+    let pathname = "/new-game";
+    const fetchVersion = vi.fn(() => response("200"));
+
+    await checkForAppUpdate({
+      clientBuildId: "100",
+      fetchVersion,
+      getPathname: () => pathname,
+      reload,
+      updateServiceWorker,
+    });
+    pathname = "/play/game-1";
+    await checkForAppUpdate({
+      clientBuildId: "100",
+      fetchVersion,
+      getPathname: () => pathname,
+      reload,
+      updateServiceWorker,
+    });
+
+    expect(fetchVersion).toHaveBeenCalledOnce();
+    expect(updateServiceWorker).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("rechecks the current route after waiting for the service worker", async () => {
     let pathname = "/";
     const update = vi.fn(async () => {
@@ -164,6 +223,23 @@ describe("automatic app updates", () => {
     await waitFor(() => expect(fetchVersion).toHaveBeenCalledOnce());
 
     act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(fetchVersion).toHaveBeenCalledTimes(2));
+
+    unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("checks immediately when the current route changes", async () => {
+    const fetchVersion = vi.fn(() => response("test"));
+    vi.stubGlobal("fetch", fetchVersion);
+
+    const { rerender, unmount } = renderHook(
+      ({ pathname }) => useVersionCheck(pathname),
+      { initialProps: { pathname: "/play/game-1" } },
+    );
+    await waitFor(() => expect(fetchVersion).toHaveBeenCalledOnce());
+
+    rerender({ pathname: "/" });
     await waitFor(() => expect(fetchVersion).toHaveBeenCalledTimes(2));
 
     unmount();
