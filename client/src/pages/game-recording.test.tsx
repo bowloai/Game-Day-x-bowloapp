@@ -6,6 +6,7 @@ const updateEndMutate = vi.fn();
 const refetch = vi.fn();
 let bowlCount = 1;
 let opponentBowlCount = 0;
+let bowlsPerEnd = 4;
 let gameType = "Roll Up";
 let trackOpponent = false;
 
@@ -44,7 +45,7 @@ const game = () => ({
   gameFormat: "singles",
   pairsType: null,
   singlesType: null,
-  bowlsPerEnd: 4,
+  bowlsPerEnd,
   position: null,
   status: "IN_PROGRESS",
   createdAt: new Date(),
@@ -91,6 +92,7 @@ vi.mock("@/hooks/use-toast", () => ({
 beforeEach(() => {
   bowlCount = 1;
   opponentBowlCount = 0;
+  bowlsPerEnd = 4;
   gameType = "Roll Up";
   trackOpponent = false;
   updateEndMutate.mockReset();
@@ -124,15 +126,24 @@ describe("Roll Up resume flow", () => {
 });
 
 describe("standard game resume flow", () => {
-  it("resumes between player bowls at the next bowl", async () => {
-    gameType = "Competition";
-    bowlCount = 2;
-    render(<GameRecording />);
+  it.each([
+    { bowls: 1, savedBowls: 0 },
+    { bowls: 2, savedBowls: 1 },
+    { bowls: 3, savedBowls: 2 },
+    { bowls: 4, savedBowls: 3 },
+  ])(
+    "resumes a partial $bowls-bowl set after bowl $savedBowls at the next bowl",
+    async ({ bowls, savedBowls }) => {
+      gameType = "Competition";
+      bowlsPerEnd = bowls;
+      bowlCount = savedBowls;
+      render(<GameRecording />);
 
-    expect(await screen.findByTestId("text-bowl-number")).toHaveTextContent("Bowl 3 of 4");
-    expect(screen.queryByText("Record End Score")).not.toBeInTheDocument();
-    expect(updateEndMutate).not.toHaveBeenCalled();
-  });
+      expect(await screen.findByTestId("text-bowl-number")).toHaveTextContent(`Bowl ${savedBowls + 1} of ${bowls}`);
+      expect(screen.queryByText("Record End Score")).not.toBeInTheDocument();
+      expect(updateEndMutate).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     { myBowls: 2, opponentBowls: 1, expectedBowl: 2, expectedTurn: "opponent" },
@@ -159,13 +170,20 @@ describe("standard game resume flow", () => {
   );
 
   it.each([
-    { tracksOpponent: false, opponentBowls: 0 },
-    { tracksOpponent: true, opponentBowls: 4 },
-  ])("resumes a completed non-Roll-Up bowl set at score entry", async ({ tracksOpponent, opponentBowls }) => {
+    { bowls: 1, tracksOpponent: false },
+    { bowls: 2, tracksOpponent: false },
+    { bowls: 3, tracksOpponent: false },
+    { bowls: 4, tracksOpponent: false },
+    { bowls: 1, tracksOpponent: true },
+    { bowls: 2, tracksOpponent: true },
+    { bowls: 3, tracksOpponent: true },
+    { bowls: 4, tracksOpponent: true },
+  ])("resumes a completed $bowls-bowl non-Roll-Up set at score entry", async ({ bowls, tracksOpponent }) => {
     gameType = "Competition";
+    bowlsPerEnd = bowls;
     trackOpponent = tracksOpponent;
-    bowlCount = 4;
-    opponentBowlCount = opponentBowls;
+    bowlCount = bowls;
+    opponentBowlCount = tracksOpponent ? bowls : 0;
     render(<GameRecording />);
 
     expect(await screen.findByText("Record End Score")).toBeInTheDocument();
