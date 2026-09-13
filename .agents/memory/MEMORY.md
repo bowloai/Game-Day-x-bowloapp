@@ -1,0 +1,1 @@
+- [PWA deployment identity](pwa-deployment-identity.md) — update checks compare one immutable build-time ID embedded in both client and server.

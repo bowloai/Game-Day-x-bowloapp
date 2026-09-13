@@ -5,9 +5,15 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { APP_BUILD_ID } from "@/hooks/useVersionCheck";
 const generatedImage = '/logo-nobg.png';
 
-const BUILD_ID = "2024.12.22.1";
+function formatBuildId(buildId: string): string {
+  if (!/^\d{13}$/.test(buildId)) return buildId === "development" ? "Development" : buildId;
+  const date = new Date(Number(buildId));
+  const part = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}.${part(date.getMonth() + 1)}.${part(date.getDate())}.${part(date.getHours())}${part(date.getMinutes())}`;
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -53,7 +59,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
       <div className="mt-auto px-2 pt-4 border-t">
-        <span className="text-xs text-muted-foreground">Build: {BUILD_ID}</span>
+        <span className="text-xs text-muted-foreground">Build: {formatBuildId(APP_BUILD_ID)}</span>
       </div>
     </div>
   );

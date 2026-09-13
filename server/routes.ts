@@ -27,8 +27,8 @@ const isAdmin: RequestHandler = async (req: any, res, next) => {
   }
 };
 
-// Build ID generated once at server startup — changes on every new deployment
-const SERVER_BUILD_ID = Date.now().toString();
+// Production builds embed the same immutable ID in the client and server bundles.
+const SERVER_BUILD_ID = process.env.APP_BUILD_ID ?? "development";
 
 export function registerRoutes(
   httpServer: Server,

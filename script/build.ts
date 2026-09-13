@@ -34,6 +34,8 @@ const allowlist = [
 
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
+  const buildId = Date.now().toString();
+  process.env.APP_BUILD_ID = buildId;
 
   console.log("building client...");
   await viteBuild();
@@ -54,6 +56,7 @@ async function buildAll() {
     outfile: "dist/index.cjs",
     define: {
       "process.env.NODE_ENV": '"production"',
+      "process.env.APP_BUILD_ID": JSON.stringify(buildId),
     },
     minify: true,
     external: externals,
