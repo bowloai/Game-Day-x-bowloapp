@@ -5,10 +5,13 @@ import GameRecording from "./game-recording";
 const updateEndMutate = vi.fn();
 const refetch = vi.fn();
 let bowlCount = 1;
+let opponentBowlCount = 0;
+let gameType = "Roll Up";
+let trackOpponent = false;
 
-const bowls = () =>
-  Array.from({ length: bowlCount }, (_, index) => ({
-    id: `bowl-${index + 1}`,
+const bowlsFor = (count: number, isOpponent: boolean) =>
+  Array.from({ length: count }, (_, index) => ({
+    id: `${isOpponent ? "opponent-" : ""}bowl-${index + 1}`,
     endId: "end-1",
     bowlNumber: index + 1,
     hand: "Forehand",
@@ -19,8 +22,13 @@ const bowls = () =>
     lineDistanceFeet: null,
     totalDistanceFeet: null,
     locationSource: null,
-    isOpponent: false,
+    isOpponent,
   }));
+
+const bowls = () => [
+  ...bowlsFor(bowlCount, false),
+  ...bowlsFor(opponentBowlCount, true),
+];
 
 const game = () => ({
   id: "game-1",
@@ -29,7 +37,7 @@ const game = () => ({
   venue: "Test Club",
   surface: "Grass",
   rink: "4",
-  type: "Roll Up",
+  type: gameType,
   totalEnds: 12,
   gameEndType: "ends",
   targetScore: null,
@@ -46,7 +54,7 @@ const game = () => ({
   performanceRating: null,
   notes: null,
   ourMat: true,
-  trackOpponent: false,
+  trackOpponent,
   category: "game",
   ends: [{
     id: "end-1",
@@ -80,12 +88,16 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-describe("Roll Up resume flow", () => {
-  beforeEach(() => {
-    updateEndMutate.mockReset();
-    refetch.mockReset();
-  });
+beforeEach(() => {
+  bowlCount = 1;
+  opponentBowlCount = 0;
+  gameType = "Roll Up";
+  trackOpponent = false;
+  updateEndMutate.mockReset();
+  refetch.mockReset();
+});
 
+describe("Roll Up resume flow", () => {
   it.each([1, 2, 3])("resumes after bowl %i at the next bowl without score entry", async (savedBowls) => {
     bowlCount = savedBowls;
     render(<GameRecording />);
@@ -108,5 +120,57 @@ describe("Roll Up resume flow", () => {
     });
     expect(screen.queryByText("Record End Score")).not.toBeInTheDocument();
     expect(await screen.findByTestId("text-end-number")).toHaveTextContent("End 1 Summary");
+  });
+});
+
+describe("standard game resume flow", () => {
+  it("resumes between player bowls at the next bowl", async () => {
+    gameType = "Competition";
+    bowlCount = 2;
+    render(<GameRecording />);
+
+    expect(await screen.findByTestId("text-bowl-number")).toHaveTextContent("Bowl 3 of 4");
+    expect(screen.queryByText("Record End Score")).not.toBeInTheDocument();
+    expect(updateEndMutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { myBowls: 2, opponentBowls: 1, expectedBowl: 2, expectedTurn: "opponent" },
+    { myBowls: 2, opponentBowls: 2, expectedBowl: 3, expectedTurn: "player" },
+  ])(
+    "resumes an opponent-tracked game on the $expectedTurn turn",
+    async ({ myBowls, opponentBowls, expectedBowl, expectedTurn }) => {
+      gameType = "Competition";
+      trackOpponent = true;
+      bowlCount = myBowls;
+      opponentBowlCount = opponentBowls;
+      render(<GameRecording />);
+
+      const bowlHeading = await screen.findByText(`Bowl ${expectedBowl} of 4`);
+      if (expectedTurn === "opponent") {
+        expect(screen.getByTestId("text-opp-bowl-number")).toBe(bowlHeading);
+        expect(screen.queryByTestId("text-bowl-number")).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByTestId("text-bowl-number")).toBe(bowlHeading);
+        expect(screen.queryByTestId("text-opp-bowl-number")).not.toBeInTheDocument();
+      }
+      expect(screen.queryByText("Record End Score")).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { tracksOpponent: false, opponentBowls: 0 },
+    { tracksOpponent: true, opponentBowls: 4 },
+  ])("resumes a completed non-Roll-Up bowl set at score entry", async ({ tracksOpponent, opponentBowls }) => {
+    gameType = "Competition";
+    trackOpponent = tracksOpponent;
+    bowlCount = 4;
+    opponentBowlCount = opponentBowls;
+    render(<GameRecording />);
+
+    expect(await screen.findByText("Record End Score")).toBeInTheDocument();
+    expect(screen.queryByTestId("text-bowl-number")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("text-opp-bowl-number")).not.toBeInTheDocument();
+    expect(updateEndMutate).not.toHaveBeenCalled();
   });
 });
