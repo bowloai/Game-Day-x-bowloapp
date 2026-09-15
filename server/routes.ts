@@ -18,7 +18,7 @@ const isAdmin: RequestHandler = async (req: any, res, next) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
     const user = await storage.getUser(userId);
-    if (!user?.isAdmin) {
+    if (!user?.isAdmin || user.isSuspended) {
       return res.status(403).json({ message: "Admin access required" });
     }
     next();
@@ -90,10 +90,18 @@ export function registerRoutes(
   app.get("/api/admin/users", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const query = req.query.q as string;
-      const users = query 
-        ? await storage.searchUsers(query)
-        : await storage.getAllUsers();
-      res.json(users.map(stripPassword));
+      const users = await storage.getUsersWithStats(query);
+      res.json(users.map(({ password: _, ...user }) => user));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/analytics", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const requestedDays = Number.parseInt(req.query.days as string, 10);
+      const periodDays = [7, 30, 90].includes(requestedDays) ? requestedDays : 30;
+      res.json(await storage.getAdminAnalytics(periodDays));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -128,6 +136,7 @@ export function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      await storage.revokeUserSessions(targetId);
 
       // Log the action
       await storage.createAuditLog({

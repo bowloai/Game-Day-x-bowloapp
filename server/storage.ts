@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { games, ends, bowls, users, auditLogs, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser, type AuditLog, type InsertAuditLog } from "@shared/schema";
-import { eq, desc, ilike, or, sql, inArray } from "drizzle-orm";
+import { games, ends, bowls, users, auditLogs, sessions, type Game, type InsertGame, type End, type InsertEnd, type Bowl, type InsertBowl, type User, type UpsertUser, type AuditLog, type InsertAuditLog } from "@shared/schema";
+import { eq, desc, ilike, or, sql, inArray, gte } from "drizzle-orm";
 
 function calculateBowlDistances(gridRow: number | null | undefined, gridCol: number | null | undefined) {
   if (gridRow == null || gridCol == null) {
@@ -26,6 +26,27 @@ export type GameWithEndsAndBowls = Game & {
   ends: (End & { bowls: Bowl[] })[];
 };
 
+export type AdminUserWithStats = User & {
+  gameCount: number;
+  bowlCount: number;
+  lastGameAt: Date | null;
+};
+
+export type AdminAnalytics = {
+  periodDays: number;
+  totals: {
+    users: number;
+    completedGames: number;
+    inProgressGames: number;
+    bowls: number;
+    activeUsers: number;
+  };
+  trends: Array<{ date: string; signups: number; games: number }>;
+  gameTypes: Array<{ label: string; count: number }>;
+  gameFormats: Array<{ label: string; count: number }>;
+  playCategories: Array<{ label: string; count: number }>;
+};
+
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -36,12 +57,15 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   searchUsers(query: string): Promise<User[]>;
   suspendUser(id: string): Promise<User | undefined>;
+  revokeUserSessions(id: string): Promise<void>;
   activateUser(id: string): Promise<User | undefined>;
   deleteUserAndData(id: string): Promise<void>;
   deleteAllUserGameData(userId: string): Promise<void>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(limit?: number): Promise<AuditLog[]>;
   getUserStats(userId: string): Promise<{ gameCount: number; bowlCount: number }>;
+  getUsersWithStats(query?: string): Promise<AdminUserWithStats[]>;
+  getAdminAnalytics(periodDays: number): Promise<AdminAnalytics>;
   
   // Games
   createGame(game: InsertGame): Promise<Game>;
@@ -121,6 +145,10 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async revokeUserSessions(id: string): Promise<void> {
+    await db.delete(sessions).where(sql`${sessions.sess}->>'userId' = ${id}`);
+  }
+
   async activateUser(id: string): Promise<User | undefined> {
     const [updated] = await db.update(users)
       .set({ isSuspended: false, updatedAt: new Date() })
@@ -161,6 +189,98 @@ export class DatabaseStorage implements IStorage {
     return { 
       gameCount: result[0]?.gameCount ?? 0, 
       bowlCount: result[0]?.bowlCount ?? 0 
+    };
+  }
+
+  async getUsersWithStats(query?: string): Promise<AdminUserWithStats[]> {
+    const searchPattern = query ? `%${query}%` : undefined;
+    const rows = await db
+      .select({
+        user: users,
+        gameCount: sql<number>`count(distinct ${games.id})::int`,
+        bowlCount: sql<number>`count(distinct ${bowls.id})::int`,
+        lastGameAt: sql<Date | null>`max(${games.createdAt})`,
+      })
+      .from(users)
+      .leftJoin(games, eq(games.userId, users.id))
+      .leftJoin(ends, eq(ends.gameId, games.id))
+      .leftJoin(bowls, eq(bowls.endId, ends.id))
+      .where(searchPattern ? or(
+        ilike(users.email, searchPattern),
+        ilike(users.firstName, searchPattern),
+        ilike(users.lastName, searchPattern),
+        ilike(users.club, searchPattern),
+      ) : undefined)
+      .groupBy(users.id)
+      .orderBy(desc(users.createdAt));
+
+    return rows.map(({ user, gameCount, bowlCount, lastGameAt }) => ({
+      ...user,
+      gameCount,
+      bowlCount,
+      lastGameAt,
+    }));
+  }
+
+  async getAdminAnalytics(periodDays: number): Promise<AdminAnalytics> {
+    const cutoff = new Date();
+    cutoff.setUTCHours(0, 0, 0, 0);
+    cutoff.setUTCDate(cutoff.getUTCDate() - periodDays + 1);
+
+    const [userTotals, gameTotals, bowlTotals, activeTotals, signupRows, gameRows, typeRows, formatRows, categoryRows] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(users),
+      db.select({
+        completed: sql<number>`count(*) filter (where ${games.status} = 'COMPLETED')::int`,
+        inProgress: sql<number>`count(*) filter (where ${games.status} = 'IN_PROGRESS')::int`,
+      }).from(games),
+      db.select({ count: sql<number>`count(*)::int` }).from(bowls),
+      db.select({ count: sql<number>`count(distinct ${games.userId})::int` })
+        .from(games)
+        .where(gte(games.createdAt, cutoff)),
+      db.select({
+        date: sql<string>`to_char(date_trunc('day', ${users.createdAt}), 'YYYY-MM-DD')`,
+        count: sql<number>`count(*)::int`,
+      }).from(users).where(gte(users.createdAt, cutoff)).groupBy(sql`date_trunc('day', ${users.createdAt})`),
+      db.select({
+        date: sql<string>`to_char(date_trunc('day', ${games.createdAt}), 'YYYY-MM-DD')`,
+        count: sql<number>`count(*)::int`,
+      }).from(games).where(gte(games.createdAt, cutoff)).groupBy(sql`date_trunc('day', ${games.createdAt})`),
+      db.select({
+        label: sql<string>`lower(coalesce(${games.type}, 'unknown'))`,
+        count: sql<number>`count(*)::int`,
+      }).from(games).groupBy(sql`lower(coalesce(${games.type}, 'unknown'))`).orderBy(desc(sql`count(*)`)),
+      db.select({
+        label: sql<string>`lower(coalesce(${games.gameFormat}, 'unknown'))`,
+        count: sql<number>`count(*)::int`,
+      }).from(games).groupBy(sql`lower(coalesce(${games.gameFormat}, 'unknown'))`).orderBy(desc(sql`count(*)`)),
+      db.select({
+        label: sql<string>`case when lower(coalesce(${games.type}, '')) = 'practice' or lower(coalesce(${games.category}, '')) = 'practice' then 'Practice' else 'Competitive' end`,
+        count: sql<number>`count(*)::int`,
+      }).from(games).groupBy(sql`case when lower(coalesce(${games.type}, '')) = 'practice' or lower(coalesce(${games.category}, '')) = 'practice' then 'Practice' else 'Competitive' end`),
+    ]);
+
+    const signups = new Map(signupRows.map(row => [row.date, row.count]));
+    const gamesByDay = new Map(gameRows.map(row => [row.date, row.count]));
+    const trends = Array.from({ length: periodDays }, (_, index) => {
+      const date = new Date(cutoff);
+      date.setUTCDate(cutoff.getUTCDate() + index);
+      const key = date.toISOString().slice(0, 10);
+      return { date: key, signups: signups.get(key) ?? 0, games: gamesByDay.get(key) ?? 0 };
+    });
+
+    return {
+      periodDays,
+      totals: {
+        users: userTotals[0]?.count ?? 0,
+        completedGames: gameTotals[0]?.completed ?? 0,
+        inProgressGames: gameTotals[0]?.inProgress ?? 0,
+        bowls: bowlTotals[0]?.count ?? 0,
+        activeUsers: activeTotals[0]?.count ?? 0,
+      },
+      trends,
+      gameTypes: typeRows.map(row => ({ label: row.label || "Unknown", count: row.count })),
+      gameFormats: formatRows.map(row => ({ label: row.label || "Unknown", count: row.count })),
+      playCategories: categoryRows.map(row => ({ label: row.label, count: row.count })),
     };
   }
 
